@@ -31,10 +31,10 @@ export default function ParentDashboard() {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-white sm:text-3xl">
-          Welcome, {user?.name?.split(" ")[0] || "Parent"} 👋
+        <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
+          Welcome, {user?.name?.split(" ")[0] || "Parent"}
         </h1>
-        <p className="mt-1 text-sm text-slate-400">
+        <p className="mt-1 text-sm text-slate-600">
           Monitor your children&apos;s learning progress
         </p>
       </div>
@@ -46,19 +46,19 @@ export default function ParentDashboard() {
           return (
             <div
               key={card.label}
-              className="rounded-2xl border border-white/5 bg-white/[0.02] p-5 transition-all duration-300 hover:border-white/10 hover:bg-white/[0.04]"
+              className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all duration-300 hover:border-blue-300 hover:shadow-md"
             >
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-xs font-medium text-slate-500">
                     {card.label}
                   </p>
-                  <p className="mt-1 text-2xl font-bold text-white">
+                  <p className="mt-1 text-2xl font-bold text-slate-900">
                     {card.value}
                   </p>
                 </div>
                 <div
-                  className={`rounded-xl bg-gradient-to-br ${card.gradient} p-2.5 shadow-lg`}
+                  className={`rounded-xl bg-gradient-to-br ${card.gradient} p-2.5 shadow-sm`}
                 >
                   <Icon className="h-5 w-5 text-white" />
                 </div>
@@ -69,12 +69,12 @@ export default function ParentDashboard() {
       </div>
 
       {/* Children Overview */}
-      <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-6">
-        <h2 className="text-lg font-semibold text-white">
+      <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs">
+        <h2 className="text-lg font-semibold text-slate-900">
           Children&apos;s Progress
         </h2>
         <div className="mt-6 flex flex-col items-center justify-center py-8 text-center">
-          <Clock className="h-10 w-10 text-slate-700" />
+          <Clock className="h-10 w-10 text-slate-300" />
           <p className="mt-3 text-sm text-slate-500">
             No children linked yet. Link your child&apos;s account to start
             tracking their progress.

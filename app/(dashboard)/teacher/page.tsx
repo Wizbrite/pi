@@ -45,23 +45,23 @@ export default function TeacherDashboard() {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-white sm:text-3xl">
-          Welcome, {user?.name?.split(" ")[0] || "Teacher"} 👋
+        <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
+          Welcome, {user?.name?.split(" ")[0] || "Teacher"}
         </h1>
-        <p className="mt-1 text-sm text-slate-400">
+        <p className="mt-1 text-sm text-slate-600">
           Manage your classes and track student performance
         </p>
       </div>
 
       {/* Pending Approval Banner */}
       {isPending && (
-        <div className="flex items-start gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-5">
-          <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-400" />
+        <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-900">
+          <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
           <div>
-            <h3 className="font-semibold text-amber-300">
+            <h3 className="font-semibold text-amber-900">
               Account Pending Approval
             </h3>
-            <p className="mt-1 text-sm text-amber-400/70">
+            <p className="mt-1 text-sm text-amber-700">
               Your teacher account is awaiting admin verification. You&apos;ll
               have full access once approved. In the meantime, you can explore
               the dashboard.
@@ -77,19 +77,19 @@ export default function TeacherDashboard() {
           return (
             <div
               key={card.label}
-              className="rounded-2xl border border-white/5 bg-white/[0.02] p-5 transition-all duration-300 hover:border-white/10 hover:bg-white/[0.04]"
+              className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all duration-300 hover:border-blue-300 hover:shadow-md"
             >
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-xs font-medium text-slate-500">
                     {card.label}
                   </p>
-                  <p className="mt-1 text-2xl font-bold text-white">
+                  <p className="mt-1 text-2xl font-bold text-slate-900">
                     {card.value}
                   </p>
                 </div>
                 <div
-                  className={`rounded-xl bg-gradient-to-br ${card.gradient} p-2.5 shadow-lg`}
+                  className={`rounded-xl bg-gradient-to-br ${card.gradient} p-2.5 shadow-sm`}
                 >
                   <Icon className="h-5 w-5 text-white" />
                 </div>
@@ -100,10 +100,10 @@ export default function TeacherDashboard() {
       </div>
 
       {/* Recent Activity */}
-      <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-6">
-        <h2 className="text-lg font-semibold text-white">Recent Activity</h2>
+      <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs">
+        <h2 className="text-lg font-semibold text-slate-900">Recent Activity</h2>
         <div className="mt-6 flex flex-col items-center justify-center py-8 text-center">
-          <Clock className="h-10 w-10 text-slate-700" />
+          <Clock className="h-10 w-10 text-slate-300" />
           <p className="mt-3 text-sm text-slate-500">
             No activity yet. Create your first class to get started.
           </p>

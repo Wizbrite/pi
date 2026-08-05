@@ -116,7 +116,7 @@ export default function LandingPage() {
               <span className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-600 bg-clip-text text-transparent">
                 GCE exams
               </span>{" "}
-              with the power of AI
+              with AI assistance
             </h1>
 
             <p className="mt-6 text-lg leading-relaxed text-slate-600 sm:text-xl">

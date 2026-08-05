@@ -19,6 +19,7 @@ import {
 import { useState } from "react";
 import { Logo } from "@/components/shared/logo";
 import { useAuthStore, type UserRole } from "@/stores/auth-store";
+import { HeaderStats } from "../student/header-stat";
 
 interface NavItem {
   label: string;
@@ -84,6 +85,10 @@ export function DashboardSidebar() {
             <ChevronLeft className="h-4 w-4" />
           )}
         </button>
+      </div>
+      <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Current Progress</p>
+        <HeaderStats xp={150} streakDays={3} />
       </div>
 
       {/* Navigation */}
