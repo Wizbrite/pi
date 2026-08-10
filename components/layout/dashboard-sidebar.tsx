@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
+  User,
   BookOpen,
   BarChart3,
   Users,
@@ -15,6 +16,7 @@ import {
   ShieldCheck,
   ChevronLeft,
   ChevronRight,
+  User2,
 } from "lucide-react";
 import { useState } from "react";
 import { Logo } from "@/components/shared/logo";
@@ -33,27 +35,27 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { label: "My Courses", href: "/student/courses", icon: BookOpen },
     { label: "Mock Exams", href: "/student/exams", icon: FileText },
     { label: "Progress", href: "/student/progress", icon: BarChart3 },
-    { label: "Settings", href: "/student/settings", icon: Settings },
+    { label: "Profile", href: "/student/profile", icon: User },
   ],
   teacher: [
     { label: "Dashboard", href: "/teacher", icon: LayoutDashboard },
     { label: "My Classes", href: "/teacher/classes", icon: Users },
     { label: "Questions", href: "/teacher/questions", icon: FileText },
     { label: "Analytics", href: "/teacher/analytics", icon: BarChart3 },
-    { label: "Settings", href: "/teacher/settings", icon: Settings },
+    { label: "Profile", href: "/teacher/profile", icon: User },
   ],
   parent: [
     { label: "Dashboard", href: "/parent", icon: LayoutDashboard },
     { label: "Children", href: "/parent/children", icon: UserCheck },
     { label: "Reports", href: "/parent/reports", icon: BarChart3 },
-    { label: "Settings", href: "/parent/settings", icon: Settings },
+    { label: "Profile", href: "/parent/profile", icon: User },
   ],
   admin: [
     { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
     { label: "Users", href: "/admin/users", icon: Users },
     { label: "Platform", href: "/admin/platform", icon: ShieldCheck },
     { label: "Analytics", href: "/admin/analytics", icon: BarChart3 },
-    { label: "Settings", href: "/admin/settings", icon: Settings },
+    { label: "Profile", href: "/admin/profile", icon: User },
   ],
 };
 

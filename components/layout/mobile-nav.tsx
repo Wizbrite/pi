@@ -7,7 +7,7 @@ import {
   BookOpen,
   FileText,
   BarChart3,
-  Settings,
+  User,
 } from "lucide-react";
 import { useAuthStore } from "@/stores/auth-store";
 import { HeaderStats } from "../student/header-stat"; // Named import matching your component export
@@ -17,14 +17,15 @@ export function MobileBottomNav() {
   const { user } = useAuthStore();
   const role = user?.role || "student";
 
-  const navItems = [
-    { label: "Dashboard", href: `/${role}`, icon: LayoutDashboard },
-    { label: "Courses", href: `/${role === "student" ? "student/courses" : role}`, icon: BookOpen },
-    { label: "Exams", href: `/${role === "student" ? "student/exams" : role}`, icon: FileText },
-    { label: "Progress", href: `/${role === "student" ? "student/progress" : role}`, icon: BarChart3 },
-    { label: "Settings", href: `/${role === "student" ? "student/settings" : role}`, icon: Settings },
-  ];
-
+  // Inside components/layout/mobile-nav.tsx
+const navItems = [
+  { label: "Dashboard", href: `/${role}`, icon: LayoutDashboard },
+  { label: "Courses", href: `/${role === "student" ? "student/courses" : role}`, icon: BookOpen },
+  { label: "Exams", href: `/${role === "student" ? "student/exams" : role}`, icon: FileText },
+  { label: "Progress", href: `/${role === "student" ? "student/progress" : role}`, icon: BarChart3 },
+  // Changed "Settings" to "Profile" pointing to /student/profile:
+  { label: "Profile", href: `/${role === "student" ? "student/profile" : role}`, icon: User },
+];
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 flex h-16 items-center justify-around border-t border-border bg-background/85 px-2 backdrop-blur-md pb-safe touch-action-manipulation md:hidden">
       {navItems.map((item) => {
