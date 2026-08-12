@@ -20,17 +20,41 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
 // Interface Definitions
-interface Question {
+export interface Question {
   id: number;
   text: string;
-  options?: string[];
-  correctAnswer?: number;
+  options: string[];
+  correctAnswer: number;
   type: "MCQ" | "Structured";
   marks: number;
   topic: string;
+  markingSchemeNotes?: string;
+  aiExplanation?: string;
 }
 
-// Mock Questions
+export interface ExamAttemptResult {
+  paperId: string;
+  subjectId: string;
+  paperTitle: string;
+  totalMarks: number;
+  timeSpentSeconds: number;
+  questions: Array<{
+    questionId: number;
+    questionNumber: number;
+    text: string;
+    topic: string;
+    userAnswer: string;
+    correctAnswer: string;
+    options: string[];
+    isCorrect: boolean;
+    marksObtained: number;
+    totalMarks: number;
+    markingSchemeNotes: string;
+    aiExplanation: string;
+  }>;
+}
+
+// Mock Questions with detailed remediation details
 const MOCK_QUESTIONS: Question[] = [
   {
     id: 1,
@@ -40,6 +64,8 @@ const MOCK_QUESTIONS: Question[] = [
     type: "MCQ",
     marks: 1,
     topic: "Units & Dimensions",
+    markingSchemeNotes: "SI base units include Metre (m), Kilogram (kg), Second (s), Ampere (A), Kelvin (K), Mole (mol), and Candela (cd).",
+    aiExplanation: "Great job! Ampere is the base unit for electric current in the International System of Units (SI).",
   },
   {
     id: 2,
@@ -49,6 +75,8 @@ const MOCK_QUESTIONS: Question[] = [
     type: "MCQ",
     marks: 1,
     topic: "Kinematics",
+    markingSchemeNotes: "In projectile motion without air resistance, horizontal velocity remains constant throughout flight: u_x = u cos θ.",
+    aiExplanation: "Correct! Vertical velocity decreases to zero at maximum height, but horizontal velocity remains unchanged as u cos θ.",
   },
   {
     id: 3,
@@ -63,6 +91,8 @@ const MOCK_QUESTIONS: Question[] = [
     type: "MCQ",
     marks: 1,
     topic: "Elasticity",
+    markingSchemeNotes: "GCE Syllabus Rule: Hooke's Law holds strictly up to the limit of proportionality, beyond which F is no longer linear with extension x.",
+    aiExplanation: "Hooke's Law states F = kx, which only applies up to the limit of proportionality.",
   },
   {
     id: 4,
@@ -72,6 +102,8 @@ const MOCK_QUESTIONS: Question[] = [
     type: "MCQ",
     marks: 1,
     topic: "Work & Energy",
+    markingSchemeNotes: "KE = 1/2 * m * v^2 = 0.5 * 4 * (5)^2 = 0.5 * 4 * 25 = 50 Joules.",
+    aiExplanation: "Spot on! Using KE = ½mv², 0.5 × 4 kg × (5 m/s)² = 50 J.",
   },
   {
     id: 5,
@@ -86,6 +118,8 @@ const MOCK_QUESTIONS: Question[] = [
     type: "MCQ",
     marks: 1,
     topic: "Electromagnetism",
+    markingSchemeNotes: "Alternating current in the primary coil creates a varying magnetic flux, inducing an emf in the secondary coil via mutual induction.",
+    aiExplanation: "Correct! The coils are electrically isolated but magnetically linked through the soft iron core via mutual electromagnetic induction.",
   },
 ];
 
@@ -103,7 +137,8 @@ export default function ExamRoomPage({
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
   const [bookmarkedQuestions, setBookmarkedQuestions] = useState<number[]>([]);
-  const [timeLeftSeconds, setTimeLeftSeconds] = useState(90 * 60); // 90 minutes
+  const TOTAL_TIME = 90 * 60; // 90 minutes
+  const [timeLeftSeconds, setTimeLeftSeconds] = useState(TOTAL_TIME);
   const [isAiOpen, setIsAiOpen] = useState(false);
   const [isNavGridOpenMobile, setIsNavGridOpenMobile] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
@@ -169,9 +204,45 @@ export default function ExamRoomPage({
     }, 800);
   };
 
-  // Submit Exam
+  // Submit Exam & Save Results to localStorage
   const handleSubmitExam = () => {
     if (confirm("Are you sure you want to submit your exam?")) {
+      const timeSpentSeconds = TOTAL_TIME - timeLeftSeconds;
+
+      const processedQuestions = MOCK_QUESTIONS.map((q, idx) => {
+        const selectedIdx = selectedAnswers[q.id];
+        const isAnswered = selectedIdx !== undefined;
+        const isCorrect = isAnswered && selectedIdx === q.correctAnswer;
+        const userAnswerText = isAnswered ? q.options[selectedIdx] : "Unanswered";
+
+        return {
+          questionId: q.id,
+          questionNumber: idx + 1,
+          text: q.text,
+          topic: q.topic,
+          userAnswer: userAnswerText,
+          correctAnswer: q.options[q.correctAnswer],
+          options: q.options,
+          isCorrect,
+          marksObtained: isCorrect ? q.marks : 0,
+          totalMarks: q.marks,
+          markingSchemeNotes: q.markingSchemeNotes || "Standard marking scheme guidelines apply.",
+          aiExplanation: q.aiExplanation || "Review the official core syllabus for this topic.",
+        };
+      });
+
+      const examAttemptData: ExamAttemptResult = {
+        paperId: paperId || "default-paper",
+        subjectId: subjectId || "default-subject",
+        paperTitle: "2023 GCE Past Paper Exam",
+        totalMarks: MOCK_QUESTIONS.reduce((acc, q) => acc + q.marks, 0),
+        timeSpentSeconds,
+        questions: processedQuestions,
+      };
+
+      // Store evaluation in localStorage for the results page
+      localStorage.setItem(`exam_attempt_${paperId}`, JSON.stringify(examAttemptData));
+
       router.push(`/student/exams/${subjectId}/results/${paperId}`);
     }
   };
@@ -181,8 +252,6 @@ export default function ExamRoomPage({
       
       {/* 1. MOBILE-RESPONSIVE TOP EXAM HEADER */}
       <header className="bg-card border border-border rounded-2xl p-3 sm:p-4 shadow-xs space-y-3 mb-4 sm:mb-6 sticky top-2 sm:top-4 z-20 backdrop-blur-md bg-card/95">
-        
-        {/* Row 1: Back + Title + Mobile Grid Trigger */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2.5 min-w-0">
             <Link
@@ -202,7 +271,6 @@ export default function ExamRoomPage({
             </div>
           </div>
 
-          {/* Question Grid Toggle for Mobile */}
           <Button
             variant="outline"
             size="sm"
@@ -214,16 +282,12 @@ export default function ExamRoomPage({
           </Button>
         </div>
 
-        {/* Row 2: Live Timer + Actions */}
         <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/60">
-          
-          {/* Live Timer */}
           <div className="flex items-center gap-1.5 bg-primary/10 border border-primary/20 px-2.5 py-1 rounded-xl text-primary font-mono font-bold text-xs sm:text-sm">
             <Clock className="w-3.5 h-3.5 animate-pulse shrink-0" />
             <span>{formatTime(timeLeftSeconds)}</span>
           </div>
 
-          {/* Action Buttons */}
           <div className="flex items-center gap-1.5">
             <Button
               variant="outline"
@@ -251,11 +315,9 @@ export default function ExamRoomPage({
       {/* MAIN WORKSPACE GRID */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 flex-1 items-start">
         
-        {/* 2. QUESTION CONTAINER (8 Cols) */}
+        {/* QUESTION CONTAINER */}
         <div className="lg:col-span-8 space-y-4">
           <div className="bg-card border border-border rounded-2xl p-4 sm:p-6 shadow-xs min-h-[380px] sm:min-h-[420px] flex flex-col justify-between">
-            
-            {/* Question Top Info */}
             <div>
               <div className="flex items-center justify-between gap-2 border-b border-border pb-3 sm:pb-4 mb-4 sm:mb-5">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -280,14 +342,12 @@ export default function ExamRoomPage({
                 </Button>
               </div>
 
-              {/* Question Text */}
               <p className="text-sm sm:text-base font-semibold text-foreground leading-relaxed mb-5 sm:mb-6">
                 {currentQ.text}
               </p>
 
-              {/* Options */}
               <div className="space-y-2.5 sm:space-y-3">
-                {currentQ.options?.map((option, idx) => {
+                {currentQ.options.map((option, idx) => {
                   const isSelected = selectedAnswers[currentQ.id] === idx;
                   return (
                     <button
@@ -315,7 +375,6 @@ export default function ExamRoomPage({
               </div>
             </div>
 
-            {/* Bottom Question Navigation Controls */}
             <div className="flex items-center justify-between border-t border-border pt-4 sm:pt-5 mt-6 gap-2">
               <Button
                 variant="outline"
@@ -340,11 +399,10 @@ export default function ExamRoomPage({
                 Next <ChevronRight className="w-4 h-4" />
               </Button>
             </div>
-
           </div>
         </div>
 
-        {/* 3. QUESTION NAVIGATION GRID & SUMMARY (Desktop view or Mobile Modal) */}
+        {/* QUESTION NAVIGATOR GRID */}
         <div className={`lg:col-span-4 ${isNavGridOpenMobile ? "block" : "hidden lg:block"}`}>
           <div className="bg-card border border-border rounded-2xl p-4 sm:p-5 shadow-xs space-y-4">
             <div className="flex items-center justify-between">
@@ -357,7 +415,6 @@ export default function ExamRoomPage({
               </button>
             </div>
 
-            {/* Grid of Question Buttons */}
             <div className="grid grid-cols-5 gap-2">
               {MOCK_QUESTIONS.map((q, idx) => {
                 const isCurrent = idx === currentQuestionIndex;
@@ -388,7 +445,6 @@ export default function ExamRoomPage({
               })}
             </div>
 
-            {/* Legend */}
             <div className="pt-3 border-t border-border flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted-foreground font-medium">
               <span className="flex items-center gap-1">
                 <span className="w-2.5 h-2.5 rounded-full bg-primary" /> Active
@@ -405,10 +461,9 @@ export default function ExamRoomPage({
 
       </div>
 
-      {/* 4. FLOATING AI TUTOR DRAWER */}
+      {/* FLOATING AI TUTOR DRAWER */}
       {isAiOpen && (
         <div className="fixed bottom-3 right-3 sm:bottom-6 sm:right-6 w-[calc(100vw-24px)] sm:w-96 bg-card border border-purple-500/30 rounded-2xl shadow-2xl z-50 flex flex-col overflow-hidden animate-in slide-in-from-bottom-5">
-          {/* AI Header */}
           <div className="bg-purple-950/20 dark:bg-purple-950/40 p-3 sm:p-3.5 border-b border-purple-500/20 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-lg bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-500">
@@ -427,7 +482,6 @@ export default function ExamRoomPage({
             </button>
           </div>
 
-          {/* AI Messages List */}
           <div className="p-3.5 space-y-3 h-56 sm:h-64 overflow-y-auto text-xs">
             {aiChat.map((msg, idx) => (
               <div
@@ -443,7 +497,6 @@ export default function ExamRoomPage({
             ))}
           </div>
 
-          {/* AI Input Form */}
           <form onSubmit={handleSendAiQuery} className="p-2.5 bg-muted/40 border-t border-border flex gap-2">
             <input
               type="text"

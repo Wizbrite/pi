@@ -33,10 +33,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="en" className={inter.variable} suppressHydrationWarning={true}>
       <body className="min-h-screen bg-background font-sans antialiased">
-        {children}
-        <Toaster richColors position="top-right" />
+       
+          {children}
+          <Toaster richColors position="top-right" />
+        
+        
       </body>
     </html>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, use } from "react";
+import React, { useState, useEffect, use } from "react";
 import Link from "next/link";
 import {
   Trophy,
@@ -17,6 +17,10 @@ import {
   Share2,
   BookOpen,
   Bot,
+  AlertTriangle,
+  X,
+  HelpCircle,
+  ArrowRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +32,7 @@ interface QuestionResult {
   topic: string;
   userAnswer: string;
   correctAnswer: string;
+  options: string[];
   isCorrect: boolean;
   marksObtained: number;
   totalMarks: number;
@@ -35,93 +40,172 @@ interface QuestionResult {
   aiExplanation: string;
 }
 
-const MOCK_RESULTS_DATA = {
-  subjectName: "Physics",
-  paperCode: "PHY701-2023-P1",
-  paperTitle: "2023 GCE Advanced Level Physics Paper 1",
-  score: 4,
-  totalMarks: 5,
-  percentage: 80,
-  grade: "Grade A",
-  timeSpent: "42 mins 15 secs",
-  totalTime: "90 mins",
-  xpEarned: 180,
-  streakBonus: 20,
-  topicPerformance: [
-    { topic: "Units & Dimensions", score: 1, total: 1, percentage: 100 },
-    { topic: "Kinematics", score: 1, total: 1, percentage: 100 },
-    { topic: "Elasticity", score: 0, total: 1, percentage: 0 },
-    { topic: "Work & Energy", score: 1, total: 1, percentage: 100 },
-    { topic: "Electromagnetism", score: 1, total: 1, percentage: 100 },
-  ],
-  questions: [
-    {
-      questionId: 1,
-      questionNumber: 1,
-      text: "Which of the following physical quantities is a fundamental (base) SI unit?",
-      topic: "Units & Dimensions",
-      userAnswer: "Ampere (A)",
-      correctAnswer: "Ampere (A)",
-      isCorrect: true,
-      marksObtained: 1,
-      totalMarks: 1,
-      markingSchemeNotes: "SI base units include Metre (m), Kilogram (kg), Second (s), Ampere (A), Kelvin (K), Mole (mol), and Candela (cd).",
-      aiExplanation: "Great job! Ampere is the base unit for electric current in the International System of Units (SI).",
-    },
-    {
-      questionId: 2,
-      questionNumber: 2,
-      text: "A projectile is launched with an initial velocity u at an angle θ to the horizontal. What is its horizontal velocity component at maximum height?",
-      topic: "Kinematics",
-      userAnswer: "u cos θ",
-      correctAnswer: "u cos θ",
-      isCorrect: true,
-      marksObtained: 1,
-      totalMarks: 1,
-      markingSchemeNotes: "In projectile motion without air resistance, horizontal velocity remains constant throughout flight: u_x = u cos θ.",
-      aiExplanation: "Correct! Vertical velocity decreases to zero at maximum height, but horizontal velocity remains unchanged as u cos θ.",
-    },
-    {
-      questionId: 3,
-      questionNumber: 3,
-      text: "According to Hooke's Law, the extension of a spring is directly proportional to the applied force provided that:",
-      topic: "Elasticity",
-      userAnswer: "The elastic limit is exceeded",
-      correctAnswer: "The limit of proportionality is not exceeded",
-      isCorrect: false,
-      marksObtained: 0,
-      totalMarks: 1,
-      markingSchemeNotes: "GCE Syllabus Rule: Hooke's Law holds strictly up to the limit of proportionality, beyond which F is no longer linear with extension x.",
-      aiExplanation: "You selected 'elastic limit is exceeded', which is incorrect. Hooke's Law states F = kx, which only applies up to the limit of proportionality. Beyond this point, the force-extension graph ceases to be a straight line.",
-    },
-    {
-      questionId: 4,
-      questionNumber: 4,
-      text: "Calculate the kinetic energy of a body of mass 4 kg moving at a constant speed of 5 m/s.",
-      topic: "Work & Energy",
-      userAnswer: "50 J",
-      correctAnswer: "50 J",
-      isCorrect: true,
-      marksObtained: 1,
-      totalMarks: 1,
-      markingSchemeNotes: "KE = 1/2 * m * v^2 = 0.5 * 4 * (5)^2 = 0.5 * 4 * 25 = 50 Joules.",
-      aiExplanation: "Spot on! Using KE = ½mv², 0.5 × 4 kg × (5 m/s)² = 50 J.",
-    },
-    {
-      questionId: 5,
-      questionNumber: 5,
-      text: "In a transformer, electrical power is transferred from primary to secondary coil through:",
-      topic: "Electromagnetism",
-      userAnswer: "Mutual electromagnetic induction",
-      correctAnswer: "Mutual electromagnetic induction",
-      isCorrect: true,
-      marksObtained: 1,
-      totalMarks: 1,
-      markingSchemeNotes: "Alternating current in the primary coil creates a varying magnetic flux, inducing an emf in the secondary coil via mutual induction.",
-      aiExplanation: "Correct! The coils are electrically isolated but magnetically linked through the soft iron core via mutual electromagnetic induction.",
-    },
-  ] as QuestionResult[],
-};
+interface AttemptData {
+  paperId: string;
+  subjectId: string;
+  paperTitle: string;
+  totalMarks: number;
+  timeSpentSeconds: number;
+  questions: QuestionResult[];
+}
+
+function MistakeReviewModal({
+  isOpen,
+  missedQuestions,
+  onClose,
+  onFinish,
+}: {
+  isOpen: boolean;
+  missedQuestions: QuestionResult[];
+  onClose: () => void;
+  onFinish: (correctedQuestionIds: number[]) => void;
+}) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [isAnswered, setIsAnswered] = useState(false);
+  const [correctedIds, setCorrectedIds] = useState<number[]>([]);
+
+  if (!isOpen || missedQuestions.length === 0) return null;
+
+  const currentQuestion = missedQuestions[currentIndex];
+  const isCorrect = selectedOption === currentQuestion.correctAnswer;
+  const isLastQuestion = currentIndex === missedQuestions.length - 1;
+
+  const handleSelectOption = (option: string) => {
+    if (isAnswered) return;
+    setSelectedOption(option);
+    setIsAnswered(true);
+
+    if (option === currentQuestion.correctAnswer) {
+      setCorrectedIds((prev) => [...prev, currentQuestion.questionId]);
+    }
+  };
+
+  const handleNext = () => {
+    if (isLastQuestion) {
+      onFinish(correctedIds);
+      setCurrentIndex(0);
+      setSelectedOption(null);
+      setIsAnswered(false);
+    } else {
+      setCurrentIndex((prev) => prev + 1);
+      setSelectedOption(null);
+      setIsAnswered(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-md flex items-center justify-center p-4">
+      <div className="bg-card border border-border w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="p-4 border-b border-border flex items-center justify-between gap-4 bg-muted/30">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center">
+              <RotateCcw className="w-4 h-4" />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-foreground">Re-answering Mistakes</h2>
+              <p className="text-xs text-muted-foreground">
+                Question {currentIndex + 1} of {missedQuestions.length}
+              </p>
+            </div>
+          </div>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            className="text-xs text-muted-foreground hover:text-foreground"
+          >
+            Skip Review <X className="w-4 h-4 ml-1" />
+          </Button>
+        </div>
+
+        <div className="p-6 overflow-y-auto space-y-6 flex-1">
+          <div className="space-y-2">
+            <Badge variant="outline" className="text-[10px] text-amber-500 border-amber-500/30">
+              {currentQuestion.topic}
+            </Badge>
+            <h3 className="text-base sm:text-lg font-bold text-foreground leading-relaxed">
+              {currentQuestion.text}
+            </h3>
+          </div>
+
+          <div className="space-y-2.5">
+            {currentQuestion.options.map((option, idx) => {
+              let style = "border-border hover:bg-muted/50 text-foreground";
+
+              if (isAnswered) {
+                if (option === currentQuestion.correctAnswer) {
+                  style = "border-green-500 bg-green-500/10 text-green-600 dark:text-green-400 font-semibold";
+                } else if (selectedOption === option) {
+                  style = "border-red-500 bg-red-500/10 text-red-600 dark:text-red-400";
+                } else {
+                  style = "border-border opacity-50";
+                }
+              }
+
+              return (
+                <button
+                  key={idx}
+                  onClick={() => handleSelectOption(option)}
+                  disabled={isAnswered}
+                  className={`w-full p-4 rounded-xl border text-left transition flex items-center justify-between text-xs sm:text-sm font-medium ${style}`}
+                >
+                  <span>{option}</span>
+                  {isAnswered && option === currentQuestion.correctAnswer && (
+                    <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+                  )}
+                  {isAnswered && selectedOption === option && !isCorrect && (
+                    <XCircle className="w-4 h-4 text-red-500 shrink-0" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {isAnswered && (
+            <div
+              className={`p-4 rounded-xl border space-y-2 ${
+                isCorrect
+                  ? "bg-green-500/10 border-green-500/20"
+                  : "bg-red-500/10 border-red-500/20"
+              }`}
+            >
+              <div className="flex items-center gap-2 text-xs font-bold">
+                <HelpCircle className="w-4 h-4" />
+                {isCorrect ? "Got it right!" : "Explanation"}
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                {currentQuestion.aiExplanation}
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div className="p-4 border-t border-border bg-muted/20 flex items-center justify-between">
+          <Button variant="ghost" size="sm" onClick={onClose} className="text-xs">
+            Cancel
+          </Button>
+
+          {isAnswered ? (
+            <Button size="sm" onClick={handleNext} className="text-xs gap-1">
+              {isLastQuestion ? "Submit Correction" : "Next Question"} <ArrowRight className="w-3.5 h-3.5" />
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={handleNext}
+              className="text-xs text-muted-foreground"
+            >
+              Skip Question
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function ExamResultsPage({
   params,
@@ -132,10 +216,77 @@ export default function ExamResultsPage({
   const subjectId = resolvedParams?.["subject-id"];
   const attemptId = resolvedParams?.["attempt-id"];
 
+  const [questions, setQuestions] = useState<QuestionResult[]>([]);
+  const [timeSpentSeconds, setTimeSpentSeconds] = useState<number>(0);
   const [filter, setFilter] = useState<"all" | "incorrect" | "correct">("all");
-  const [expandedQuestionId, setExpandedQuestionId] = useState<number | null>(3);
+  const [expandedQuestionId, setExpandedQuestionId] = useState<number | null>(null);
+  const [showMistakeModal, setShowMistakeModal] = useState(false);
 
-  const filteredQuestions = MOCK_RESULTS_DATA.questions.filter((q) => {
+  // Retrieve actual user performance stored in localStorage from the exam room
+  useEffect(() => {
+    if (!attemptId) return;
+
+    const storedData = localStorage.getItem(`exam_attempt_${attemptId}`);
+    if (storedData) {
+      try {
+        const parsed: AttemptData = JSON.parse(storedData);
+        setQuestions(parsed.questions || []);
+        setTimeSpentSeconds(parsed.timeSpentSeconds || 0);
+
+        // Find the first incorrect question to auto-expand for quick review
+        const firstIncorrect = parsed.questions.find((q) => !q.isCorrect);
+        if (firstIncorrect) {
+          setExpandedQuestionId(firstIncorrect.questionId);
+        }
+      } catch (err) {
+        console.error("Failed to parse stored attempt data:", err);
+      }
+    }
+  }, [attemptId]);
+
+  // Dynamic score and stats calculations based on actual exam data
+  const missedQuestions = questions.filter((q) => !q.isCorrect);
+  const score = questions.filter((q) => q.isCorrect).length;
+  const totalMarks = questions.reduce((acc, q) => acc + q.totalMarks, 0) || questions.length;
+  const percentage = totalMarks > 0 ? Math.round((score / totalMarks) * 100) : 0;
+
+  const formatTimeSpent = (secs: number) => {
+    const mins = Math.floor(secs / 60);
+    const remainderSecs = secs % 60;
+    return `${mins} mins ${remainderSecs} secs`;
+  };
+
+  const handleReviewFinished = (correctedQuestionIds: number[]) => {
+    setShowMistakeModal(false);
+
+    setQuestions((prev) => {
+      const updated = prev.map((q) => {
+        if (correctedQuestionIds.includes(q.questionId)) {
+          return {
+            ...q,
+            isCorrect: true,
+            userAnswer: q.correctAnswer,
+            marksObtained: q.totalMarks,
+          };
+        }
+        return q;
+      });
+
+      // Sync the corrected results back into localStorage
+      if (attemptId) {
+        const stored = localStorage.getItem(`exam_attempt_${attemptId}`);
+        if (stored) {
+          const parsed: AttemptData = JSON.parse(stored);
+          parsed.questions = updated;
+          localStorage.setItem(`exam_attempt_${attemptId}`, JSON.stringify(parsed));
+        }
+      }
+
+      return updated;
+    });
+  };
+
+  const filteredQuestions = questions.filter((q) => {
     if (filter === "correct") return q.isCorrect;
     if (filter === "incorrect") return !q.isCorrect;
     return true;
@@ -144,7 +295,7 @@ export default function ExamResultsPage({
   return (
     <div className="min-h-screen bg-background space-y-6 pb-12">
       
-      {/* TOP HEADER */}
+      {/* HEADER */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-card border border-border rounded-2xl p-4 sm:p-6 shadow-xs">
         <div className="flex items-center gap-3">
           <Link
@@ -156,9 +307,9 @@ export default function ExamResultsPage({
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono font-bold text-muted-foreground uppercase">{subjectId}</span>
-              <Badge variant="outline" className="text-[10px] py-0">GCE Results</Badge>
+              <Badge variant="outline" className="text-[10px] py-0">Attempt #{attemptId}</Badge>
             </div>
-            <h1 className="text-lg sm:text-xl font-extrabold text-foreground">{MOCK_RESULTS_DATA.paperTitle}</h1>
+            <h1 className="text-lg sm:text-xl font-extrabold text-foreground">2023 GCE Past Paper Exam</h1>
           </div>
         </div>
 
@@ -174,6 +325,40 @@ export default function ExamResultsPage({
         </div>
       </div>
 
+      {/* CORRECTION CARD */}
+      {missedQuestions.length > 0 ? (
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-foreground">
+                You made {missedQuestions.length} mistake{missedQuestions.length > 1 ? "s" : ""}
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Re-answer these missed questions right now to correct your errors and improve your score!
+              </p>
+            </div>
+          </div>
+
+          <Button
+            onClick={() => setShowMistakeModal(true)}
+            className="w-full sm:w-auto shrink-0 gap-2 bg-amber-600 hover:bg-amber-700 text-white font-bold"
+          >
+            <RotateCcw className="w-4 h-4" /> Correct Mistakes
+          </Button>
+        </div>
+      ) : (
+        <div className="bg-green-500/10 border border-green-500/20 rounded-2xl p-5 flex items-center gap-3 text-green-600 dark:text-green-400 shadow-xs">
+          <CheckCircle2 className="w-6 h-6 shrink-0" />
+          <div>
+            <h3 className="text-sm font-bold">All Mistakes Cleared!</h3>
+            <p className="text-xs opacity-90">Great job! You answered every question correctly in this attempt.</p>
+          </div>
+        </div>
+      )}
+
       {/* XP CELEBRATION BANNER */}
       <div className="relative overflow-hidden bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 rounded-2xl p-5 sm:p-6 text-white shadow-md">
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -188,22 +373,26 @@ export default function ExamResultsPage({
                 </Badge>
                 <span className="text-xs font-semibold text-purple-100">+20 Day Streak Bonus!</span>
               </div>
-              <h2 className="text-xl sm:text-2xl font-black mt-1">Excellent Effort!</h2>
-              <p className="text-xs sm:text-sm text-purple-100">You scored higher than 84% of students on this paper.</p>
+              <h2 className="text-xl sm:text-2xl font-black mt-1">
+                {percentage >= 70 ? "Excellent Effort!" : "Keep Practicing!"}
+              </h2>
+              <p className="text-xs sm:text-sm text-purple-100">
+                You answered {score} out of {totalMarks} questions correctly.
+              </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/20 px-4 py-2.5 rounded-xl self-start sm:self-auto">
             <Zap className="w-6 h-6 text-amber-300 fill-amber-300" />
             <div>
-              <span className="text-xl font-black leading-none block">+{MOCK_RESULTS_DATA.xpEarned + MOCK_RESULTS_DATA.streakBonus} XP</span>
+              <span className="text-xl font-black leading-none block">+{score * 40 + 20} XP</span>
               <span className="text-[10px] text-purple-200 uppercase font-bold tracking-wider">Earned</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* METRICS & SCORE BREAKDOWN */}
+      {/* METRICS & BREAKDOWN */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-card border border-border rounded-2xl p-5 flex flex-col justify-between shadow-xs">
           <div className="flex items-center justify-between">
@@ -212,34 +401,36 @@ export default function ExamResultsPage({
           </div>
           <div className="my-3">
             <div className="flex items-baseline gap-1">
-              <span className="text-3xl font-black text-foreground">{MOCK_RESULTS_DATA.score}</span>
-              <span className="text-sm font-bold text-muted-foreground">/ {MOCK_RESULTS_DATA.totalMarks}</span>
+              <span className="text-3xl font-black text-foreground">{score}</span>
+              <span className="text-sm font-bold text-muted-foreground">/ {totalMarks}</span>
             </div>
             <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 mt-1">
-              {MOCK_RESULTS_DATA.percentage}% Accuracy
+              {percentage}% Accuracy
             </div>
           </div>
           <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
             <div
-              className="bg-emerald-500 h-full rounded-full"
-              style={{ width: `${MOCK_RESULTS_DATA.percentage}%` }}
+              className="bg-emerald-500 h-full rounded-full transition-all duration-500"
+              style={{ width: `${percentage}%` }}
             />
           </div>
         </div>
 
         <div className="bg-card border border-border rounded-2xl p-5 flex flex-col justify-between shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-muted-foreground uppercase">GCE Equivalent</span>
+            <span className="text-xs font-bold text-muted-foreground uppercase">Grade</span>
             <Award className="w-4 h-4 text-purple-500" />
           </div>
           <div className="my-3">
-            <span className="text-3xl font-black text-purple-600 dark:text-purple-400">{MOCK_RESULTS_DATA.grade}</span>
+            <span className="text-3xl font-black text-purple-600 dark:text-purple-400">
+              {percentage >= 70 ? "Grade A" : percentage >= 50 ? "Grade C" : "Grade F"}
+            </span>
             <p className="text-xs font-medium text-muted-foreground mt-1">
-              Passed official grade threshold
+              {percentage >= 50 ? "Passed official threshold" : "Needs improvement"}
             </p>
           </div>
           <div className="text-[11px] font-bold text-muted-foreground bg-muted/60 p-1.5 rounded-lg text-center">
-            Grade Boundary: A ≥ 75%
+            Pass Threshold: 50%
           </div>
         </div>
 
@@ -249,13 +440,11 @@ export default function ExamResultsPage({
             <Clock className="w-4 h-4 text-blue-500" />
           </div>
           <div className="my-3">
-            <span className="text-2xl font-black text-foreground">{MOCK_RESULTS_DATA.timeSpent}</span>
-            <p className="text-xs font-medium text-muted-foreground mt-1">
-              Allocated: {MOCK_RESULTS_DATA.totalTime}
-            </p>
+            <span className="text-2xl font-black text-foreground">{formatTimeSpent(timeSpentSeconds)}</span>
+            <p className="text-xs font-medium text-muted-foreground mt-1">Allocated: 90 mins</p>
           </div>
           <div className="text-[11px] font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10 p-1.5 rounded-lg text-center">
-            Pacing: 8.4 mins/question
+            Pacing Recorded
           </div>
         </div>
 
@@ -267,50 +456,20 @@ export default function ExamResultsPage({
           <div className="my-3 space-y-1">
             <div className="flex justify-between text-xs font-semibold">
               <span className="text-emerald-600 dark:text-emerald-400">Correct:</span>
-              <span>4</span>
+              <span>{score}</span>
             </div>
             <div className="flex justify-between text-xs font-semibold">
               <span className="text-red-500">Incorrect:</span>
-              <span>1</span>
-            </div>
-            <div className="flex justify-between text-xs font-semibold">
-              <span className="text-muted-foreground">Unanswered:</span>
-              <span>0</span>
+              <span>{missedQuestions.length}</span>
             </div>
           </div>
           <div className="text-[11px] font-bold text-muted-foreground bg-muted/60 p-1.5 rounded-lg text-center">
-            5 total questions reviewed
+            {totalMarks} total questions reviewed
           </div>
         </div>
       </div>
 
-      {/* TOPIC MASTERY BREAKDOWN */}
-      <div className="bg-card border border-border rounded-2xl p-5 shadow-xs space-y-4">
-        <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">Topic Mastery Breakdown</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {MOCK_RESULTS_DATA.topicPerformance.map((topic, idx) => (
-            <div key={idx} className="p-3.5 rounded-xl border border-border bg-muted/30 space-y-2">
-              <div className="flex items-center justify-between text-xs font-bold">
-                <span className="text-foreground truncate">{topic.topic}</span>
-                <span className={topic.percentage >= 70 ? "text-emerald-600 dark:text-emerald-400" : "text-red-500"}>
-                  {topic.percentage}%
-                </span>
-              </div>
-              <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
-                <div
-                  className={`h-full rounded-full ${topic.percentage >= 70 ? "bg-emerald-500" : "bg-red-500"}`}
-                  style={{ width: `${topic.percentage}%` }}
-                />
-              </div>
-              <span className="text-[10px] text-muted-foreground font-medium block">
-                {topic.score} of {topic.total} marks earned
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* QUESTION BY QUESTION REVIEW SECTION */}
+      {/* QUESTION REVIEW */}
       <div className="bg-card border border-border rounded-2xl p-5 shadow-xs space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border pb-4">
           <div>
@@ -325,7 +484,7 @@ export default function ExamResultsPage({
                 filter === "all" ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              All (5)
+              All ({questions.length})
             </button>
             <button
               onClick={() => setFilter("incorrect")}
@@ -333,7 +492,7 @@ export default function ExamResultsPage({
                 filter === "incorrect" ? "bg-card text-red-500 shadow-xs" : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              Missed (1)
+              Missed ({missedQuestions.length})
             </button>
             <button
               onClick={() => setFilter("correct")}
@@ -341,7 +500,7 @@ export default function ExamResultsPage({
                 filter === "correct" ? "bg-card text-emerald-600 shadow-xs" : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              Correct (4)
+              Correct ({score})
             </button>
           </div>
         </div>
@@ -438,6 +597,13 @@ export default function ExamResultsPage({
           })}
         </div>
       </div>
+
+      <MistakeReviewModal
+        isOpen={showMistakeModal}
+        missedQuestions={missedQuestions}
+        onClose={() => setShowMistakeModal(false)}
+        onFinish={handleReviewFinished}
+      />
     </div>
   );
 }
