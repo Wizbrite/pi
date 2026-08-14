@@ -52,7 +52,7 @@ export default function LeaderboardPage() {
       {/* Header Section */}
       <div className="mb-8">
         <h1 className="text-2xl md:text-3xl font-black text-foreground flex items-center gap-3">
-          <Trophy className="w-8 h-8 text-[#F59E0B]" />
+          <Trophy className="w-8 h-8 text-violet-500" />
           Leaderboard
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
@@ -61,26 +61,26 @@ export default function LeaderboardPage() {
       </div>
 
       {/* Current User Snapshot Widget */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-6 text-white shadow-md flex flex-col sm:flex-row items-center justify-between gap-6 mb-8">
+      <div className="bg-violet-600 dark:bg-[#131834] dark:border dark:border-white/10 rounded-2xl p-6 text-white shadow-md flex flex-col sm:flex-row items-center justify-between gap-6 mb-8">
         <div className="flex items-center gap-4 w-full sm:w-auto">
            <div className="w-16 h-16 rounded-full bg-white/20 border-2 border-white/50 flex items-center justify-center text-2xl font-black shadow-inner">
              {currentUserObj?.name.charAt(0)}
            </div>
            <div>
-             <p className="text-xs text-blue-200 font-bold uppercase tracking-wider">Your Standing</p>
+             <p className="text-xs text-violet-200 font-bold uppercase tracking-wider">Your Standing</p>
              <p className="text-xl font-black">{currentUserObj?.name}</p>
              <div className="flex items-center gap-2 mt-1">
                <span className="bg-white/20 px-2 py-0.5 rounded text-xs font-semibold backdrop-blur-sm">
                  Global Rank: #{currentUserObj?.rank}
                </span>
-               <span className="bg-[#F59E0B]/80 px-2 py-0.5 rounded text-xs font-semibold backdrop-blur-sm flex items-center gap-1">
+               <span className="bg-violet-500/80 px-2 py-0.5 rounded text-xs font-semibold backdrop-blur-sm flex items-center gap-1">
                  <Award className="w-3 h-3" /> {currentUserObj?.badges[0] || "Novice"}
                </span>
              </div>
            </div>
         </div>
         <div className="bg-white/10 p-4 rounded-xl border border-white/20 backdrop-blur-sm w-full sm:w-auto text-center sm:text-right">
-          <p className="text-xs text-blue-200 font-bold uppercase tracking-wider mb-0.5">Total XP</p>
+          <p className="text-xs text-violet-200 font-bold uppercase tracking-wider mb-0.5">Total XP</p>
           <p className="text-3xl font-black tracking-tighter text-white">{currentUserObj?.xp.toLocaleString()}</p>
         </div>
       </div>

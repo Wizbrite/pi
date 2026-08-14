@@ -28,7 +28,7 @@ const recommendedModules: RecommendedModule[] = [
     questionCount: 10,
     level: "A Level",
     href: "/student/exams?subject=pure-maths&topic=algebra",
-    badgeColor: "bg-blue-50 text-blue-700 border-blue-200/60",
+    badgeColor: "bg-violet-50 text-violet-700 border-violet-200/60",
   },
   {
     id: "2",
@@ -39,7 +39,7 @@ const recommendedModules: RecommendedModule[] = [
     questionCount: 12,
     level: "A Level",
     href: "/student/exams?subject=physics&topic=mechanics",
-    badgeColor: "bg-indigo-50 text-indigo-700 border-indigo-200/60",
+    badgeColor: "bg-violet-50 text-violet-700 border-violet-200/60",
   },
   // O-Level Modules
   {
@@ -51,7 +51,7 @@ const recommendedModules: RecommendedModule[] = [
     questionCount: 10,
     level: "O Level",
     href: "/student/exams?subject=maths&topic=trigonometry",
-    badgeColor: "bg-emerald-50 text-emerald-700 border-emerald-200/60",
+    badgeColor: "bg-violet-50 text-violet-700 border-violet-200/60",
   },
   {
     id: "4",
@@ -62,7 +62,7 @@ const recommendedModules: RecommendedModule[] = [
     questionCount: 15,
     level: "O Level",
     href: "/student/exams?subject=physics&topic=forces",
-    badgeColor: "bg-amber-50 text-amber-700 border-amber-200/60",
+    badgeColor: "bg-violet-50 text-violet-700 border-violet-200/60",
   }
 ];
 
@@ -78,14 +78,14 @@ export function RecommendedNextSteps() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-base font-bold text-slate-900">Recommended for You</h3>
-          <p className="text-xs text-slate-500">
+          <h3 className="text-base font-bold text-foreground">Recommended for You</h3>
+          <p className="text-xs text-muted-foreground">
             Handpicked practice modules based on your {currentLevel} curriculum
           </p>
         </div>
         <Link
           href="/student/courses"
-          className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700"
+          className="inline-flex items-center gap-1 text-xs font-semibold text-violet-600 hover:text-violet-700"
         >
           View all
           <ArrowRight className="h-3.5 w-3.5" />
@@ -96,7 +96,7 @@ export function RecommendedNextSteps() {
         {filteredModules.map((module) => (
           <div
             key={module.id}
-            className="group flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all duration-300 hover:border-blue-300 hover:shadow-md"
+            className="group flex flex-col justify-between rounded-2xl border border-border bg-card p-5 shadow-xs transition-all duration-300 hover:border-violet-300 hover:shadow-md"
           >
             <div>
               <div className="flex items-center justify-between gap-2">
@@ -105,27 +105,27 @@ export function RecommendedNextSteps() {
                 >
                   {module.subject} • {module.paper}
                 </span>
-                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500">
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
                   <Clock className="h-3 w-3" />
                   {module.duration}
                 </span>
               </div>
 
-              <h4 className="mt-3 font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+              <h4 className="mt-3 font-bold text-foreground group-hover:text-violet-600 transition-colors">
                 {module.title}
               </h4>
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="mt-1 text-xs text-muted-foreground">
                 {module.questionCount} GCE-aligned multiple choice & structural questions
               </p>
             </div>
 
-            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+            <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
               <span className="text-[11px] font-semibold text-slate-400">
                 {module.level}
               </span>
               <Link
                 href={module.href}
-                className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 group-hover:translate-x-0.5 transition-transform"
+                className="inline-flex items-center gap-1 text-xs font-bold text-violet-600 group-hover:translate-x-0.5 transition-transform"
               >
                 Start Practice
                 <ArrowRight className="h-3.5 w-3.5" />

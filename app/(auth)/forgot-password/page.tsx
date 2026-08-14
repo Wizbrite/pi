@@ -48,8 +48,8 @@ export default function ForgotPasswordPage() {
   if (isSubmitted) {
     return (
       <div className="text-center">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10">
-          <CheckCircle2 className="h-6 w-6 text-emerald-400" />
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-violet-500/10">
+          <CheckCircle2 className="h-6 w-6 text-violet-400" />
         </div>
         <h1 className="text-xl font-bold text-white">Check your email</h1>
         <p className="mt-2 text-sm text-slate-400">
@@ -58,7 +58,7 @@ export default function ForgotPasswordPage() {
         </p>
         <Link
           href="/login"
-          className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-emerald-400 transition-colors hover:text-emerald-300"
+          className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-violet-400 transition-colors hover:text-violet-300"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to login

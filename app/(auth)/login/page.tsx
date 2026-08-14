@@ -63,20 +63,20 @@ export default function LoginPage() {
   return (
     <div>
       <div className="mb-6 text-center">
-        <h1 className="text-2xl font-bold text-slate-900">Welcome back</h1>
-        <p className="mt-1 text-sm text-slate-600">
+        <h1 className="text-2xl font-bold text-foreground">Welcome back</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           Log in to continue your learning journey
         </p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="email" className="text-slate-700 font-medium">Email</Label>
+          <Label htmlFor="email" className="text-foreground font-medium">Email</Label>
           <Input
             id="email"
             type="email"
             placeholder="you@example.com"
-            className="border-slate-200 bg-white text-slate-900 focus-visible:ring-blue-500"
+            className="border-border bg-white text-foreground focus-visible:ring-violet-500"
             {...register("email")}
             aria-invalid={!!errors.email}
           />
@@ -87,10 +87,10 @@ export default function LoginPage() {
 
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <Label htmlFor="password" className="text-slate-700 font-medium">Password</Label>
+            <Label htmlFor="password" className="text-foreground font-medium">Password</Label>
             <Link
               href="/forgot-password"
-              className="text-xs font-semibold text-blue-600 transition-colors hover:text-blue-700"
+              className="text-xs font-semibold text-violet-600 transition-colors hover:text-violet-700"
             >
               Forgot password?
             </Link>
@@ -99,7 +99,7 @@ export default function LoginPage() {
             id="password"
             type="password"
             placeholder="••••••••"
-            className="border-slate-200 bg-white text-slate-900 focus-visible:ring-blue-500"
+            className="border-border bg-white text-foreground focus-visible:ring-violet-500"
             {...register("password")}
             aria-invalid={!!errors.password}
           />
@@ -108,7 +108,7 @@ export default function LoginPage() {
           )}
         </div>
 
-        <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-md shadow-blue-500/20" disabled={isLoading}>
+        <Button type="submit" className="w-full bg-violet-600 hover:bg-violet-700 text-white font-semibold shadow-md shadow-violet-500/20" disabled={isLoading}>
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -120,11 +120,11 @@ export default function LoginPage() {
         </Button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-slate-600">
+      <p className="mt-6 text-center text-sm text-muted-foreground">
         Don&apos;t have an account?{" "}
         <Link
           href="/register"
-          className="font-semibold text-blue-600 transition-colors hover:text-blue-700"
+          className="font-semibold text-violet-600 transition-colors hover:text-violet-700"
         >
           Sign up
         </Link>

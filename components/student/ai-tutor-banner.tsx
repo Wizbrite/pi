@@ -20,10 +20,10 @@ export function AiTutorBanner({ onAsk }: AiTutorBannerProps) {
   };
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-blue-100 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 p-6 text-white shadow-md">
+    <div className="relative overflow-hidden rounded-2xl border border-violet-100 bg-gradient-to-r from-violet-600 via-violet-600 to-violet-700 p-6 text-white shadow-md">
       {/* Decorative ambient lighting */}
       <div className="pointer-events-none absolute -right-10 -top-10 h-44 w-44 rounded-full bg-white/10 blur-2xl" />
-      <div className="pointer-events-none absolute -bottom-10 right-1/3 h-32 w-32 rounded-full bg-indigo-400/20 blur-xl" />
+      <div className="pointer-events-none absolute -bottom-10 right-1/3 h-32 w-32 rounded-full bg-violet-400/20 blur-xl" />
 
       <div className="relative z-10 space-y-4">
         <div className="flex items-center gap-2.5">
@@ -33,12 +33,12 @@ export function AiTutorBanner({ onAsk }: AiTutorBannerProps) {
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-bold text-white">Ask your AI Tutor</h2>
-              <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2.5 py-0.5 text-[11px] font-semibold text-blue-100 backdrop-blur-sm">
-                <Sparkles className="h-3 w-3 text-amber-300" />
+              <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2.5 py-0.5 text-[11px] font-semibold text-violet-100 backdrop-blur-sm">
+                <Sparkles className="h-3 w-3 text-violet-300" />
                 24/7 Available
               </span>
             </div>
-            <p className="text-xs text-blue-100/90">
+            <p className="text-xs text-violet-100/90">
               Get instant step-by-step explanations for any GCE topic, question, or formula.
             </p>
           </div>
@@ -56,10 +56,10 @@ export function AiTutorBanner({ onAsk }: AiTutorBannerProps) {
           </div>
           <button
             type="submit"
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-blue-700 shadow-md transition-all hover:bg-blue-50 active:scale-[0.98]"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-violet-700 shadow-md transition-all hover:bg-violet-50 active:scale-[0.98]"
           >
             Ask AI
-            <Sparkles className="h-4 w-4 text-blue-600" />
+            <Sparkles className="h-4 w-4 text-violet-600" />
           </button>
         </form>
       </div>
@@ -72,11 +72,11 @@ export function AiTutorFab({ onClick }: { onClick?: () => void }) {
     <button
       onClick={onClick}
       aria-label="Open AI Assistant"
-      className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-xl shadow-blue-600/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl active:scale-95"
+      className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 rounded-full bg-gradient-to-r from-violet-600 to-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-xl shadow-violet-600/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl active:scale-95"
     >
       <div className="relative">
         <Bot className="h-5 w-5" />
-        <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-emerald-400 ring-2 ring-blue-600" />
+        <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-violet-400 ring-2 ring-violet-600" />
       </div>
       <span className="hidden sm:inline">Ask AI Tutor</span>
     </button>

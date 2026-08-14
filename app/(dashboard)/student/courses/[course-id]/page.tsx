@@ -119,7 +119,7 @@ export default function CourseTopicsPage({ params }: PageProps) {
                   <div className="group border border-border rounded-xl p-3.5 bg-background hover:border-primary/50 hover:bg-accent/40 active:scale-[0.98] active:bg-accent/60 transition-all cursor-pointer space-y-2">
                     <div className="flex justify-between items-start">
                       {lesson.completed ? (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <CheckCircle2 className="w-4 h-4 text-violet-600 shrink-0" />
                       ) : (
                         <BookOpen className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
                       )}

@@ -33,7 +33,7 @@ export function LeaderboardTable({ students, currentUserId, allStudents }: Leade
           <div className={`w-8 text-center font-black ${isMe ? "text-primary" : "text-muted-foreground"}`}>
             #{student.rank}
           </div>
-          <div className="w-10 h-10 rounded-full bg-slate-200 border-2 border-background flex items-center justify-center text-sm font-bold text-slate-500 shrink-0">
+          <div className="w-10 h-10 rounded-full bg-slate-200 border-2 border-background flex items-center justify-center text-sm font-bold text-muted-foreground shrink-0">
             {student.name.charAt(0)}
           </div>
           <div className="flex flex-col">
@@ -47,7 +47,7 @@ export function LeaderboardTable({ students, currentUserId, allStudents }: Leade
         </div>
 
         <div className={`flex items-center gap-1.5 font-black text-sm ${isMe ? "text-primary" : "text-foreground"}`}>
-          <Zap className={`w-4 h-4 ${isMe ? "fill-primary text-primary" : "fill-amber-500 text-amber-500"}`} />
+          <Zap className={`w-4 h-4 ${isMe ? "fill-primary text-primary" : "fill-primary/60 text-primary/60"}`} />
           {student.xp.toLocaleString()}
         </div>
       </div>

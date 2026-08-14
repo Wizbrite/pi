@@ -136,7 +136,7 @@ export function DashboardSidebar() {
           <div className="mb-3 rounded-xl bg-muted/50 p-3 border border-border">
             <p className="truncate text-sm font-semibold text-foreground">{user.name}</p>
             <p className="truncate text-xs text-muted-foreground">{user.email}</p>
-            <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-700">
+            <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-violet-700">
               <GraduationCap className="h-3 w-3" />
               {role}
             </span>

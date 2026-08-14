@@ -3,13 +3,13 @@ import { Logo } from "@/components/shared/logo";
 
 export function Footer() {
   return (
-    <footer className="border-t border-slate-200/80 bg-slate-50">
+    <footer className="border-t border-border bg-muted">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
           {/* Brand */}
           <div className="space-y-4">
             <Logo size="sm" />
-            <p className="max-w-xs text-sm leading-relaxed text-slate-600">
+            <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
               AI-powered adaptive learning for Cameroon GCE students. Study
               smarter, pass better.
             </p>
@@ -17,13 +17,13 @@ export function Footer() {
 
           {/* Quick Links */}
           <div>
-            <h4 className="mb-3 text-sm font-semibold text-slate-900">Platform</h4>
+            <h4 className="mb-3 text-sm font-semibold text-foreground">Platform</h4>
             <ul className="space-y-2">
               {["Features", "Pricing", "About"].map((item) => (
                 <li key={item}>
                   <Link
                     href={`#${item.toLowerCase()}`}
-                    className="text-sm text-slate-600 transition-colors hover:text-blue-600"
+                    className="text-sm text-muted-foreground transition-colors hover:text-violet-600"
                   >
                     {item}
                   </Link>
@@ -34,13 +34,13 @@ export function Footer() {
 
           {/* Resources */}
           <div>
-            <h4 className="mb-3 text-sm font-semibold text-slate-900">Resources</h4>
+            <h4 className="mb-3 text-sm font-semibold text-foreground">Resources</h4>
             <ul className="space-y-2">
               {["Blog", "Documentation", "Help Center"].map((item) => (
                 <li key={item}>
                   <Link
                     href="#"
-                    className="text-sm text-slate-600 transition-colors hover:text-blue-600"
+                    className="text-sm text-muted-foreground transition-colors hover:text-violet-600"
                   >
                     {item}
                   </Link>
@@ -51,13 +51,13 @@ export function Footer() {
 
           {/* Legal */}
           <div>
-            <h4 className="mb-3 text-sm font-semibold text-slate-900">Legal</h4>
+            <h4 className="mb-3 text-sm font-semibold text-foreground">Legal</h4>
             <ul className="space-y-2">
               {["Privacy Policy", "Terms of Service"].map((item) => (
                 <li key={item}>
                   <Link
                     href="#"
-                    className="text-sm text-slate-600 transition-colors hover:text-blue-600"
+                    className="text-sm text-muted-foreground transition-colors hover:text-violet-600"
                   >
                     {item}
                   </Link>
@@ -67,8 +67,8 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mt-10 border-t border-slate-200/80 pt-6 text-center">
-          <p className="text-xs text-slate-500">
+        <div className="mt-10 border-t border-border pt-6 text-center">
+          <p className="text-xs text-muted-foreground">
             &copy; {new Date().getFullYear()} Pi Learning. Built for Cameroon
             GCE students.
           </p>

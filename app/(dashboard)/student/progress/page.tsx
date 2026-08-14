@@ -14,7 +14,7 @@ export default function ProgressPage() {
         <Card className="bg-card border-border text-card-foreground shadow-xs">
           <CardHeader>
             <CardTitle className="text-lg text-foreground flex items-center gap-2">
-              <Award className="w-5 h-5 text-emerald-600" />
+              <Award className="w-5 h-5 text-violet-600" />
               Strongest Topics
             </CardTitle>
           </CardHeader>
@@ -33,7 +33,7 @@ export default function ProgressPage() {
         <Card className="bg-card border-border text-card-foreground shadow-xs">
           <CardHeader>
             <CardTitle className="text-lg text-foreground flex items-center gap-2">
-              <Target className="w-5 h-5 text-amber-600" />
+              <Target className="w-5 h-5 text-violet-600" />
               Topics Needing Revision
             </CardTitle>
           </CardHeader>

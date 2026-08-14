@@ -59,8 +59,8 @@ export default function StudentProfilePage() {
     avgScore: "84%",
     subscriptionStatus: "Free Plan",
     achievements: [
-      { id: 1, title: "7-Day Streak", desc: "Studied 7 days in a row", icon: Flame, color: "text-amber-500 bg-amber-500/10" },
-      { id: 2, title: "Quiz Master", desc: "Completed 25+ topic quizzes", icon: Trophy, color: "text-blue-500 bg-blue-500/10" },
+      { id: 1, title: "7-Day Streak", desc: "Studied 7 days in a row", icon: Flame, color: "text-violet-500 bg-violet-500/10" },
+      { id: 2, title: "Quiz Master", desc: "Completed 25+ topic quizzes", icon: Trophy, color: "text-violet-500 bg-violet-500/10" },
       { id: 3, title: "Physics Scholar", desc: "Scored 90%+ in Mechanics", icon: Award, color: "text-purple-500 bg-purple-500/10" },
     ],
   };
@@ -95,19 +95,19 @@ export default function StudentProfilePage() {
       </section>
 
       {/* 2. SUBSCRIPTION PLAN BANNER / CARD */}
-      <section className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-6 text-white shadow-md flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <section className="bg-gradient-to-r from-violet-600 to-violet-600 rounded-2xl p-6 text-white shadow-md flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <CreditCard className="w-5 h-5 text-amber-300" />
-            <span className="text-xs font-bold uppercase tracking-wider text-blue-100">Subscription Status</span>
+            <CreditCard className="w-5 h-5 text-violet-300" />
+            <span className="text-xs font-bold uppercase tracking-wider text-violet-100">Subscription Status</span>
           </div>
           <h2 className="text-xl font-extrabold">{studentData.subscriptionStatus}</h2>
-          <p className="text-xs text-blue-100 max-w-md">
+          <p className="text-xs text-violet-100 max-w-md">
             Upgrade to Pro to unlock unlimited GCE past paper solutions, full AI tutor access, and offline downloads.
           </p>
         </div>
         <Link href="/student/subscription">
-          <Button className="bg-amber-400 hover:bg-amber-500 text-slate-900 font-bold shadow-sm whitespace-nowrap gap-1.5">
+          <Button className="bg-violet-400 hover:bg-violet-500 text-foreground font-bold shadow-sm whitespace-nowrap gap-1.5">
             Upgrade Plan <ArrowRight className="w-4 h-4" />
           </Button>
         </Link>
@@ -130,8 +130,8 @@ export default function StudentProfilePage() {
             </div>
             <div className="p-3 bg-muted/50 rounded-xl border border-border text-center">
               <span className="text-xs text-muted-foreground block">Streak</span>
-              <span className="text-lg font-black text-amber-500 flex items-center justify-center gap-1 mt-0.5">
-                <Flame className="w-4 h-4 fill-amber-500" /> {studentData.streakDays}d
+              <span className="text-lg font-black text-violet-500 flex items-center justify-center gap-1 mt-0.5">
+                <Flame className="w-4 h-4 fill-violet-500" /> {studentData.streakDays}d
               </span>
             </div>
             <div className="p-3 bg-muted/50 rounded-xl border border-border text-center">
@@ -149,7 +149,7 @@ export default function StudentProfilePage() {
         <div className="md:col-span-2 bg-card border border-border rounded-2xl p-5 space-y-4">
           <div className="flex justify-between items-center">
             <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-              <Trophy className="w-4 h-4 text-amber-500" /> Recent Badges
+              <Trophy className="w-4 h-4 text-violet-500" /> Recent Badges
             </h3>
             <span className="text-xs text-primary font-semibold hover:underline cursor-pointer">View All</span>
           </div>
@@ -232,10 +232,10 @@ export default function StudentProfilePage() {
             href="https://facebook.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-between p-3 border border-border rounded-xl hover:bg-blue-500/10 hover:border-blue-500/30 transition text-xs font-semibold text-foreground"
+            className="flex items-center justify-between p-3 border border-border rounded-xl hover:bg-violet-500/10 hover:border-violet-500/30 transition text-xs font-semibold text-foreground"
           >
             <span className="flex items-center gap-2">
-              <FaFacebook className="w-4 h-4 text-blue-600" /> Facebook Page
+              <FaFacebook className="w-4 h-4 text-violet-600" /> Facebook Page
             </span>
             <ExternalLink className="w-3.5 h-3.5 text-muted-foreground" />
           </a>
@@ -244,10 +244,10 @@ export default function StudentProfilePage() {
             href="https://twitter.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-between p-3 border border-border rounded-xl hover:bg-sky-500/10 hover:border-sky-500/30 transition text-xs font-semibold text-foreground"
+            className="flex items-center justify-between p-3 border border-border rounded-xl hover:bg-violet-500/10 hover:border-violet-500/30 transition text-xs font-semibold text-foreground"
           >
             <span className="flex items-center gap-2">
-              <FaTwitter className="w-4 h-4 text-sky-500" /> X / Twitter
+              <FaTwitter className="w-4 h-4 text-violet-500" /> X / Twitter
             </span>
             <ExternalLink className="w-3.5 h-3.5 text-muted-foreground" />
           </a>

@@ -65,7 +65,7 @@ function ResetPasswordForm() {
         </p>
         <Link
           href="/forgot-password"
-          className="mt-4 inline-block text-sm font-medium text-emerald-400 transition-colors hover:text-emerald-300"
+          className="mt-4 inline-block text-sm font-medium text-violet-400 transition-colors hover:text-violet-300"
         >
           Request a new link
         </Link>
@@ -76,8 +76,8 @@ function ResetPasswordForm() {
   if (isReset) {
     return (
       <div className="text-center">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/10">
-          <CheckCircle2 className="h-6 w-6 text-emerald-400" />
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-violet-500/10">
+          <CheckCircle2 className="h-6 w-6 text-violet-400" />
         </div>
         <h1 className="text-xl font-bold text-white">Password reset!</h1>
         <p className="mt-2 text-sm text-slate-400">
@@ -156,7 +156,7 @@ export default function ResetPasswordPage() {
     <Suspense
       fallback={
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-emerald-400" />
+          <Loader2 className="h-6 w-6 animate-spin text-violet-400" />
         </div>
       }
     >

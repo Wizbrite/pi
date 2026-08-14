@@ -333,7 +333,7 @@ export default function ExamRoomPage({
                   onClick={() => toggleBookmark(currentQ.id)}
                   className={`text-xs gap-1 h-8 px-2 sm:px-3 ${
                     bookmarkedQuestions.includes(currentQ.id)
-                      ? "text-amber-500 bg-amber-500/10"
+                      ? "text-violet-500 bg-violet-500/10"
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
@@ -438,7 +438,7 @@ export default function ExamRoomPage({
                   >
                     {idx + 1}
                     {isFlagged && (
-                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-500 ring-2 ring-card" />
+                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-violet-500 ring-2 ring-card" />
                     )}
                   </button>
                 );
@@ -453,7 +453,7 @@ export default function ExamRoomPage({
                 <span className="w-2.5 h-2.5 rounded-full bg-muted border border-border" /> Answered
               </span>
               <span className="flex items-center gap-1">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-500" /> Flagged
+                <span className="w-2.5 h-2.5 rounded-full bg-violet-500" /> Flagged
               </span>
             </div>
           </div>

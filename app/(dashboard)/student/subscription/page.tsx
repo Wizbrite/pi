@@ -206,7 +206,7 @@ export default function SubscriptionPage() {
               <ul className="space-y-2.5 pt-2">
                 {plan.features.map((feature, idx) => (
                   <li key={idx} className="flex items-start gap-2.5 text-xs text-foreground/90">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                    <CheckCircle2 className="w-4 h-4 text-violet-500 shrink-0 mt-0.5" />
                     <span>{feature}</span>
                   </li>
                 ))}
@@ -233,7 +233,7 @@ export default function SubscriptionPage() {
       {/* TRUST FOOTER */}
       <div className="max-w-4xl mx-auto bg-muted/40 border border-border rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
         <div className="flex items-center gap-3">
-          <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+          <div className="p-3 rounded-xl bg-violet-500/10 text-violet-600 dark:text-violet-400">
             <ShieldCheck className="w-6 h-6" />
           </div>
           <div>
@@ -327,7 +327,7 @@ export default function SubscriptionPage() {
                     <span className="font-bold text-muted-foreground uppercase text-[10px]">Includes:</span>
                     {selectedPlan.features.slice(0, 3).map((f, i) => (
                       <div key={i} className="flex items-center gap-2 text-foreground/90">
-                        <Check className="w-3.5 h-3.5 text-emerald-500" />
+                        <Check className="w-3.5 h-3.5 text-violet-500" />
                         <span>{f}</span>
                       </div>
                     ))}
@@ -348,11 +348,11 @@ export default function SubscriptionPage() {
                       onClick={() => setPaymentMethod("mtn_momo")}
                       className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-1 text-center transition ${
                         paymentMethod === "mtn_momo"
-                          ? "border-amber-500 bg-amber-500/10 font-bold text-foreground"
+                          ? "border-violet-500 bg-violet-500/10 font-bold text-foreground"
                           : "border-border text-muted-foreground hover:bg-muted"
                       }`}
                     >
-                      <Smartphone className="w-5 h-5 text-amber-500" />
+                      <Smartphone className="w-5 h-5 text-violet-500" />
                       <span className="text-[10px]">MTN MoMo</span>
                     </button>
 
@@ -472,7 +472,7 @@ export default function SubscriptionPage() {
               {/* STEP 4: SUCCESS CONFIRMATION */}
               {step === 4 && (
                 <div className="py-4 text-center space-y-4">
-                  <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 mx-auto flex items-center justify-center">
+                  <div className="w-14 h-14 rounded-2xl bg-violet-500/10 border border-violet-500/20 text-violet-500 mx-auto flex items-center justify-center">
                     <CheckCircle2 className="w-8 h-8" />
                   </div>
                   <div>
@@ -495,7 +495,7 @@ export default function SubscriptionPage() {
 
                   <Button
                     onClick={() => setIsModalOpen(false)}
-                    className="w-full font-bold text-xs h-10 bg-emerald-600 hover:bg-emerald-700 text-white"
+                    className="w-full font-bold text-xs h-10 bg-violet-600 hover:bg-violet-700 text-white"
                   >
                     Start Studying Now
                   </Button>

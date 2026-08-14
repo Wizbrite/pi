@@ -158,7 +158,7 @@ export default function MockExamsPage() {
                       className={
                         subject.level === "A-Level"
                           ? "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20"
-                          : "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
+                          : "bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20"
                       }
                     >
                       {subject.level}

@@ -250,12 +250,12 @@ export function TopicQuizModal({
           ) : (
             /* Gamified Post-Quiz Victory View */
             <div className="text-center py-6 space-y-4">
-              <div className="w-16 h-16 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-500 flex items-center justify-center mx-auto shadow-inner">
+              <div className="w-16 h-16 rounded-full bg-violet-500/10 border border-violet-500/30 text-violet-500 flex items-center justify-center mx-auto shadow-inner">
                 <Trophy className="w-8 h-8" />
               </div>
               
               <div className="space-y-1">
-                <Badge className="bg-amber-500 text-black font-bold uppercase tracking-wider text-[10px]">
+                <Badge className="bg-violet-500 text-black font-bold uppercase tracking-wider text-[10px]">
                   Mastery Quiz Completed
                 </Badge>
                 <h4 className="text-2xl font-black text-foreground">+{totalEarnedXp} XP</h4>
@@ -267,7 +267,7 @@ export function TopicQuizModal({
               {/* Progress Indicator */}
               <div className="w-full bg-muted rounded-full h-2 overflow-hidden max-w-xs mx-auto">
                 <div
-                  className="bg-amber-500 h-full rounded-full transition-all duration-700"
+                  className="bg-violet-500 h-full rounded-full transition-all duration-700"
                   style={{ width: `${(score / MOCK_QUESTIONS.length) * 100}%` }}
                 />
               </div>

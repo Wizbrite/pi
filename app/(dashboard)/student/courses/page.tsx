@@ -106,7 +106,7 @@ export default function StudentCoursesPage() {
           <Button 
             variant="outline" 
             onClick={() => setSimulateError(!simulateError)}
-            className="text-amber-600 border-amber-200 hover:bg-amber-50"
+            className="text-violet-600 border-violet-200 hover:bg-violet-50"
           >
             Toggle Error State
           </Button>
@@ -135,8 +135,8 @@ export default function StudentCoursesPage() {
           </Button>
         </div>
       ) : filteredSubjects.length === 0 ? (
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-12 flex flex-col items-center text-center space-y-4">
-          <p className="text-sm font-medium text-slate-600">No subjects found for this level.</p>
+        <div className="rounded-xl border border-border bg-muted p-12 flex flex-col items-center text-center space-y-4">
+          <p className="text-sm font-medium text-muted-foreground">No subjects found for this level.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

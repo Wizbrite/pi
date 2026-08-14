@@ -20,10 +20,10 @@ export default function DashboardLayout({
 
   if (isLoading) {
     return (
-      <div className="flex min-h-[100dvh] items-center justify-center bg-slate-50">
+      <div className="flex min-h-[100dvh] items-center justify-center bg-muted">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-          <p className="text-sm text-slate-500">Loading dashboard…</p>
+          <Loader2 className="h-8 w-8 animate-spin text-violet-600" />
+          <p className="text-sm text-muted-foreground">Loading dashboard…</p>
         </div>
       </div>
     );

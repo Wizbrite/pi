@@ -79,20 +79,20 @@ export default function RegisterPage() {
   return (
     <div>
       <div className="mb-6 text-center">
-        <h1 className="text-2xl font-bold text-slate-900">Create your account</h1>
-        <p className="mt-1 text-sm text-slate-600">
+        <h1 className="text-2xl font-bold text-foreground">Create your account</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           Start your GCE prep journey today
         </p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="name" className="text-slate-700 font-medium">Full Name</Label>
+          <Label htmlFor="name" className="text-foreground font-medium">Full Name</Label>
           <Input
             id="name"
             type="text"
             placeholder="Ngwa Blessing"
-            className="border-slate-200 bg-white text-slate-900 focus-visible:ring-blue-500"
+            className="border-border bg-white text-foreground focus-visible:ring-violet-500"
             {...register("name")}
             aria-invalid={!!errors.name}
           />
@@ -102,12 +102,12 @@ export default function RegisterPage() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="email" className="text-slate-700 font-medium">Email</Label>
+          <Label htmlFor="email" className="text-foreground font-medium">Email</Label>
           <Input
             id="email"
             type="email"
             placeholder="you@example.com"
-            className="border-slate-200 bg-white text-slate-900 focus-visible:ring-blue-500"
+            className="border-border bg-white text-foreground focus-visible:ring-violet-500"
             {...register("email")}
             aria-invalid={!!errors.email}
           />
@@ -117,12 +117,12 @@ export default function RegisterPage() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="password" className="text-slate-700 font-medium">Password</Label>
+          <Label htmlFor="password" className="text-foreground font-medium">Password</Label>
           <Input
             id="password"
             type="password"
             placeholder="Minimum 8 characters"
-            className="border-slate-200 bg-white text-slate-900 focus-visible:ring-blue-500"
+            className="border-border bg-white text-foreground focus-visible:ring-violet-500"
             {...register("password")}
             aria-invalid={!!errors.password}
           />
@@ -132,7 +132,7 @@ export default function RegisterPage() {
         </div>
 
         <div className="space-y-2">
-          <Label className="text-slate-700 font-medium">I am a…</Label>
+          <Label className="text-foreground font-medium">I am a…</Label>
           <Select
             defaultValue="student"
             onValueChange={(value) =>
@@ -141,7 +141,7 @@ export default function RegisterPage() {
               })
             }
           >
-            <SelectTrigger id="role" className="border-slate-200 bg-white text-slate-900">
+            <SelectTrigger id="role" className="border-border bg-white text-foreground">
               <SelectValue placeholder="Select your role" />
             </SelectTrigger>
             <SelectContent>
@@ -157,7 +157,7 @@ export default function RegisterPage() {
 
         {selectedRole === "student" && (
           <div className="space-y-2">
-            <Label className="text-slate-700 font-medium">GCE Level</Label>
+            <Label className="text-foreground font-medium">GCE Level</Label>
             <Select
               onValueChange={(value) =>
                 setValue("gceLevel", value as "Ordinary" | "Advanced", {
@@ -165,7 +165,7 @@ export default function RegisterPage() {
                 })
               }
             >
-              <SelectTrigger id="gceLevel" className="border-slate-200 bg-white text-slate-900">
+              <SelectTrigger id="gceLevel" className="border-border bg-white text-foreground">
                 <SelectValue placeholder="Select your GCE level" />
               </SelectTrigger>
               <SelectContent>
@@ -180,15 +180,15 @@ export default function RegisterPage() {
         )}
 
         {selectedRole === "teacher" && (
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-3.5">
-            <p className="text-xs text-amber-800 font-medium">
+          <div className="rounded-xl border border-violet-200 bg-violet-50 p-3.5">
+            <p className="text-xs text-violet-800 font-medium">
               <strong>Note:</strong> Teacher accounts require admin approval
               before full access is granted.
             </p>
           </div>
         )}
 
-        <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-md shadow-blue-500/20" disabled={isLoading}>
+        <Button type="submit" className="w-full bg-violet-600 hover:bg-violet-700 text-white font-semibold shadow-md shadow-violet-500/20" disabled={isLoading}>
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -200,11 +200,11 @@ export default function RegisterPage() {
         </Button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-slate-600">
+      <p className="mt-6 text-center text-sm text-muted-foreground">
         Already have an account?{" "}
         <Link
           href="/login"
-          className="font-semibold text-blue-600 transition-colors hover:text-blue-700"
+          className="font-semibold text-violet-600 transition-colors hover:text-violet-700"
         >
           Log in
         </Link>

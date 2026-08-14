@@ -234,7 +234,7 @@ export default function SubjectExamPapersPage({
         <div className="bg-card border border-border rounded-2xl p-6 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="space-y-1.5">
             <div className="flex items-center gap-2">
-              <Badge className={subject.level === "A-Level" ? "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20" : "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"}>
+              <Badge className={subject.level === "A-Level" ? "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20" : "bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20"}>
                 {subject.level}
               </Badge>
               <Badge variant="outline" className="text-xs">
@@ -317,8 +317,8 @@ export default function SubjectExamPapersPage({
                   <Badge
                     className={
                       paper.type === "MCQ"
-                        ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
-                        : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                        ? "bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20"
+                        : "bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20"
                     }
                   >
                     {paper.type}

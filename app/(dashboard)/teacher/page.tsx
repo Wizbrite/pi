@@ -15,13 +15,13 @@ const statCards = [
     label: "My Classes",
     value: "0",
     icon: Users,
-    gradient: "from-emerald-500 to-teal-600",
+    gradient: "from-violet-500 to-teal-600",
   },
   {
     label: "Questions Created",
     value: "0",
     icon: FileText,
-    gradient: "from-amber-500 to-orange-600",
+    gradient: "from-violet-500 to-orange-600",
   },
   {
     label: "Students Tracked",
@@ -33,7 +33,7 @@ const statCards = [
     label: "Resources Shared",
     value: "0",
     icon: BookOpen,
-    gradient: "from-cyan-500 to-blue-600",
+    gradient: "from-violet-500 to-violet-600",
   },
 ];
 
@@ -45,23 +45,23 @@ export default function TeacherDashboard() {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
+        <h1 className="text-2xl font-bold text-foreground sm:text-3xl">
           Welcome, {user?.name?.split(" ")[0] || "Teacher"}
         </h1>
-        <p className="mt-1 text-sm text-slate-600">
+        <p className="mt-1 text-sm text-muted-foreground">
           Manage your classes and track student performance
         </p>
       </div>
 
       {/* Pending Approval Banner */}
       {isPending && (
-        <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-900">
-          <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+        <div className="flex items-start gap-3 rounded-2xl border border-violet-200 bg-violet-50 p-5 text-violet-900">
+          <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-violet-600" />
           <div>
-            <h3 className="font-semibold text-amber-900">
+            <h3 className="font-semibold text-violet-900">
               Account Pending Approval
             </h3>
-            <p className="mt-1 text-sm text-amber-700">
+            <p className="mt-1 text-sm text-violet-700">
               Your teacher account is awaiting admin verification. You&apos;ll
               have full access once approved. In the meantime, you can explore
               the dashboard.
@@ -77,14 +77,14 @@ export default function TeacherDashboard() {
           return (
             <div
               key={card.label}
-              className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all duration-300 hover:border-blue-300 hover:shadow-md"
+              className="rounded-2xl border border-border bg-white p-5 shadow-xs transition-all duration-300 hover:border-violet-300 hover:shadow-md"
             >
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs font-medium text-slate-500">
+                  <p className="text-xs font-medium text-muted-foreground">
                     {card.label}
                   </p>
-                  <p className="mt-1 text-2xl font-bold text-slate-900">
+                  <p className="mt-1 text-2xl font-bold text-foreground">
                     {card.value}
                   </p>
                 </div>
@@ -100,11 +100,11 @@ export default function TeacherDashboard() {
       </div>
 
       {/* Recent Activity */}
-      <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs">
-        <h2 className="text-lg font-semibold text-slate-900">Recent Activity</h2>
+      <div className="rounded-2xl border border-border bg-white p-6 shadow-xs">
+        <h2 className="text-lg font-semibold text-foreground">Recent Activity</h2>
         <div className="mt-6 flex flex-col items-center justify-center py-8 text-center">
           <Clock className="h-10 w-10 text-slate-300" />
-          <p className="mt-3 text-sm text-slate-500">
+          <p className="mt-3 text-sm text-muted-foreground">
             No activity yet. Create your first class to get started.
           </p>
         </div>

@@ -73,7 +73,7 @@ export function MistakeReviewModal({
         {/* Modal Header */}
         <div className="p-4 border-b border-border flex items-center justify-between gap-4 bg-muted/30">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-violet-500/10 text-violet-500 flex items-center justify-center">
               <RotateCcw className="w-4 h-4" />
             </div>
             <div>
@@ -105,7 +105,7 @@ export function MistakeReviewModal({
         {/* Modal Body */}
         <div className="p-6 overflow-y-auto space-y-6 flex-1">
           <div className="space-y-2">
-            <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+            <span className="text-xs font-semibold text-violet-600 dark:text-violet-400 uppercase tracking-wider">
               Retry Missed Question
             </span>
             <h3 className="text-base sm:text-lg font-bold text-foreground leading-relaxed">

@@ -17,7 +17,7 @@ export function Navbar() {
   const { isAuthenticated } = useAuthStore();
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-slate-200/80 bg-white/90 backdrop-blur-md">
+    <header className="sticky top-0 z-50 w-full border-b border-border bg-card/90 backdrop-blur-md">
       <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Logo size="sm" />
 
@@ -27,7 +27,7 @@ export function Navbar() {
             <a
               key={link.label}
               href={link.href}
-              className="text-sm font-medium text-slate-600 transition-colors hover:text-blue-600"
+              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
             >
               {link.label}
             </a>
@@ -39,7 +39,7 @@ export function Navbar() {
           {isAuthenticated ? (
             <Link
               href="/student"
-              className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow-md shadow-blue-500/20 transition-all hover:bg-blue-700 hover:shadow-blue-500/30"
+              className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground shadow-md shadow-primary/20 transition-all hover:bg-primary/90 hover:shadow-primary/30"
             >
               Dashboard
             </Link>
@@ -47,13 +47,13 @@ export function Navbar() {
             <>
               <Link
                 href="/login"
-                className="rounded-lg px-5 py-2 text-sm font-semibold text-slate-700 transition-colors hover:text-blue-600"
+                className="rounded-lg px-5 py-2 text-sm font-semibold text-foreground transition-colors hover:text-primary"
               >
                 Log In
               </Link>
               <Link
                 href="/register"
-                className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow-md shadow-blue-500/20 transition-all hover:bg-blue-700 hover:shadow-blue-500/30"
+                className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground shadow-md shadow-primary/20 transition-all hover:bg-primary/90 hover:shadow-primary/30"
               >
                 Get Started
               </Link>
@@ -63,7 +63,7 @@ export function Navbar() {
 
         {/* Mobile Hamburger */}
         <button
-          className="flex items-center justify-center rounded-lg p-2 text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 md:hidden"
+          className="flex items-center justify-center rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground md:hidden"
           onClick={() => setMobileOpen(!mobileOpen)}
           aria-label="Toggle menu"
         >
@@ -73,30 +73,30 @@ export function Navbar() {
 
       {/* Mobile Menu */}
       {mobileOpen && (
-        <div className="border-t border-slate-200 bg-white/95 backdrop-blur-md md:hidden">
+        <div className="border-t border-border bg-card/95 backdrop-blur-md md:hidden">
           <div className="space-y-1 px-4 py-4">
             {navLinks.map((link) => (
               <a
                 key={link.label}
                 href={link.href}
                 onClick={() => setMobileOpen(false)}
-                className="block rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-blue-50 hover:text-blue-600"
+                className="block rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-primary/5 hover:text-primary"
               >
                 {link.label}
               </a>
             ))}
-            <div className="mt-4 flex flex-col gap-2 border-t border-slate-100 pt-4">
+            <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4">
               <Link
                 href="/login"
                 onClick={() => setMobileOpen(false)}
-                className="rounded-lg px-3 py-2.5 text-center text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100"
+                className="rounded-lg px-3 py-2.5 text-center text-sm font-semibold text-foreground transition-colors hover:bg-muted"
               >
                 Log In
               </Link>
               <Link
                 href="/register"
                 onClick={() => setMobileOpen(false)}
-                className="rounded-lg bg-blue-600 px-3 py-2.5 text-center text-sm font-semibold text-white shadow-md shadow-blue-500/20 transition-all hover:bg-blue-700"
+                className="rounded-lg bg-primary px-3 py-2.5 text-center text-sm font-semibold text-primary-foreground shadow-md shadow-primary/20 transition-all hover:bg-primary/90"
               >
                 Get Started
               </Link>
