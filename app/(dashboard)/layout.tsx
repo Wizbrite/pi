@@ -34,7 +34,7 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-slate-50/50 text-slate-900 md:flex-row md:h-screen">
+    <div className="flex min-h-[100dvh] flex-col bg-background text-foreground md:flex-row md:h-screen">
       {/* Mobile Sticky App Header Bar */}
       <MobileTopHeader />
 

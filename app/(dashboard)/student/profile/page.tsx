@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useTheme } from "@/components/theme-provider";
 import { FaFacebook, FaTwitter, FaWhatsapp} from "react-icons/fa";
 import {
   User,
@@ -37,7 +38,14 @@ export default function StudentProfilePage() {
   const { user } = useAuthStore();
 
   // State for theme & notifications
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  
+  const isDarkMode = theme === "dark";
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
   // Mock student stats & achievements
@@ -181,7 +189,9 @@ export default function StudentProfilePage() {
                 <p className="text-xs text-muted-foreground">Adjust the interface visual theme</p>
               </div>
             </div>
-            <Switch checked={isDarkMode} onCheckedChange={setIsDarkMode} />
+            {mounted && (
+              <Switch checked={isDarkMode} onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")} />
+            )}
           </div>
 
           {/* Notifications Toggle */}
