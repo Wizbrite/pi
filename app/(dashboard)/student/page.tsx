@@ -17,8 +17,21 @@ import { AiTutorBanner, AiTutorFab } from "@/components/student/ai-tutor-banner"
 import { RecommendedNextSteps } from "@/components/student/recommended-next-steps";
 
 export default function StudentDashboard() {
-  const { user } = useAuthStore();
-
+  const { user, setUser } = useAuthStore();
+  const handleLevelChange = (level: "Ordinary" | "Advanced") => {
+    if (user) {
+      setUser({ ...user, gceLevel: level });
+    } else {
+      setUser({
+        id: "mock-1",
+        name: "Student",
+        email: "student@example.com",
+        role: "student",
+        gceLevel: level,
+        createdAt: new Date().toISOString()
+      });
+    }
+  };
   // Mock data state - easily connected to backend
   const subjectsCount = 0;
   const mockExamsCount = 0;
@@ -35,22 +48,47 @@ export default function StudentDashboard() {
 
   return (
     <div className="space-y-8 pb-12">
-      {/* Header with Countdown Pill */}
+      {/* Header with Countdown Pill and Level Switcher */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
             Welcome back, {user?.name?.split(" ")[0] || "Student"}
           </h1>
           <p className="mt-1 text-sm text-slate-600">
-            {user?.gceLevel === "Advanced" ? "A Level" : "O Level"} •{" "}
             Here&apos;s your learning overview
           </p>
         </div>
 
-        {/* GCE Countdown Banner Pill */}
-        <div className="inline-flex items-center gap-2 self-start rounded-full border border-blue-200/80 bg-blue-50/80 px-4 py-2 text-xs font-semibold text-blue-700 shadow-xs backdrop-blur-xs sm:self-auto">
-          <Calendar className="h-4 w-4 text-blue-600" />
-          <span><strong className="font-extrabold text-blue-800">{daysUntilGce} Days</strong> until GCE Exams</span>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          {/* Level Switcher */}
+          <div className="inline-flex items-center rounded-full bg-slate-100 p-1">
+            <button
+              onClick={() => handleLevelChange("Ordinary")}
+              className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all ${
+                user?.gceLevel !== "Advanced"
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              O-Level
+            </button>
+            <button
+              onClick={() => handleLevelChange("Advanced")}
+              className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all ${
+                user?.gceLevel === "Advanced"
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              A-Level
+            </button>
+          </div>
+
+          {/* GCE Countdown Banner Pill */}
+          <div className="inline-flex items-center gap-2 rounded-full border border-blue-200/80 bg-blue-50/80 px-4 py-2 text-xs font-semibold text-blue-700 shadow-xs backdrop-blur-xs">
+            <Calendar className="h-4 w-4 text-blue-600" />
+            <span><strong className="font-extrabold text-blue-800">{daysUntilGce} Days</strong> until GCE Exams</span>
+          </div>
         </div>
       </div>
 

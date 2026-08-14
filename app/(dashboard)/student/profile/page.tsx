@@ -44,7 +44,7 @@ export default function StudentProfilePage() {
   const studentData = {
     name: user?.name || "Student Name",
     email: user?.email || "student@example.com",
-    level: "Advanced Level (A-Level)",
+    level: user?.gceLevel === "Advanced" ? "Advanced Level (A-Level)" : "Ordinary Level (O-Level)",
     xp: 1250,
     streakDays: 5,
     quizzesCompleted: 42,

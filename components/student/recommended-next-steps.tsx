@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, BookOpen, Calculator, Zap, Clock } from "lucide-react";
+import { ArrowRight, Clock } from "lucide-react";
+import { useAuthStore } from "@/stores/auth-store";
+import { useMemo } from "react";
 
 interface RecommendedModule {
   id: string;
@@ -10,12 +12,13 @@ interface RecommendedModule {
   paper: string;
   duration: string;
   questionCount: number;
-  level: string;
+  level: "A Level" | "O Level";
   href: string;
   badgeColor: string;
 }
 
 const recommendedModules: RecommendedModule[] = [
+  // A-Level Modules
   {
     id: "1",
     title: "Algebra & Polynomial Functions Practice",
@@ -38,16 +41,46 @@ const recommendedModules: RecommendedModule[] = [
     href: "/student/exams?subject=physics&topic=mechanics",
     badgeColor: "bg-indigo-50 text-indigo-700 border-indigo-200/60",
   },
+  // O-Level Modules
+  {
+    id: "3",
+    title: "Trigonometry Basics",
+    subject: "Mathematics",
+    paper: "Paper 1",
+    duration: "15 mins",
+    questionCount: 10,
+    level: "O Level",
+    href: "/student/exams?subject=maths&topic=trigonometry",
+    badgeColor: "bg-emerald-50 text-emerald-700 border-emerald-200/60",
+  },
+  {
+    id: "4",
+    title: "Forces and Motion Quiz",
+    subject: "Physics",
+    paper: "Paper 2",
+    duration: "20 mins",
+    questionCount: 15,
+    level: "O Level",
+    href: "/student/exams?subject=physics&topic=forces",
+    badgeColor: "bg-amber-50 text-amber-700 border-amber-200/60",
+  }
 ];
 
 export function RecommendedNextSteps() {
+  const { user } = useAuthStore();
+  const currentLevel = user?.gceLevel === "Advanced" ? "A Level" : "O Level";
+
+  const filteredModules = useMemo(() => {
+    return recommendedModules.filter((module) => module.level === currentLevel);
+  }, [currentLevel]);
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-base font-bold text-slate-900">Recommended for You</h3>
           <p className="text-xs text-slate-500">
-            Handpicked practice modules based on your curriculum
+            Handpicked practice modules based on your {currentLevel} curriculum
           </p>
         </div>
         <Link
@@ -60,7 +93,7 @@ export function RecommendedNextSteps() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        {recommendedModules.map((module) => (
+        {filteredModules.map((module) => (
           <div
             key={module.id}
             className="group flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all duration-300 hover:border-blue-300 hover:shadow-md"

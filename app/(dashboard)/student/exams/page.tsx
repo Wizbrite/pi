@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useAuthStore } from "@/stores/auth-store";
 
 // 1. Mock Data for 10 Subjects
 interface ExamSubject {
@@ -42,8 +43,10 @@ const MOCK_EXAM_SUBJECTS: ExamSubject[] = [
 ];
 
 export default function MockExamsPage() {
+  const { user } = useAuthStore();
+  const currentLevel = user?.gceLevel === "Advanced" ? "A-Level" : "O-Level";
+
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedLevel, setSelectedLevel] = useState<"All" | "O-Level" | "A-Level">("All");
   const [selectedCategory, setSelectedCategory] = useState<"All" | "Science" | "Arts">("All");
 
   // 2. Filter & Search Logic
@@ -55,14 +58,14 @@ export default function MockExamsPage() {
         subject.code.toLowerCase().includes(searchQuery.toLowerCase());
 
       // Level filter match
-      const matchesLevel = selectedLevel === "All" || subject.level === selectedLevel;
+      const matchesLevel = subject.level === currentLevel;
 
       // Category filter match
       const matchesCategory = selectedCategory === "All" || subject.category === selectedCategory;
 
       return matchesSearch && matchesLevel && matchesCategory;
     });
-  }, [searchQuery, selectedLevel, selectedCategory]);
+  }, [searchQuery, currentLevel, selectedCategory]);
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-12">
@@ -100,26 +103,6 @@ export default function MockExamsPage() {
         {/* Filter Badges & Options */}
         <div className="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-border">
           
-          {/* Level Filter (O-Level vs A-Level) */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs font-semibold text-muted-foreground mr-1 flex items-center gap-1">
-              <GraduationCap className="w-3.5 h-3.5" /> Level:
-            </span>
-            {(["All", "O-Level", "A-Level"] as const).map((lvl) => (
-              <button
-                key={lvl}
-                onClick={() => setSelectedLevel(lvl)}
-                className={`px-3 py-1 rounded-full text-xs font-semibold transition ${
-                  selectedLevel === lvl
-                    ? "bg-primary text-primary-foreground shadow-xs"
-                    : "bg-muted/60 text-muted-foreground hover:bg-muted"
-                }`}
-              >
-                {lvl}
-              </button>
-            ))}
-          </div>
-
           {/* Field Category Filter (Science vs Arts) */}
           <div className="flex items-center gap-1.5">
             <span className="text-xs font-semibold text-muted-foreground mr-1 flex items-center gap-1">
@@ -146,10 +129,9 @@ export default function MockExamsPage() {
       {/* RESULTS COUNT SUMMARY */}
       <div className="flex justify-between items-center text-xs text-muted-foreground px-1">
         <span>Showing <strong className="text-foreground">{filteredSubjects.length}</strong> subjects</span>
-        {(selectedLevel !== "All" || selectedCategory !== "All" || searchQuery) && (
+        {(selectedCategory !== "All" || searchQuery) && (
           <button
             onClick={() => {
-              setSelectedLevel("All");
               setSelectedCategory("All");
               setSearchQuery("");
             }}
@@ -242,7 +224,6 @@ export default function MockExamsPage() {
             variant="outline"
             size="sm"
             onClick={() => {
-              setSelectedLevel("All");
               setSelectedCategory("All");
               setSearchQuery("");
             }}
