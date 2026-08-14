@@ -1,0 +1,123 @@
+.
+├── app
+│   ├── api
+│   │   └── auth
+│   │       ├── forgot-password
+│   │       │   └── route.ts
+│   │       ├── login
+│   │       │   └── route.ts
+│   │       ├── logout
+│   │       │   └── route.ts
+│   │       ├── me
+│   │       │   └── route.ts
+│   │       ├── register
+│   │       │   └── route.ts
+│   │       └── reset-password
+│   │           └── route.ts
+│   ├── (auth)
+│   │   ├── forgot-password
+│   │   │   └── page.tsx
+│   │   ├── login
+│   │   │   └── page.tsx
+│   │   ├── register
+│   │   │   └── page.tsx
+│   │   ├── reset-password
+│   │   │   └── page.tsx
+│   │   └── layout.tsx
+│   ├── (dashboard)
+│   │   ├── admin
+│   │   │   └── page.tsx
+│   │   ├── parent
+│   │   │   └── page.tsx
+│   │   ├── student
+│   │   │   ├── courses
+│   │   │   │   ├── [course-id]
+│   │   │   │   │   ├── lessons
+│   │   │   │   │   │   └── [lesson-id]
+│   │   │   │   │   │       └── page.tsx
+│   │   │   │   │   └── page.tsx
+│   │   │   │   └── page.tsx
+│   │   │   ├── exams
+│   │   │   │   ├── [subject-id]
+│   │   │   │   │   ├── results
+│   │   │   │   │   │   └── [attempt-id]
+│   │   │   │   │   │       └── page.tsx
+│   │   │   │   │   ├── room
+│   │   │   │   │   │   └── [paper-id]
+│   │   │   │   │   │       └── page.tsx
+│   │   │   │   │   └── page.tsx
+│   │   │   │   └── page.tsx
+│   │   │   ├── profile
+│   │   │   │   └── page.tsx
+│   │   │   ├── progress
+│   │   │   │   └── page.tsx
+│   │   │   ├── subscription
+│   │   │   │   └── page.tsx
+│   │   │   └── page.tsx
+│   │   ├── teacher
+│   │   │   └── page.tsx
+│   │   └── layout.tsx
+│   ├── favicon.ico
+│   ├── globals.css
+│   ├── layout.tsx
+│   └── page.tsx
+├── components
+│   ├── exams
+│   │   └── mistake-review-modal.tsx
+│   ├── layout
+│   │   ├── dashboard-sidebar.tsx
+│   │   ├── footer.tsx
+│   │   ├── mobile-nav.tsx
+│   │   └── navbar.tsx
+│   ├── shared
+│   │   └── logo.tsx
+│   ├── student
+│   │   ├── ai-tutor-banner.tsx
+│   │   ├── header-stat.tsx
+│   │   ├── recommended-next-steps.tsx
+│   │   └── topic-quiz-modal.tsx
+│   ├── ui
+│   │   ├── badge.tsx
+│   │   ├── button.tsx
+│   │   ├── card.tsx
+│   │   ├── input.tsx
+│   │   ├── label.tsx
+│   │   ├── select.tsx
+│   │   ├── sonner.tsx
+│   │   └── switch.tsx
+│   └── theme-provider.tsx
+├── lib
+│   ├── config
+│   │   └── env.ts
+│   ├── db
+│   │   └── mongodb.ts
+│   ├── cloudinary.ts
+│   ├── mistral.ts
+│   ├── mock-data.ts
+│   └── utils.ts
+├── modules
+│   └── auth
+│       ├── models
+│       │   └── user.model.ts
+│       ├── repositories
+│       │   └── user.repository.ts
+│       ├── services
+│       │   └── auth.service.ts
+│       └── validation
+│           └── auth.schema.ts
+├── stores
+│   └── auth-store.ts
+├── AGENTS.md
+├── CLAUDE.md
+├── components.json
+├── eslint.config.mjs
+├── middleware.ts
+├── next.config.ts
+├── next-env.d.ts
+├── package.json
+├── package-lock.json
+├── pnpm-lock.yaml
+├── pnpm-workspace.yaml
+├── postcss.config.mjs
+├── README.md
+└── tsconfig.json

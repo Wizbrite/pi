@@ -17,6 +17,7 @@ import {
   ChevronLeft,
   ChevronRight,
   User2,
+  Trophy,
 } from "lucide-react";
 import { useState } from "react";
 import { Logo } from "@/components/shared/logo";
@@ -35,6 +36,7 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { label: "My Courses", href: "/student/courses", icon: BookOpen },
     { label: "Mock Exams", href: "/student/exams", icon: FileText },
     { label: "Progress", href: "/student/progress", icon: BarChart3 },
+    { label: "Leaderboard", href: "/student/leaderboard", icon: Trophy },
     { label: "Profile", href: "/student/profile", icon: User },
   ],
   teacher: [
