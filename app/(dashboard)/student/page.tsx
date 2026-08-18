@@ -102,7 +102,7 @@ export default function StudentDashboard() {
           <div className="flex items-start justify-between">
             <div>
               <p className="text-xs font-medium text-muted-foreground">
-                Subjects Enrolled
+                Courses Enrolled
               </p>
               <p className="mt-1 text-2xl font-bold text-foreground">
                 {subjectsCount > 0 ? subjectsCount : "0"}
@@ -118,10 +118,10 @@ export default function StudentDashboard() {
               className="mt-4 inline-flex items-center justify-center gap-1.5 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-bold text-violet-700 transition-all hover:bg-violet-100 hover:text-violet-800"
             >
               <Plus className="h-3.5 w-3.5" />
-              Enroll in Subjects
+              Enroll in Courses
             </Link>
           ) : (
-            <p className="mt-3 text-xs text-muted-foreground">Active subjects</p>
+            <p className="mt-3 text-xs text-muted-foreground">Active courses</p>
           )}
         </div>
 
@@ -201,9 +201,9 @@ export default function StudentDashboard() {
               <BookOpen className="h-5 w-5 text-violet-600" />
             </div>
             <div>
-              <h3 className="font-semibold text-foreground">Browse Subjects</h3>
+              <h3 className="font-semibold text-foreground">Browse Courses</h3>
               <p className="text-xs text-muted-foreground">
-                Explore GCE subjects and start studying
+                Explore GCE courses and start studying
               </p>
             </div>
           </div>
