@@ -66,7 +66,7 @@ export default function StudentDashboard() {
               onClick={() => handleLevelChange("Ordinary")}
               className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all ${
                 user?.gceLevel !== "Advanced"
-                  ? "bg-white text-foreground shadow-sm"
+                  ? "bg-card text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -76,7 +76,7 @@ export default function StudentDashboard() {
               onClick={() => handleLevelChange("Advanced")}
               className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all ${
                 user?.gceLevel === "Advanced"
-                  ? "bg-white text-foreground shadow-sm"
+                  ? "bg-card text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -98,7 +98,7 @@ export default function StudentDashboard() {
       {/* Stats Grid with Actionable Empty States */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {/* Subjects Enrolled */}
-        <div className="group flex flex-col justify-between rounded-2xl border border-border bg-white p-5 shadow-xs transition-all duration-300 hover:border-violet-300 hover:shadow-md">
+        <div className="group flex flex-col justify-between rounded-2xl border border-border bg-card p-5 shadow-xs transition-all duration-300 hover:border-violet-300 hover:shadow-md">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-xs font-medium text-muted-foreground">
@@ -126,7 +126,7 @@ export default function StudentDashboard() {
         </div>
 
         {/* Mock Exams Taken */}
-        <div className="group flex flex-col justify-between rounded-2xl border border-border bg-white p-5 shadow-xs transition-all duration-300 hover:border-violet-300 hover:shadow-md">
+        <div className="group flex flex-col justify-between rounded-2xl border border-border bg-card p-5 shadow-xs transition-all duration-300 hover:border-violet-300 hover:shadow-md">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-xs font-medium text-muted-foreground">
@@ -154,7 +154,7 @@ export default function StudentDashboard() {
         </div>
 
         {/* Average Score */}
-        <div className="group flex flex-col justify-between rounded-2xl border border-border bg-white p-5 shadow-xs transition-all duration-300 hover:border-violet-300 hover:shadow-md">
+        <div className="group flex flex-col justify-between rounded-2xl border border-border bg-card p-5 shadow-xs transition-all duration-300 hover:border-violet-300 hover:shadow-md">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-xs font-medium text-muted-foreground">
@@ -172,7 +172,7 @@ export default function StudentDashboard() {
         </div>
 
         {/* Study Streak */}
-        <div className="group flex flex-col justify-between rounded-2xl border border-border bg-white p-5 shadow-xs transition-all duration-300 hover:border-violet-300 hover:shadow-md">
+        <div className="group flex flex-col justify-between rounded-2xl border border-border bg-card p-5 shadow-xs transition-all duration-300 hover:border-violet-300 hover:shadow-md">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-xs font-medium text-muted-foreground">
@@ -194,7 +194,7 @@ export default function StudentDashboard() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Link
           href="/student/courses"
-          className="rounded-2xl border border-border bg-white p-6 shadow-xs transition-all hover:border-violet-300 hover:shadow-md"
+          className="rounded-2xl border border-border bg-card p-6 shadow-xs transition-all hover:border-violet-300 hover:shadow-md"
         >
           <div className="flex items-center gap-3">
             <div className="rounded-xl bg-violet-50 p-3">
@@ -211,7 +211,7 @@ export default function StudentDashboard() {
 
         <Link
           href="/student/exams"
-          className="rounded-2xl border border-border bg-white p-6 shadow-xs transition-all hover:border-violet-300 hover:shadow-md"
+          className="rounded-2xl border border-border bg-card p-6 shadow-xs transition-all hover:border-violet-300 hover:shadow-md"
         >
           <div className="flex items-center gap-3">
             <div className="rounded-xl bg-violet-50 p-3">
@@ -228,7 +228,7 @@ export default function StudentDashboard() {
 
         <Link
           href="/student/progress"
-          className="rounded-2xl border border-border bg-white p-6 shadow-xs transition-all hover:border-violet-300 hover:shadow-md"
+          className="rounded-2xl border border-border bg-card p-6 shadow-xs transition-all hover:border-violet-300 hover:shadow-md"
         >
           <div className="flex items-center gap-3">
             <div className="rounded-xl bg-violet-50 p-3">
@@ -245,7 +245,7 @@ export default function StudentDashboard() {
       </div>
 
       {/* Recent Activity & Guided Recommended Next Steps */}
-      <div className="space-y-6 rounded-2xl border border-border bg-white p-6 shadow-xs">
+      <div className="space-y-6 rounded-2xl border border-border bg-card p-6 shadow-xs">
         <div>
           <h2 className="text-lg font-semibold text-foreground">Recent Activity</h2>
           <div className="mt-4 flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-muted/50 py-6 text-center">

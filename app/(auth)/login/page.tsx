@@ -76,7 +76,7 @@ export default function LoginPage() {
             id="email"
             type="email"
             placeholder="you@example.com"
-            className="border-border bg-white text-foreground focus-visible:ring-violet-500"
+            className="border-border bg-card text-foreground focus-visible:ring-violet-500"
             {...register("email")}
             aria-invalid={!!errors.email}
           />
@@ -99,7 +99,7 @@ export default function LoginPage() {
             id="password"
             type="password"
             placeholder="••••••••"
-            className="border-border bg-white text-foreground focus-visible:ring-violet-500"
+            className="border-border bg-card text-foreground focus-visible:ring-violet-500"
             {...register("password")}
             aria-invalid={!!errors.password}
           />

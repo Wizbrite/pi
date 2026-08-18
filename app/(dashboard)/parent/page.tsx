@@ -46,7 +46,7 @@ export default function ParentDashboard() {
           return (
             <div
               key={card.label}
-              className="rounded-2xl border border-border bg-white p-5 shadow-xs transition-all duration-300 hover:border-violet-300 hover:shadow-md"
+              className="rounded-2xl border border-border bg-card p-5 shadow-xs transition-all duration-300 hover:border-violet-300 hover:shadow-md"
             >
               <div className="flex items-start justify-between">
                 <div>
@@ -69,7 +69,7 @@ export default function ParentDashboard() {
       </div>
 
       {/* Children Overview */}
-      <div className="rounded-2xl border border-border bg-white p-6 shadow-xs">
+      <div className="rounded-2xl border border-border bg-card p-6 shadow-xs">
         <h2 className="text-lg font-semibold text-foreground">
           Children&apos;s Progress
         </h2>

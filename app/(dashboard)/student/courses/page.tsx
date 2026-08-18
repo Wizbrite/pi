@@ -128,7 +128,7 @@ export default function StudentCoursesPage() {
           <Button 
             variant="outline" 
             onClick={() => setSimulateError(false)}
-            className="bg-white border-red-200 text-red-700 hover:bg-red-50 gap-2"
+            className="bg-card border-red-200 text-red-700 hover:bg-red-50 gap-2"
           >
             <RefreshCcw className="h-4 w-4" />
             Retry

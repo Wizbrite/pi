@@ -92,7 +92,7 @@ export default function RegisterPage() {
             id="name"
             type="text"
             placeholder="Ngwa Blessing"
-            className="border-border bg-white text-foreground focus-visible:ring-violet-500"
+            className="border-border bg-card text-foreground focus-visible:ring-violet-500"
             {...register("name")}
             aria-invalid={!!errors.name}
           />
@@ -107,7 +107,7 @@ export default function RegisterPage() {
             id="email"
             type="email"
             placeholder="you@example.com"
-            className="border-border bg-white text-foreground focus-visible:ring-violet-500"
+            className="border-border bg-card text-foreground focus-visible:ring-violet-500"
             {...register("email")}
             aria-invalid={!!errors.email}
           />
@@ -122,7 +122,7 @@ export default function RegisterPage() {
             id="password"
             type="password"
             placeholder="Minimum 8 characters"
-            className="border-border bg-white text-foreground focus-visible:ring-violet-500"
+            className="border-border bg-card text-foreground focus-visible:ring-violet-500"
             {...register("password")}
             aria-invalid={!!errors.password}
           />
@@ -141,7 +141,7 @@ export default function RegisterPage() {
               })
             }
           >
-            <SelectTrigger id="role" className="border-border bg-white text-foreground">
+            <SelectTrigger id="role" className="border-border bg-card text-foreground">
               <SelectValue placeholder="Select your role" />
             </SelectTrigger>
             <SelectContent>
@@ -165,7 +165,7 @@ export default function RegisterPage() {
                 })
               }
             >
-              <SelectTrigger id="gceLevel" className="border-border bg-white text-foreground">
+              <SelectTrigger id="gceLevel" className="border-border bg-card text-foreground">
                 <SelectValue placeholder="Select your GCE level" />
               </SelectTrigger>
               <SelectContent>

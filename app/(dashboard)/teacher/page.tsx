@@ -77,7 +77,7 @@ export default function TeacherDashboard() {
           return (
             <div
               key={card.label}
-              className="rounded-2xl border border-border bg-white p-5 shadow-xs transition-all duration-300 hover:border-violet-300 hover:shadow-md"
+              className="rounded-2xl border border-border bg-card p-5 shadow-xs transition-all duration-300 hover:border-violet-300 hover:shadow-md"
             >
               <div className="flex items-start justify-between">
                 <div>
@@ -100,7 +100,7 @@ export default function TeacherDashboard() {
       </div>
 
       {/* Recent Activity */}
-      <div className="rounded-2xl border border-border bg-white p-6 shadow-xs">
+      <div className="rounded-2xl border border-border bg-card p-6 shadow-xs">
         <h2 className="text-lg font-semibold text-foreground">Recent Activity</h2>
         <div className="mt-6 flex flex-col items-center justify-center py-8 text-center">
           <Clock className="h-10 w-10 text-slate-300" />
