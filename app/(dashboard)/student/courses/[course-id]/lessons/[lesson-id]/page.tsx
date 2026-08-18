@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { ArrowLeft, Sparkles, Send, ArrowRight, X, BotMessageSquare } from "lucide-react";
 import { TopicQuizModal } from "@/components/student/topic-quiz-modal";
 import { MOCK_COURSES } from "@/lib/mock-data";
+import { usePracticeStore } from "@/stores/practice-store";
 
 interface PageProps {
   params: Promise<{
@@ -19,6 +20,7 @@ interface PageProps {
 
 export default function LessonDetailPage({ params }: PageProps) {
   const resolvedParams = use(params);
+  const addMistake = usePracticeStore((state) => state.addMistake);
   const courseId = resolvedParams["course-id"];
   const lessonId = resolvedParams["lesson-id"];
 
@@ -200,14 +202,22 @@ export default function LessonDetailPage({ params }: PageProps) {
 
       {/* Integrated Assessment Drawer/Modal */}
       <TopicQuizModal
-        isOpen={isQuizOpen}
-        onClose={() => setIsQuizOpen(false)}
-        topicTitle={topic.title}
-        lessonTitle={lesson.title}
-        onQuizComplete={(finalScore) => {
-          console.log(`Completed ${lesson.title} quiz with score:`, finalScore);
-        }}
-      />
+  isOpen={isQuizOpen}
+  onClose={() => setIsQuizOpen(false)}
+  topicTitle={topic.title}
+  lessonTitle={lesson.title}
+  onQuizComplete={(finalScore, earnedXp, failedQuestions) => {
+    failedQuestions?.forEach((q) => {
+      addMistake({
+        subject: course.title,
+        topic: topic.title,
+        question: q.questionText,
+        incorrectAnswer: q.userAnswer,
+        correctAnswer: q.correctAnswer,
+      });
+    });
+  }}
+/>
     </div>
   );
 }

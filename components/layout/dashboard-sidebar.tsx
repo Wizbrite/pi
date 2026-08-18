@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   ChevronLeft,
   ChevronRight,
+  Target,
   User2,
   Trophy,
 } from "lucide-react";
@@ -36,6 +37,7 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { label: "My Courses", href: "/student/courses", icon: BookOpen },
     { label: "Mock Exams", href: "/student/exams", icon: FileText },
     { label: "Progress", href: "/student/progress", icon: BarChart3 },
+    { label: "Practice Hub", href: "/student/practice-hub", icon: Target },
     { label: "Leaderboard", href: "/student/leaderboard", icon: Trophy },
     { label: "Profile", href: "/student/profile", icon: User },
   ],

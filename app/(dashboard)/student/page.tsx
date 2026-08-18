@@ -266,7 +266,7 @@ export default function StudentDashboard() {
       </div>
 
       {/* Floating Action Button (FAB) for AI Tutor */}
-      <AiTutorFab onClick={() => handleAskAi("Quick Help")} />
+      <Link href="/student/ai-tutor"><AiTutorFab onClick={() => handleAskAi("Quick Help")} /></Link>
     </div>
   );
 }

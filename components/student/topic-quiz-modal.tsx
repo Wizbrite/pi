@@ -13,7 +13,6 @@ import {
   RotateCcw,
   X,
   BookOpen,
-  Zap,
   Trophy
 } from "lucide-react";
 
@@ -52,12 +51,18 @@ const MOCK_QUESTIONS: Question[] = [
   }
 ];
 
+export interface FailedQuestion {
+  questionText: string;
+  userAnswer: string;
+  correctAnswer: string;
+}
+
 interface TopicQuizModalProps {
   isOpen: boolean;
   onClose: () => void;
   topicTitle: string;
   lessonTitle: string;
-  onQuizComplete?: (score: number, earnedXp: number) => void;
+  onQuizComplete?: (score: number, earnedXp: number, failedQuestions: FailedQuestion[]) => void;
 }
 
 export function TopicQuizModal({
@@ -76,6 +81,7 @@ export function TopicQuizModal({
   const [showAiInput, setShowAiInput] = useState(false);
   const [aiQuery, setAiQuery] = useState("");
   const [aiResponse, setAiResponse] = useState<string | null>(null);
+  const [failedQuestions, setFailedQuestions] = useState<FailedQuestion[]>([]);
 
   if (!isOpen) return null;
 
@@ -92,8 +98,18 @@ export function TopicQuizModal({
   const handleConfirmAnswer = () => {
     if (selectedOption === null) return;
     setIsAnswered(true);
+
     if (selectedOption === q.correctIndex) {
       setScore((prev) => prev + 1);
+    } else {
+      // Record the mistake
+      const mistake: FailedQuestion = {
+        questionText: q.question,
+        userAnswer: q.options[selectedOption],
+        correctAnswer: q.options[q.correctIndex],
+      };
+
+      setFailedQuestions((prev) => [...prev, mistake]);
     }
   };
 
@@ -106,11 +122,11 @@ export function TopicQuizModal({
     if (currentQuestionIndex + 1 < MOCK_QUESTIONS.length) {
       setCurrentQuestionIndex((prev) => prev + 1);
     } else {
-      const finalScore = selectedOption === q.correctIndex ? score + 1 : score;
+      const finalScore = score;
       const finalXp = finalScore * XP_PER_CORRECT;
       setQuizFinished(true);
       if (onQuizComplete) {
-        onQuizComplete(finalScore, finalXp);
+        onQuizComplete(finalScore, finalXp, failedQuestions);
       }
     }
   };
@@ -127,6 +143,7 @@ export function TopicQuizModal({
     setSelectedOption(null);
     setIsAnswered(false);
     setScore(0);
+    setFailedQuestions([]); // Clear recorded mistakes on retake
     setQuizFinished(false);
     setShowAiInput(false);
     setAiResponse(null);

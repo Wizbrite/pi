@@ -8,6 +8,7 @@ import {
   FileText,
   BarChart3,
   User,
+  Target,
   Trophy,
 } from "lucide-react";
 import { useAuthStore } from "@/stores/auth-store";
@@ -23,6 +24,7 @@ const navItems = [
   { label: "Dashboard", href: `/${role}`, icon: LayoutDashboard },
   { label: "Courses", href: `/${role === "student" ? "student/courses" : role}`, icon: BookOpen },
   { label: "Exams", href: `/${role === "student" ? "student/exams" : role}`, icon: FileText },
+  { label: "Practice", href: `/${role === "student" ? "student/practice-hub" : role}`, icon: Target},
   { label: "Progress", href: `/${role === "student" ? "student/progress" : role}`, icon: BarChart3 },
   { label: "Ranks", href: `/${role === "student" ? "student/leaderboard" : role}`, icon: Trophy },
   // Changed "Settings" to "Profile" pointing to /student/profile:

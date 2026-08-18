@@ -72,7 +72,7 @@ export function AiTutorFab({ onClick }: { onClick?: () => void }) {
     <button
       onClick={onClick}
       aria-label="Open AI Assistant"
-      className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 rounded-full bg-gradient-to-r from-violet-600 to-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-xl shadow-violet-600/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl active:scale-95"
+      className="fixed bottom-20 right-6 z-60 flex items-center gap-2.5 rounded-full bg-gradient-to-r from-violet-600 to-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-xl shadow-violet-600/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl active:scale-95"
     >
       <div className="relative">
         <Bot className="h-5 w-5" />
