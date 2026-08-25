@@ -8,34 +8,65 @@ import {
   FileText,
   BarChart3,
   User,
+  Users,
+  UserCheck,
+  ShieldCheck,
   Target,
   Trophy,
 } from "lucide-react";
-import { useAuthStore } from "@/stores/auth-store";
+import { useAuthStore, type UserRole } from "@/stores/auth-store";
 import { HeaderStats } from "../student/header-stat"; // Named import matching your component export
+
+interface NavItem {
+  label: string;
+  href: string;
+  icon: React.ElementType;
+}
+
+const roleNavItems: Record<UserRole, NavItem[]> = {
+  student: [
+    { label: "Dashboard", href: "/student", icon: LayoutDashboard },
+    { label: "Courses", href: "/student/courses", icon: BookOpen },
+    { label: "Exams", href: "/student/exams", icon: FileText },
+    { label: "Practice", href: "/student/practice-hub", icon: Target },
+    { label: "Progress", href: "/student/progress", icon: BarChart3 },
+    { label: "Ranks", href: "/student/leaderboard", icon: Trophy },
+    { label: "Profile", href: "/student/profile", icon: User },
+  ],
+  teacher: [
+    { label: "Dashboard", href: "/teacher", icon: LayoutDashboard },
+    { label: "Classes", href: "/teacher/classes", icon: Users },
+    { label: "Questions", href: "/teacher/questions", icon: FileText },
+    { label: "Analytics", href: "/teacher/analytics", icon: BarChart3 },
+    { label: "Profile", href: "/teacher/profile", icon: User },
+  ],
+  parent: [
+    { label: "Dashboard", href: "/parent", icon: LayoutDashboard },
+    { label: "Children", href: "/parent/children", icon: UserCheck },
+    { label: "Reports", href: "/parent/reports", icon: BarChart3 },
+    { label: "Profile", href: "/parent/profile", icon: User },
+  ],
+  admin: [
+    { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
+    { label: "Users", href: "/admin/users", icon: Users },
+    { label: "Platform", href: "/admin/platform", icon: ShieldCheck },
+    { label: "Analytics", href: "/admin/analytics", icon: BarChart3 },
+    { label: "Profile", href: "/admin/profile", icon: User },
+  ],
+};
 
 export function MobileBottomNav() {
   const pathname = usePathname();
   const { user } = useAuthStore();
   const role = user?.role || "student";
 
-  // Inside components/layout/mobile-nav.tsx
-const navItems = [
-  { label: "Dashboard", href: `/${role}`, icon: LayoutDashboard },
-  { label: "Courses", href: `/${role === "student" ? "student/courses" : role}`, icon: BookOpen },
-  { label: "Exams", href: `/${role === "student" ? "student/exams" : role}`, icon: FileText },
-  { label: "Practice", href: `/${role === "student" ? "student/practice-hub" : role}`, icon: Target},
-  { label: "Progress", href: `/${role === "student" ? "student/progress" : role}`, icon: BarChart3 },
-  { label: "Ranks", href: `/${role === "student" ? "student/leaderboard" : role}`, icon: Trophy },
-  // Changed "Settings" to "Profile" pointing to /student/profile:
-  { label: "Profile", href: `/${role === "student" ? "student/profile" : role}`, icon: User },
-];
+  const navItems = roleNavItems[role];
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 flex h-16 items-center justify-around border-t border-border bg-background/85 px-2 backdrop-blur-md pb-safe touch-action-manipulation md:hidden">
       {navItems.map((item) => {
         const isActive =
           pathname === item.href ||
-          (item.href !== `/${role}` && pathname.startsWith(item.href));
+          (item.href !== `/${role}` && pathname.startsWith(`${item.href}/`));
         const Icon = item.icon;
 
         return (

@@ -1,57 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import { X, Trophy, ArrowRight, RotateCcw, CheckCircle2, XCircle, BookOpen, Sparkles, Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import {
-  CheckCircle2,
-  XCircle,
-  Sparkles,
-  Send,
-  ArrowRight,
-  RotateCcw,
-  X,
-  BookOpen,
-  Trophy
-} from "lucide-react";
 
-interface Question {
-  id: number;
-  question: string;
-  options: string[];
-  correctIndex: number;
-  explanation: string;
-}
-
-const MOCK_QUESTIONS: Question[] = [
-  {
-    id: 1,
-    question: "What is the primary characteristic of thermal equilibrium?",
-    options: [
-      "Both systems have equal heat energy",
-      "No net heat transfer occurs between the systems",
-      "One system loses heat continuously",
-      "Temperature difference is at its maximum"
-    ],
-    correctIndex: 1,
-    explanation: "Thermal equilibrium occurs when two objects in thermal contact cease to exchange heat by radiation or conduction because they have reached the same temperature."
-  },
-  {
-    id: 2,
-    question: "Which law of thermodynamics states that energy cannot be created or destroyed?",
-    options: [
-      "Zeroth Law",
-      "First Law",
-      "Second Law",
-      "Third Law"
-    ],
-    correctIndex: 1,
-    explanation: "The First Law of Thermodynamics is a formulation of the law of conservation of energy."
-  }
-];
-
-export interface FailedQuestion {
+interface FailedQuestion {
   questionText: string;
   userAnswer: string;
   correctAnswer: string;
@@ -62,6 +17,7 @@ interface TopicQuizModalProps {
   onClose: () => void;
   topicTitle: string;
   lessonTitle: string;
+  lessonId: string;
   onQuizComplete?: (score: number, earnedXp: number, failedQuestions: FailedQuestion[]) => void;
 }
 
@@ -70,90 +26,136 @@ export function TopicQuizModal({
   onClose,
   topicTitle,
   lessonTitle,
+  lessonId,
   onQuizComplete
 }: TopicQuizModalProps) {
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedOption, setSelectedOption] = useState<number | null>(null);
-  const [isAnswered, setIsAnswered] = useState(false);
-  const [score, setScore] = useState(0);
-  const [quizFinished, setQuizFinished] = useState(false);
+  const [questions, setQuestions] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [ncqAnswer, setNcqAnswer] = useState("");
+  const [isAnswered, setIsAnswered] = useState(false);
+  const [isIncorrect, setIsIncorrect] = useState(false);
+  
+  const [score, setScore] = useState(0);
+  const [failedQuestions, setFailedQuestions] = useState<FailedQuestion[]>([]);
+  const [quizFinished, setQuizFinished] = useState(false);
+  
   const [showAiInput, setShowAiInput] = useState(false);
   const [aiQuery, setAiQuery] = useState("");
   const [aiResponse, setAiResponse] = useState<string | null>(null);
-  const [failedQuestions, setFailedQuestions] = useState<FailedQuestion[]>([]);
+
+  const XP_PER_CORRECT = 50;
+
+  const fetchQuestions = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/lessons/${lessonId}/questions`);
+      if (!res.ok) throw new Error("Failed to fetch questions");
+      const json = await res.json();
+      if (!json.success) throw new Error(json.message);
+      
+      setQuestions(json.data || []);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Failed to load questions");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [lessonId]);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchQuestions();
+      handleReset();
+    }
+  }, [isOpen, fetchQuestions]);
 
   if (!isOpen) return null;
 
-  const q = MOCK_QUESTIONS[currentQuestionIndex];
-  const isIncorrect = isAnswered && selectedOption !== q.correctIndex;
-  const XP_PER_CORRECT = 25;
-  const totalEarnedXp = score * XP_PER_CORRECT;
+  const currentQ = questions[currentQuestionIndex];
+  const isNCQ = currentQ && (!currentQ.options || currentQ.options.length === 0);
 
-  const handleSelectOption = (index: number) => {
-    if (isAnswered) return;
-    setSelectedOption(index);
+  const handleSelectOption = (opt: string) => {
+    if (!isAnswered) setSelectedOption(opt);
   };
 
   const handleConfirmAnswer = () => {
-    if (selectedOption === null) return;
+    if (!currentQ) return;
     setIsAnswered(true);
 
-    if (selectedOption === q.correctIndex) {
-      setScore((prev) => prev + 1);
-    } else {
-      // Record the mistake
-      const mistake: FailedQuestion = {
-        questionText: q.question,
-        userAnswer: q.options[selectedOption],
-        correctAnswer: q.options[q.correctIndex],
-      };
+    const userAnswer = isNCQ ? ncqAnswer : selectedOption;
+    // Basic exact-match for NCQ for now; in a real app, AI could grade this.
+    const isCorrect = isNCQ 
+      ? userAnswer?.trim().toLowerCase() === currentQ.correctAnswer.toLowerCase()
+      : userAnswer === currentQ.correctAnswer;
 
-      setFailedQuestions((prev) => [...prev, mistake]);
+    if (isCorrect) {
+      setIsIncorrect(false);
+      setScore(prev => prev + 1);
+    } else {
+      setIsIncorrect(true);
+      setFailedQuestions(prev => [
+        ...prev,
+        {
+          questionText: currentQ.questionText,
+          userAnswer: userAnswer || "No answer",
+          correctAnswer: currentQ.correctAnswer
+        }
+      ]);
     }
   };
 
   const handleNextQuestion = () => {
-    setSelectedOption(null);
-    setIsAnswered(false);
-    setShowAiInput(false);
-    setAiResponse(null);
-
-    if (currentQuestionIndex + 1 < MOCK_QUESTIONS.length) {
-      setCurrentQuestionIndex((prev) => prev + 1);
+    if (currentQuestionIndex < questions.length - 1) {
+      setCurrentQuestionIndex(prev => prev + 1);
+      setSelectedOption(null);
+      setNcqAnswer("");
+      setIsAnswered(false);
+      setIsIncorrect(false);
+      setShowAiInput(false);
+      setAiResponse(null);
     } else {
-      const finalScore = score;
-      const finalXp = finalScore * XP_PER_CORRECT;
       setQuizFinished(true);
+      const totalXp = score * XP_PER_CORRECT;
+      
+      // Auto-complete lesson
+      fetch(`/api/lessons/${lessonId}/complete`, { method: "POST" })
+        .catch(err => console.error("Failed to complete lesson", err));
+        
       if (onQuizComplete) {
-        onQuizComplete(finalScore, finalXp, failedQuestions);
+        onQuizComplete(score, totalXp, failedQuestions);
       }
     }
-  };
-
-  const handleAskAi = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!aiQuery.trim()) return;
-    setAiResponse(`AI Breakdown for Question ${q.id}: regarding "${aiQuery}"...`);
-    setAiQuery("");
   };
 
   const handleReset = () => {
     setCurrentQuestionIndex(0);
     setSelectedOption(null);
+    setNcqAnswer("");
     setIsAnswered(false);
+    setIsIncorrect(false);
     setScore(0);
-    setFailedQuestions([]); // Clear recorded mistakes on retake
+    setFailedQuestions([]);
     setQuizFinished(false);
     setShowAiInput(false);
     setAiResponse(null);
   };
 
+  const handleAskAi = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!aiQuery.trim()) return;
+    setAiResponse(`AI Tutor: The correct answer is related to "${currentQ?.correctAnswer}". In a full integration, I would explain why your answer "${isNCQ ? ncqAnswer : selectedOption}" was right or wrong.`);
+    setAiQuery("");
+  };
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end md:items-center justify-center p-0 md:p-4 pb-16 md:pb-4">
-      <div className="w-full max-w-xl bg-background border-t md:border border-border rounded-t-2xl md:rounded-xl shadow-xl max-h-[85dvh] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-background border border-border w-full max-w-lg rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
         
-        {/* Modal Header */}
         <div className="flex justify-between items-center px-4 py-3 border-b border-border bg-muted/30 shrink-0">
           <div>
             <Badge variant="accent" className="text-[10px] uppercase">
@@ -166,46 +168,69 @@ export function TopicQuizModal({
           </Button>
         </div>
 
-        {/* Modal Scrollable Body */}
         <div className="p-4 md:p-6 overflow-y-auto space-y-4 text-sm flex-1">
-          {!quizFinished ? (
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center h-48 space-y-3">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              <p className="text-muted-foreground text-xs">Loading questions...</p>
+            </div>
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center h-48 space-y-3">
+              <p className="text-red-500 text-sm">{error}</p>
+              <Button variant="outline" size="sm" onClick={fetchQuestions}>Retry</Button>
+            </div>
+          ) : !questions || questions.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-48 space-y-3">
+              <p className="text-muted-foreground text-sm">No questions available for this lesson.</p>
+            </div>
+          ) : !quizFinished ? (
             <>
               <div className="flex justify-between items-center text-xs text-muted-foreground">
-                <span>Question {currentQuestionIndex + 1} of {MOCK_QUESTIONS.length}</span>
-                <span className="font-semibold text-primary">Potential XP: {MOCK_QUESTIONS.length * XP_PER_CORRECT}</span>
+                <span>Question {currentQuestionIndex + 1} of {questions.length}</span>
+                <span className="font-semibold text-primary">Potential XP: {questions.length * XP_PER_CORRECT}</span>
               </div>
 
-              <p className="font-medium text-foreground text-base leading-snug">{q.question}</p>
+              <p className="font-medium text-foreground text-base leading-snug">{currentQ.questionText}</p>
 
               <div className="space-y-2 pt-1">
-                {q.options.map((opt, idx) => {
-                  let btnStyle = "border-border bg-card text-card-foreground hover:border-primary/50";
+                {isNCQ ? (
+                  <textarea
+                    className="w-full min-h-[100px] p-3 rounded-lg border border-input bg-background text-sm resize-none focus:outline-none focus:ring-1 focus:ring-primary"
+                    placeholder="Type your answer here..."
+                    value={ncqAnswer}
+                    onChange={(e) => setNcqAnswer(e.target.value)}
+                    disabled={isAnswered}
+                  />
+                ) : (
+                  currentQ.options.map((opt: string, idx: number) => {
+                    let btnStyle = "border-border bg-card text-card-foreground hover:border-primary/50";
 
-                  if (selectedOption === idx) {
-                    btnStyle = "border-primary bg-primary/10 text-primary font-medium";
-                  }
-
-                  if (isAnswered) {
-                    if (idx === q.correctIndex) {
-                      btnStyle = "border-green-500/50 bg-green-500/10 text-green-600 dark:text-green-400 font-medium";
-                    } else if (selectedOption === idx) {
-                      btnStyle = "border-red-500/50 bg-red-500/10 text-red-600 dark:text-red-400";
+                    if (selectedOption === opt) {
+                      btnStyle = "border-primary bg-primary/10 text-primary font-medium";
                     }
-                  }
 
-                  return (
-                    <button
-                      key={idx}
-                      onClick={() => handleSelectOption(idx)}
-                      disabled={isAnswered}
-                      className={`w-full p-3 rounded-lg border text-left text-sm transition-all flex justify-between items-center min-h-[44px] touch-manipulation active:scale-[0.99] ${btnStyle}`}
-                    >
-                      <span>{opt}</span>
-                      {isAnswered && idx === q.correctIndex && <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0 ml-2" />}
-                      {isAnswered && selectedOption === idx && idx !== q.correctIndex && <XCircle className="w-4 h-4 text-red-500 shrink-0 ml-2" />}
-                    </button>
-                  );
-                })}
+                    if (isAnswered) {
+                      if (opt === currentQ.correctAnswer) {
+                        btnStyle = "border-green-500/50 bg-green-500/10 text-green-600 dark:text-green-400 font-medium";
+                      } else if (selectedOption === opt) {
+                        btnStyle = "border-red-500/50 bg-red-500/10 text-red-600 dark:text-red-400";
+                      }
+                    }
+
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => handleSelectOption(opt)}
+                        disabled={isAnswered}
+                        className={`w-full p-3 rounded-lg border text-left text-sm transition-all flex justify-between items-center min-h-[44px] touch-manipulation active:scale-[0.99] ${btnStyle}`}
+                      >
+                        <span>{opt}</span>
+                        {isAnswered && opt === currentQ.correctAnswer && <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0 ml-2" />}
+                        {isAnswered && selectedOption === opt && opt !== currentQ.correctAnswer && <XCircle className="w-4 h-4 text-red-500 shrink-0 ml-2" />}
+                      </button>
+                    );
+                  })
+                )}
               </div>
 
               {isAnswered && (
@@ -214,7 +239,7 @@ export function TopicQuizModal({
                     <span className="font-bold block mb-0.5">
                       {isIncorrect ? "Not quite right!" : "Correct Explanation:"}
                     </span>
-                    {q.explanation}
+                    {currentQ.explanation || "No explanation provided."}
                   </div>
 
                   {isIncorrect && (
@@ -240,14 +265,14 @@ export function TopicQuizModal({
                       onClick={() => setShowAiInput(true)}
                       className="text-xs text-primary hover:text-primary/80 px-0"
                     >
-                      <Sparkles className="w-3.5 h-3.5 mr-1" /> Confused? Ask AI Tutor about this question
+                      <Sparkles className="w-3.5 h-3.5 mr-1" /> Confused? Ask AI Tutor
                     </Button>
                   ) : (
                     <form onSubmit={handleAskAi} className="flex gap-2 pt-1">
                       <Input
                         value={aiQuery}
                         onChange={(e) => setAiQuery(e.target.value)}
-                        placeholder="Why is option 2 correct?"
+                        placeholder="Why is this answer correct?"
                         className="text-xs h-9"
                       />
                       <Button type="submit" size="sm" className="h-9 px-3 shrink-0">
@@ -265,7 +290,6 @@ export function TopicQuizModal({
               )}
             </>
           ) : (
-            /* Gamified Post-Quiz Victory View */
             <div className="text-center py-6 space-y-4">
               <div className="w-16 h-16 rounded-full bg-violet-500/10 border border-violet-500/30 text-violet-500 flex items-center justify-center mx-auto shadow-inner">
                 <Trophy className="w-8 h-8" />
@@ -275,17 +299,16 @@ export function TopicQuizModal({
                 <Badge className="bg-violet-500 text-black font-bold uppercase tracking-wider text-[10px]">
                   Mastery Quiz Completed
                 </Badge>
-                <h4 className="text-2xl font-black text-foreground">+{totalEarnedXp} XP</h4>
+                <h4 className="text-2xl font-black text-foreground">+{score * XP_PER_CORRECT} XP</h4>
                 <p className="text-xs text-muted-foreground">
-                  You scored <span className="font-bold text-foreground">{score}/{MOCK_QUESTIONS.length}</span> correct choices.
+                  You scored <span className="font-bold text-foreground">{score}/{questions.length}</span> correct answers.
                 </p>
               </div>
 
-              {/* Progress Indicator */}
               <div className="w-full bg-muted rounded-full h-2 overflow-hidden max-w-xs mx-auto">
                 <div
                   className="bg-violet-500 h-full rounded-full transition-all duration-700"
-                  style={{ width: `${(score / MOCK_QUESTIONS.length) * 100}%` }}
+                  style={{ width: `${(score / questions.length) * 100}%` }}
                 />
               </div>
 
@@ -301,13 +324,12 @@ export function TopicQuizModal({
           )}
         </div>
 
-        {/* Footer Actions */}
-        {!quizFinished && (
+        {!quizFinished && !isLoading && !error && questions.length > 0 && (
           <div className="p-3.5 border-t border-border bg-background shrink-0 flex gap-2">
             {!isAnswered ? (
               <Button
                 onClick={handleConfirmAnswer}
-                disabled={selectedOption === null}
+                disabled={isNCQ ? ncqAnswer.trim() === "" : selectedOption === null}
                 className="w-full h-11 text-sm font-semibold shadow-xs"
               >
                 Submit Answer

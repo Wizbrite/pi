@@ -1,97 +1,45 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores/auth-store';
-import { AlertTriangle, RefreshCcw } from 'lucide-react';
-
-const mockSubjects = [
-  // O-Level
-  {
-    id: 'math-0580',
-    title: 'Mathematics',
-    code: 'GCE O-Level • 0580',
-    level: 'Ordinary',
-    progress: 75,
-    modulesCompleted: 15,
-    totalModules: 20,
-    nextTopic: 'Trigonometry',
-  },
-  {
-    id: 'biology-0610',
-    title: 'Biology',
-    code: 'GCE O-Level • 0610',
-    level: 'Ordinary',
-    progress: 45,
-    modulesCompleted: 9,
-    totalModules: 20,
-    nextTopic: 'Human Physiology',
-  },
-  {
-    id: 'chemistry-0620',
-    title: 'Chemistry',
-    code: 'GCE O-Level • 0620',
-    level: 'Ordinary',
-    progress: 30,
-    modulesCompleted: 6,
-    totalModules: 20,
-    nextTopic: 'Organic Chemistry Basics',
-  },
-  {
-    id: 'physics-0625',
-    title: 'Physics',
-    code: 'GCE O-Level • 0625',
-    level: 'Ordinary',
-    progress: 60,
-    modulesCompleted: 12,
-    totalModules: 20,
-    nextTopic: 'Forces and Motion',
-  },
-  // A-Level
-  {
-    id: 'pure-maths-0770',
-    title: 'Pure Mathematics',
-    code: 'GCE A-Level • 0770',
-    level: 'Advanced',
-    progress: 65,
-    modulesCompleted: 13,
-    totalModules: 20,
-    nextTopic: 'Calculus: Integration by Parts',
-  },
-  {
-    id: 'physics-0780',
-    title: 'Physics',
-    code: 'GCE A-Level • 0780',
-    level: 'Advanced',
-    progress: 40,
-    modulesCompleted: 8,
-    totalModules: 20,
-    nextTopic: 'Electromagnetism & Faraday’s Law',
-  },
-  {
-    id: 'computer-science-0795',
-    title: 'Computer Science',
-    code: 'GCE A-Level • 0795',
-    level: 'Advanced',
-    progress: 80,
-    modulesCompleted: 16,
-    totalModules: 20,
-    nextTopic: 'Data Structures: Binary Trees',
-  },
-];
+import { AlertTriangle, RefreshCcw, Loader2 } from 'lucide-react';
 
 export default function StudentCoursesPage() {
   const { user } = useAuthStore();
-  const [simulateError, setSimulateError] = useState(false);
-
-  // Default to Ordinary if user is not fully loaded or gceLevel is undefined
   const currentLevel = user?.gceLevel === 'Advanced' ? 'Advanced' : 'Ordinary';
 
-  const filteredSubjects = useMemo(() => {
-    return mockSubjects.filter((subject) => subject.level === currentLevel);
+  const [courses, setCourses] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchCourses = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/courses?level=${currentLevel === 'Advanced' ? 'A-Level' : 'O-Level'}`);
+      if (!res.ok) {
+        throw new Error('Failed to fetch courses');
+      }
+      const json = await res.json();
+      if (json.success) {
+        setCourses(json.data);
+      } else {
+        throw new Error(json.message || 'Failed to fetch courses');
+      }
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'An unexpected error occurred while loading courses.');
+    } finally {
+      setIsLoading(false);
+    }
   }, [currentLevel]);
+
+  useEffect(() => {
+    fetchCourses();
+  }, [fetchCourses]);
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
@@ -103,69 +51,78 @@ export default function StudentCoursesPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            onClick={() => setSimulateError(!simulateError)}
-            className="text-violet-600 border-violet-200 hover:bg-violet-50"
-          >
-            Toggle Error State
-          </Button>
           <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
             + Enroll New Subject
           </Button>
         </div>
       </div>
 
-      {simulateError ? (
+      {isLoading ? (
+        <div className="flex flex-col items-center justify-center min-h-[40vh] space-y-4">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Loading your courses...</p>
+        </div>
+      ) : error ? (
         <div className="rounded-xl border border-red-200 bg-red-50 p-6 flex flex-col items-center text-center space-y-4">
           <div className="rounded-full bg-red-100 p-3">
             <AlertTriangle className="h-6 w-6 text-red-600" />
           </div>
           <div>
             <h3 className="text-sm font-semibold text-red-800">Failed to load subjects</h3>
-            <p className="text-xs text-red-600 mt-1">There was a problem communicating with the server.</p>
+            <p className="text-xs text-red-600 mt-1">{error}</p>
           </div>
           <Button 
             variant="outline" 
-            onClick={() => setSimulateError(false)}
+            onClick={fetchCourses}
             className="bg-card border-red-200 text-red-700 hover:bg-red-50 gap-2"
           >
             <RefreshCcw className="h-4 w-4" />
-            Retry
+            Try Again
           </Button>
         </div>
-      ) : filteredSubjects.length === 0 ? (
+      ) : courses.length === 0 ? (
         <div className="rounded-xl border border-border bg-muted p-12 flex flex-col items-center text-center space-y-4">
           <p className="text-sm font-medium text-muted-foreground">No subjects found for this level.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredSubjects.map((course) => (
-            <Card key={course.id} className="bg-card text-card-foreground border-border hover:border-primary/50 transition-all shadow-xs">
-              <CardHeader className="pb-3">
-                <span className="text-xs font-semibold text-primary uppercase tracking-wider">{course.code}</span>
-                <CardTitle className="text-xl">{course.title}</CardTitle>
-                <CardDescription className="text-muted-foreground">Next: {course.nextTopic}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <div className="flex justify-between text-xs font-medium text-muted-foreground mb-1.5">
-                    <span>{course.modulesCompleted}/{course.totalModules} Modules</span>
-                    <span className="text-foreground font-semibold">{course.progress}%</span>
+          {courses.map((course) => {
+            // For Phase 1, we don't have exact module progress calculated at the top-level yet, 
+            // so we will mock a 0% progress, or calculate it if the API later provides it.
+            const progress = course.progress || 0;
+            const modulesCompleted = course.modulesCompleted || 0;
+            const totalModules = course.topics?.length || 0;
+            const nextTopic = course.topics?.[0]?.title || "N/A";
+
+            return (
+              <Card key={course._id} className="bg-card text-card-foreground border-border hover:border-primary/50 transition-all shadow-xs">
+                <CardHeader className="pb-3">
+                  <span className="text-xs font-semibold text-primary uppercase tracking-wider">
+                    GCE {course.level} • {course.subject}
+                  </span>
+                  <CardTitle className="text-xl">{course.title}</CardTitle>
+                  <CardDescription className="text-muted-foreground">Next: {nextTopic}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <div className="flex justify-between text-xs font-medium text-muted-foreground mb-1.5">
+                      <span>{modulesCompleted}/{totalModules} Modules</span>
+                      <span className="text-foreground font-semibold">{progress}%</span>
+                    </div>
+                    <div className="w-full bg-secondary h-2 rounded-full overflow-hidden">
+                      <div className="bg-primary h-full rounded-full transition-all" style={{ width: `${progress}%` }} />
+                    </div>
                   </div>
-                  <div className="w-full bg-secondary h-2 rounded-full overflow-hidden">
-                    <div className="bg-primary h-full rounded-full transition-all" style={{ width: `${course.progress}%` }} />
-                  </div>
-                </div>
-                
-                <Link href={`/student/courses/${course.id}`} className="block w-full">
-                  <Button variant="outline" className="w-full border-border text-foreground hover:bg-accent hover:text-accent-foreground">
-                    Continue Learning
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          ))}
+                  
+                  <Link href={`/student/courses/${course._id}`} className="block w-full">
+                    <Button variant="outline" className="w-full border-border text-foreground hover:bg-accent hover:text-accent-foreground">
+                      Continue Learning
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>
