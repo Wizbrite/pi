@@ -390,14 +390,23 @@ export default function ExamRoomPage({
                 {Object.keys(selectedAnswers).length} / {MOCK_QUESTIONS.length}
               </span>
 
-              <Button
-                size="sm"
-                disabled={currentQuestionIndex === MOCK_QUESTIONS.length - 1}
-                onClick={() => setCurrentQuestionIndex((prev) => prev + 1)}
-                className="text-xs font-semibold gap-1 bg-foreground text-background hover:bg-foreground/90 h-9 px-3"
-              >
-                Next <ChevronRight className="w-4 h-4" />
-              </Button>
+              {currentQuestionIndex < MOCK_QUESTIONS.length - 1 ? (
+                <Button
+                  size="sm"
+                  onClick={() => setCurrentQuestionIndex((prev) => prev + 1)}
+                  className="text-xs font-semibold gap-1 bg-foreground text-background hover:bg-foreground/90 h-9 px-3"
+                >
+                  Next <ChevronRight className="w-4 h-4" />
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  onClick={handleSubmitExam}
+                  className="text-xs font-bold gap-1.5 h-9 px-4 bg-green-600 hover:bg-green-700 text-white animate-pulse shadow-lg shadow-green-600/40 ring-2 ring-green-400/50"
+                >
+                  <CheckCircle2 className="w-4 h-4" /> Submit
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -463,15 +472,15 @@ export default function ExamRoomPage({
 
       {/* FLOATING AI TUTOR DRAWER */}
       {isAiOpen && (
-        <div className="fixed bottom-3 right-3 sm:bottom-6 sm:right-6 w-[calc(100vw-24px)] sm:w-96 bg-card border border-purple-500/30 rounded-2xl shadow-2xl z-50 flex flex-col overflow-hidden animate-in slide-in-from-bottom-5">
-          <div className="bg-purple-950/20 dark:bg-purple-950/40 p-3 sm:p-3.5 border-b border-purple-500/20 flex items-center justify-between">
+        <div className="fixed bottom-16 right-3 sm:bottom-6 sm:right-6 w-[calc(100vw-24px)] sm:w-96 bg-card border border-purple-500/30 rounded-2xl shadow-2xl z-[60] flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 max-h-[60vh] sm:max-h-[unset]">
+          <div className="bg-purple-950/20 dark:bg-purple-950/40 p-3 sm:p-3.5 border-b border-purple-500/20 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-lg bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-500">
                 <Bot className="w-4 h-4" />
               </div>
               <div>
                 <h4 className="text-xs font-bold text-foreground">AI Exam Assistant</h4>
-                <p className="text-[10px] text-muted-foreground">Ollama Model • Concept Hints</p>
+                <p className="text-[10px] text-muted-foreground">Pi AI • Concept Hints</p>
               </div>
             </div>
             <button
@@ -482,7 +491,7 @@ export default function ExamRoomPage({
             </button>
           </div>
 
-          <div className="p-3.5 space-y-3 h-56 sm:h-64 overflow-y-auto text-xs">
+          <div className="p-3.5 space-y-3 flex-1 overflow-y-auto text-xs min-h-0">
             {aiChat.map((msg, idx) => (
               <div
                 key={idx}
@@ -497,7 +506,8 @@ export default function ExamRoomPage({
             ))}
           </div>
 
-          <form onSubmit={handleSendAiQuery} className="p-2.5 bg-muted/40 border-t border-border flex gap-2">
+          {/* Input always visible — flex-shrink-0 keeps it from being pushed off screen */}
+          <form onSubmit={handleSendAiQuery} className="p-2.5 bg-muted/40 border-t border-border flex gap-2 shrink-0">
             <input
               type="text"
               value={aiPrompt}

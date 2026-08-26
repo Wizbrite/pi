@@ -325,9 +325,10 @@ export default function LessonDetailPage({ params }: LessonPageProps) {
 
       {/* Mobile AI Drawer */}
       {isAiDrawerOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex flex-col justify-end md:hidden animate-in fade-in">
-          <div className="bg-background border-t border-border rounded-t-2xl p-5 space-y-4 max-h-[80vh] overflow-y-auto animate-in slide-in-from-bottom duration-200">
-            <div className="flex items-center justify-between border-b border-border pb-3">
+        <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm flex flex-col justify-end md:hidden animate-in fade-in">
+          <div className="bg-background border-t border-border rounded-t-2xl flex flex-col animate-in slide-in-from-bottom duration-200" style={{ maxHeight: "75vh" }}>
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-border px-5 py-3 shrink-0">
               <div className="flex items-center gap-2 text-sm font-bold text-foreground">
                 <Sparkles className="w-4 h-4 text-primary" /> Pi AI Tutor
               </div>
@@ -340,41 +341,49 @@ export default function LessonDetailPage({ params }: LessonPageProps) {
               </button>
             </div>
 
-            {/* Inlined mobile form — no focus loss */}
-            <form onSubmit={handleAskAI} className="flex gap-2">
-              <input
-                type="text"
-                value={aiQuery}
-                onChange={(e) => setAiQuery(e.target.value)}
-                placeholder="Type your question..."
-                disabled={aiLoading}
-                className="flex-1 px-3 py-2 rounded-lg border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-              />
-              <Button
-                type="submit"
-                disabled={aiLoading || !aiQuery.trim()}
-                className="bg-primary text-primary-foreground shrink-0"
-              >
-                {aiLoading ? <StopCircle className="w-4 h-4" /> : <Send className="w-4 h-4" />}
-              </Button>
-            </form>
+            {/* Input — always visible at top */}
+            <div className="px-5 pt-4 pb-3 shrink-0">
+              <form onSubmit={handleAskAI} className="flex gap-2">
+                <input
+                  type="text"
+                  value={aiQuery}
+                  onChange={(e) => setAiQuery(e.target.value)}
+                  placeholder="Type your question..."
+                  disabled={aiLoading}
+                  autoFocus
+                  className="flex-1 px-3 py-2 rounded-lg border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 min-h-[44px]"
+                />
+                <Button
+                  type="submit"
+                  disabled={aiLoading || !aiQuery.trim()}
+                  className="bg-primary text-primary-foreground shrink-0 min-h-[44px]"
+                >
+                  {aiLoading ? <StopCircle className="w-4 h-4" /> : <Send className="w-4 h-4" />}
+                </Button>
+              </form>
+            </div>
 
-            {/* Single response box in mobile drawer */}
+            {/* Scrollable response area */}
             {(aiLoading || aiResponse || aiError) && (
-              <div className="p-4 bg-accent/60 border border-primary/20 rounded-xl text-sm text-accent-foreground leading-relaxed">
-                {aiLoading && !aiResponse && (
-                  <div className="flex items-center gap-2 text-muted-foreground text-xs">
-                    <Loader2 className="w-4 h-4 animate-spin" /> Pi is thinking...
-                  </div>
-                )}
-                {aiResponse && (
-                  <div className="prose prose-sm dark:prose-invert max-w-none">
-                    <ReactMarkdown>{aiResponse}</ReactMarkdown>
-                  </div>
-                )}
-                {aiError && <p className="text-xs text-red-500">{aiError}</p>}
+              <div className="flex-1 overflow-y-auto px-5 pb-5">
+                <div className="p-4 bg-accent/60 border border-primary/20 rounded-xl text-sm text-accent-foreground leading-relaxed">
+                  {aiLoading && !aiResponse && (
+                    <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                      <Loader2 className="w-4 h-4 animate-spin" /> Pi is thinking...
+                    </div>
+                  )}
+                  {aiResponse && (
+                    <div className="prose prose-sm dark:prose-invert max-w-none">
+                      <ReactMarkdown>{aiResponse}</ReactMarkdown>
+                    </div>
+                  )}
+                  {aiError && <p className="text-xs text-red-500">{aiError}</p>}
+                </div>
               </div>
             )}
+
+            {/* Bottom padding for safe area */}
+            <div className="h-4 shrink-0" />
           </div>
         </div>
       )}
