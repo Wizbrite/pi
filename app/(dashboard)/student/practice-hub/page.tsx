@@ -138,6 +138,9 @@ export default function PracticeHubPage() {
                       {item.subject}
                     </span>
                     <span className="text-xs text-slate-500 dark:text-slate-400">{item.topic}</span>
+                    {item.lesson && (
+                      <span className="text-xs text-slate-500 dark:text-slate-400 opacity-70">• {item.lesson}</span>
+                    )}
                   </div>
                   <span className="text-xs text-rose-500 font-medium">Failed {item.attemptsFailed || 1}x</span>
                 </div>
@@ -287,6 +290,7 @@ function MistakeQuizModal({
               <div className="space-y-1">
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   {currentItem.subject} • {currentItem.topic}
+                  {currentItem.lesson && ` • ${currentItem.lesson}`}
                 </p>
                 <h4 className="text-base font-bold text-[#0a0d1d] dark:text-white leading-snug">
                   {currentItem.question}

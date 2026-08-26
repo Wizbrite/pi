@@ -20,7 +20,7 @@ export function AiTutorBanner({ onAsk }: AiTutorBannerProps) {
   };
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-violet-100 bg-gradient-to-r from-violet-600 via-violet-600 to-violet-700 p-6 text-white shadow-md">
+    <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-primary p-6 text-white shadow-md">
       {/* Decorative ambient lighting */}
       <div className="pointer-events-none absolute -right-10 -top-10 h-44 w-44 rounded-full bg-white/10 blur-2xl" />
       <div className="pointer-events-none absolute -bottom-10 right-1/3 h-32 w-32 rounded-full bg-violet-400/20 blur-xl" />
@@ -56,10 +56,10 @@ export function AiTutorBanner({ onAsk }: AiTutorBannerProps) {
           </div>
           <button
             type="submit"
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-violet-700 shadow-md transition-all hover:bg-violet-50 active:scale-[0.98]"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-primary shadow-md transition-all hover:bg-slate-50 active:scale-[0.98]"
           >
             Ask AI
-            <Sparkles className="h-4 w-4 text-violet-600" />
+            <Sparkles className="h-4 w-4 text-primary" />
           </button>
         </form>
       </div>
@@ -72,11 +72,11 @@ export function AiTutorFab({ onClick }: { onClick?: () => void }) {
     <button
       onClick={onClick}
       aria-label="Open AI Assistant"
-      className="fixed bottom-20 right-6 z-60 flex items-center gap-2.5 rounded-full bg-gradient-to-r from-violet-600 to-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-xl shadow-violet-600/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl active:scale-95"
+      className="fixed bottom-20 right-6 z-60 flex items-center gap-2.5 rounded-full bg-primary px-4 py-3 text-sm font-semibold text-white shadow-xl shadow-primary/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl active:scale-95"
     >
       <div className="relative">
         <Bot className="h-5 w-5" />
-        <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-violet-400 ring-2 ring-violet-600" />
+        <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-purple-300 ring-2 ring-primary" />
       </div>
       <span className="hidden sm:inline">Ask AI Tutor</span>
     </button>

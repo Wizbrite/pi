@@ -14,6 +14,7 @@ import {
 import { TopicQuizModal } from "@/components/student/topic-quiz-modal";
 import { useAiTutor } from "@/hooks/use-ai-tutor";
 import { buildLessonSystemPrompt } from "@/lib/ai/prompts";
+import { usePracticeStore } from "@/stores/practice-store";
 
 interface LessonPageProps {
   params: Promise<{ "course-id": string; "lesson-id": string }>;
@@ -397,8 +398,19 @@ export default function LessonDetailPage({ params }: LessonPageProps) {
           lessonTitle={lesson.title}
           lessonId={lesson._id.toString()}
           courseTitle={course.title}
-          onQuizComplete={(finalScore: number) => {
+          onQuizComplete={(finalScore: number, earnedXp: number, failedQuestions: any[]) => {
             console.log("Quiz completed. Score:", finalScore);
+            const { addMistake } = usePracticeStore.getState();
+            failedQuestions?.forEach((q) => {
+              addMistake({
+                subject: course.title,
+                topic: topic.title,
+                lesson: lesson.title,
+                question: q.questionText,
+                incorrectAnswer: q.userAnswer,
+                correctAnswer: q.correctAnswer,
+              });
+            });
           }}
         />
       )}

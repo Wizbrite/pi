@@ -5,6 +5,7 @@ export interface SavedMistake {
   id: string;
   subject: string;
   topic: string;
+  lesson?: string;
   question: string;
   incorrectAnswer: string;
   correctAnswer: string;

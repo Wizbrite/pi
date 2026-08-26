@@ -28,7 +28,7 @@ const recommendedModules: RecommendedModule[] = [
     questionCount: 10,
     level: "A Level",
     href: "/student/exams?subject=pure-maths&topic=algebra",
-    badgeColor: "bg-violet-50 text-violet-700 border-violet-200/60",
+    badgeColor: "bg-primary/10 text-primary border-primary/20",
   },
   {
     id: "2",
@@ -39,7 +39,7 @@ const recommendedModules: RecommendedModule[] = [
     questionCount: 12,
     level: "A Level",
     href: "/student/exams?subject=physics&topic=mechanics",
-    badgeColor: "bg-violet-50 text-violet-700 border-violet-200/60",
+    badgeColor: "bg-primary/10 text-primary border-primary/20",
   },
   // O-Level Modules
   {
@@ -51,7 +51,7 @@ const recommendedModules: RecommendedModule[] = [
     questionCount: 10,
     level: "O Level",
     href: "/student/exams?subject=maths&topic=trigonometry",
-    badgeColor: "bg-violet-50 text-violet-700 border-violet-200/60",
+    badgeColor: "bg-primary/10 text-primary border-primary/20",
   },
   {
     id: "4",
@@ -62,7 +62,7 @@ const recommendedModules: RecommendedModule[] = [
     questionCount: 15,
     level: "O Level",
     href: "/student/exams?subject=physics&topic=forces",
-    badgeColor: "bg-violet-50 text-violet-700 border-violet-200/60",
+    badgeColor: "bg-primary/10 text-primary border-primary/20",
   }
 ];
 
@@ -85,7 +85,7 @@ export function RecommendedNextSteps() {
         </div>
         <Link
           href="/student/courses"
-          className="inline-flex items-center gap-1 text-xs font-semibold text-violet-600 hover:text-violet-700"
+          className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:text-primary/80"
         >
           View all
           <ArrowRight className="h-3.5 w-3.5" />
@@ -96,7 +96,7 @@ export function RecommendedNextSteps() {
         {filteredModules.map((module) => (
           <div
             key={module.id}
-            className="group flex flex-col justify-between rounded-2xl border border-border bg-card p-5 shadow-xs transition-all duration-300 hover:border-violet-300 hover:shadow-md"
+            className="group flex flex-col justify-between rounded-2xl border border-border bg-card p-5 shadow-xs transition-all duration-300 hover:border-primary/50 hover:shadow-md"
           >
             <div>
               <div className="flex items-center justify-between gap-2">
@@ -111,7 +111,7 @@ export function RecommendedNextSteps() {
                 </span>
               </div>
 
-              <h4 className="mt-3 font-bold text-foreground group-hover:text-violet-600 transition-colors">
+              <h4 className="mt-3 font-bold text-foreground group-hover:text-primary transition-colors">
                 {module.title}
               </h4>
               <p className="mt-1 text-xs text-muted-foreground">
@@ -125,7 +125,7 @@ export function RecommendedNextSteps() {
               </span>
               <Link
                 href={module.href}
-                className="inline-flex items-center gap-1 text-xs font-bold text-violet-600 group-hover:translate-x-0.5 transition-transform"
+                className="inline-flex items-center gap-1 text-xs font-bold text-primary group-hover:translate-x-0.5 transition-transform"
               >
                 Start Practice
                 <ArrowRight className="h-3.5 w-3.5" />

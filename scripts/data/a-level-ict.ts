@@ -62,7 +62,7 @@ The diagram below shows a simple LAN with three client PCs and a shared printer:
 
 **Key security implication:** a networked computer inherits the vulnerabilities of every other device on the same broadcast domain, whereas a standalone computer is protected from remote network attacks but is vulnerable to physical theft.`,
               aiPromptHint:
-                "Ask AI: What are the security risks of networked computers compared to standalone systems?",
+                "Ask Pi: What are the security risks of networked computers compared to standalone systems?",
             },
             {
               partNumber: 2,
@@ -87,7 +87,7 @@ The diagram below shows a simple LAN with three client PCs and a shared printer:
 
 In large enterprises, **Client‑Server** is the de‑facto standard because it enables granular authentication, load balancing, and centralized management.`,
               aiPromptHint:
-                "Ask AI: Why is Client-Server architecture preferred over Peer-to-Peer for large enterprises?",
+                "Ask Pi: Why is Client-Server architecture preferred over Peer-to-Peer for large enterprises?",
             },
           ],
           questions: [
@@ -138,7 +138,7 @@ In large enterprises, **Client‑Server** is the de‑facto standard because it 
 All of these devices may have built‑in management interfaces (CLI, web UI, SNMP) for configuration and monitoring.`,
 
               aiPromptHint:
-                "Ask AI: What is the main structural difference between a Switch and a Router?",
+                "Ask Pi: What is the main structural difference between a Switch and a Router?",
             },
             {
               partNumber: 2,
@@ -146,7 +146,7 @@ All of these devices may have built‑in management interfaces (CLI, web UI, SNM
               content:
                 "Physical topology describes the layout of cables and nodes. Star topology connects all nodes to a central switch/hub; Bus uses a single backbone cable terminated at ends; Ring connects nodes in a closed loop; Mesh provides redundant paths between nodes. Logical topology describes how data actually travels through the physical setup (e.g., Logical Bus on a Physical Star using a Hub).",
               aiPromptHint:
-                "Ask AI: Explain why a physical star topology fails if the central switch crashes.",
+                "Ask Pi: Explain why a physical star topology fails if the central switch crashes.",
             },
           ],
           questions: [
@@ -179,7 +179,7 @@ All of these devices may have built‑in management interfaces (CLI, web UI, SNM
               content:
                 "A **protocol** is a formal set of rules that governs data exchange between network devices. Protocols define aspects such as data format, packet structure, control signals, and error handling procedures, ensuring seamless communication even between heterogeneous systems.",
               aiPromptHint:
-                "Ask AI: How does HTTPS achieve secure data transfer compared to HTTP?",
+                "Ask Pi: How does HTTPS achieve secure data transfer compared to HTTP?",
             },
             {
               partNumber: 2,
@@ -187,7 +187,7 @@ All of these devices may have built‑in management interfaces (CLI, web UI, SNM
               content:
                 "The Open Systems Interconnection (OSI) model standardizes network communication into 7 layers: 7. Application, 6. Presentation, 5. Session, 4. Transport, 3. Network, 2. Data Link, and 1. Physical. Data flows down from Layer 7 to Layer 1 via encapsulation at the transmitter, and up from Layer 1 to Layer 7 via decapsulation at the receiver.",
               aiPromptHint:
-                "Ask AI: Name a mnemonic to easily remember all 7 layers of the OSI model from Layer 7 to Layer 1.",
+                "Ask Pi: Name a mnemonic to easily remember all 7 layers of the OSI model from Layer 7 to Layer 1.",
             },
           ],
           questions: [
@@ -225,7 +225,7 @@ All of these devices may have built‑in management interfaces (CLI, web UI, SNM
               content:
                 "Peripheral communication relies on control mechanisms: Buffers temporarily store data to balance speed differences between CPU and devices; Interrupts signal CPU to stop current execution for urgent I/O tasks; Polling periodically checks device status; Handshaking establishes agreement on communication parameters prior to transmission.",
               aiPromptHint:
-                "Ask AI: Why is Interrupt-driven I/O more efficient than Polling?",
+                "Ask Pi: Why is Interrupt-driven I/O more efficient than Polling?",
             },
             {
               partNumber: 2,
@@ -233,7 +233,7 @@ All of these devices may have built‑in management interfaces (CLI, web UI, SNM
               content:
                 "Organisations secure resources through Intranets (private internal network), Extranets (extended access for trusted partners), and Virtual Private Networks (VPNs) which tunnel encrypted traffic across public networks. Firewalls inspect incoming/outgoing traffic against predefined access rules to block unauthorized connections.",
               aiPromptHint:
-                "Ask AI: How does a VPN protect data transmitted over public Wi-Fi?",
+                "Ask Pi: How does a VPN protect data transmitted over public Wi-Fi?",
             },
           ],
           questions: [
@@ -279,7 +279,7 @@ All of these devices may have built‑in management interfaces (CLI, web UI, SNM
               content:
                 "Data communication is the exchange of data between two nodes via a transmission medium. Its essential components are the Message, Sender, Receiver, Medium, and Protocol. Performance features include Bandwidth (data capacity per second), Baud Rate (signal state changes per second), Bit Rate (bits transmitted per second), and Transmission Impairments (attenuation, noise, and distortion).",
               aiPromptHint:
-                "Ask AI: What is the relationship between Bit Rate and Baud Rate?",
+                "Ask Pi: What is the relationship between Bit Rate and Baud Rate?",
             },
             {
               partNumber: 2,
@@ -287,7 +287,7 @@ All of these devices may have built‑in management interfaces (CLI, web UI, SNM
               content:
                 "Transmission can be Analogue (continuous wave signals) or Digital (discrete binary pulses). Modems perform Modulation (digital to analogue conversion) and Demodulation (analogue to digital conversion) to allow digital computers to communicate over analogue media like telephone lines.",
               aiPromptHint:
-                "Ask AI: How does Amplitude Modulation differ from Frequency Modulation?",
+                "Ask Pi: How does Amplitude Modulation differ from Frequency Modulation?",
             },
           ],
           questions: [
@@ -320,7 +320,7 @@ All of these devices may have built‑in management interfaces (CLI, web UI, SNM
               content:
                 "To ensure transmission integrity, systems employ error detection methods. Parity Bits add an extra bit to make total 1s even (Even Parity) or odd (Odd Parity). Checksums generate a numeric sum from data blocks, appending it to the transmission for recalculation at the receiver end. Cyclic Redundancy Check (CRC) uses polynomial division to detect block errors.",
               aiPromptHint:
-                "Ask AI: Why does a single parity bit fail to detect an even number of bit errors?",
+                "Ask Pi: Why does a single parity bit fail to detect an even number of bit errors?",
             },
             {
               partNumber: 2,
@@ -328,7 +328,7 @@ All of these devices may have built‑in management interfaces (CLI, web UI, SNM
               content:
                 "Self-correcting codes, such as Hamming Code, append redundant parity bits at specific positions, allowing the receiver to locate and automatically correct single-bit errors without requesting retransmission. Echo checks require the receiving device to send received data back to the sender for verification.",
               aiPromptHint:
-                "Ask AI: How does Hamming Code calculate the position of an inverted error bit?",
+                "Ask Pi: How does Hamming Code calculate the position of an inverted error bit?",
             },
           ],
           questions: [
@@ -361,7 +361,7 @@ All of these devices may have built‑in management interfaces (CLI, web UI, SNM
               content:
                 "Guided media transport signals along physical paths: Twisted Pair cables (UTP/STP) resist EMI; Coaxial cables offer shielding for high frequencies; Fibre Optic cables use total internal reflection of light waves for immune, high-bandwidth transmission. Unguided media transmit electromagnetic signals through air/vacuum: Radio waves, Microwaves (requires line-of-sight), and Infrared.",
               aiPromptHint:
-                "Ask AI: Why is Fibre Optic cabling immune to Electromagnetic Interference (EMI)?",
+                "Ask Pi: Why is Fibre Optic cabling immune to Electromagnetic Interference (EMI)?",
             },
             {
               partNumber: 2,
@@ -369,7 +369,7 @@ All of these devices may have built‑in management interfaces (CLI, web UI, SNM
               content:
                 "Transmission direction modes include: Simplex (unidirectional communication, e.g., radio broadcasting); Half-Duplex (bidirectional communication, but only one direction at a time, e.g., Walkie-Talkies); Full-Duplex (simultaneous bidirectional communication, e.g., mobile phones). Transmission modes also classify into Serial vs Parallel and Synchronous vs Asynchronous.",
               aiPromptHint:
-                "Ask AI: What is the primary operational difference between Simplex and Half-Duplex transmission?",
+                "Ask Pi: What is the primary operational difference between Simplex and Half-Duplex transmission?",
             },
           ],
           questions: [
@@ -415,7 +415,7 @@ All of these devices may have built‑in management interfaces (CLI, web UI, SNM
               content:
                 "The Internet is a globally connected WAN of networks using TCP/IP protocols. Internet Service Providers (ISPs) provide user connectivity and are arranged hierarchically: Tier 1 ISPs form the global Internet Backbone, Tier 2 are regional providers, and Tier 3 are local ISPs. Connection technologies include DSL, Cable, Fibre (FTTH), Satellite, and Cellular (4G/5G).",
               aiPromptHint:
-                "Ask AI: How does DNS convert human-readable URLs into IP addresses?",
+                "Ask Pi: How does DNS convert human-readable URLs into IP addresses?",
             },
             {
               partNumber: 2,
@@ -423,7 +423,7 @@ All of these devices may have built‑in management interfaces (CLI, web UI, SNM
               content:
                 "Core internet services include the World Wide Web (WWW), Email (SMTP/POP/IMAP), FTP, VoIP, and SSH. Social networking platforms enable communication and community interactions, while Collaborative Environments (Wiki, Forums, Blogs, Google Workspace) allow remote real-time content creation and knowledge sharing.",
               aiPromptHint:
-                "Ask AI: What is the main structural difference between the Internet and the World Wide Web?",
+                "Ask Pi: What is the main structural difference between the Internet and the World Wide Web?",
             },
           ],
           questions: [
@@ -461,7 +461,7 @@ All of these devices may have built‑in management interfaces (CLI, web UI, SNM
               content:
                 "HTML (HyperText Markup Language) structures web content using semantic tags (`<div>`, `<form>`, `<table>`, `<a>`, `<img>`, `<video>`). CSS (Cascading Style Sheets) controls styling and layout presentation using selectors, properties, and values, supporting responsive design across viewing devices.",
               aiPromptHint:
-                "Ask AI: What is the difference between inline, internal, and external CSS?",
+                "Ask Pi: What is the difference between inline, internal, and external CSS?",
             },
             {
               partNumber: 2,
@@ -469,7 +469,7 @@ All of these devices may have built‑in management interfaces (CLI, web UI, SNM
               content:
                 "JavaScript runs on the client browser to create dynamic interactive user interfaces, modify DOM elements, and validate form inputs. PHP (Hypertext Preprocessor) is a server-side scripting language executed on the web server to handle business logic, process HTML form requests, and interface with relational databases.",
               aiPromptHint:
-                "Ask AI: Why must form validation be performed on the server-side even if JavaScript handles it on the client-side?",
+                "Ask Pi: Why must form validation be performed on the server-side even if JavaScript handles it on the client-side?",
             },
           ],
           questions: [
@@ -502,7 +502,7 @@ All of these devices may have built‑in management interfaces (CLI, web UI, SNM
               content:
                 "To publish websites, web servers (e.g., Apache, Nginx, IIS) store web assets and listen for incoming HTTP/HTTPS requests. Web hosting environments include Shared Hosting (multiple sites share one server), Virtual Private Server (VPS), Dedicated Hosting, and Cloud Hosting. Essential deployment assets include domain registration, DNS mapping, and database access.",
               aiPromptHint:
-                "Ask AI: What is the difference between Shared Hosting and Dedicated Hosting?",
+                "Ask Pi: What is the difference between Shared Hosting and Dedicated Hosting?",
             },
           ],
           questions: [
@@ -553,7 +553,7 @@ All of these devices may have built‑in management interfaces (CLI, web UI, SNM
               content:
                 "E-Commerce is the electronic buying and selling of goods/services across online networks. Business models include B2B (Business-to-Business), B2C (Business-to-Consumer), and C2C (Consumer-to-Consumer, e.g., online auctions). Essential infrastructure includes digital product catalogs, shopping carts, secure payment gateways (SSL/TLS), and inventory automation.",
               aiPromptHint:
-                "Ask AI: How do secure payment gateways process credit card transactions online?",
+                "Ask Pi: How do secure payment gateways process credit card transactions online?",
             },
             {
               partNumber: 2,
@@ -561,7 +561,7 @@ All of these devices may have built‑in management interfaces (CLI, web UI, SNM
               content:
                 "E-Banking allows customers to conduct financial transactions remotely via electronic platforms. Services include electronic funds transfer (EFT), mobile banking, real-time balance inquiries, utility payments, and online credit processing. Security depends on multi-factor authentication (MFA), end-to-end encryption, and fraud-detection monitoring.",
               aiPromptHint:
-                "Ask AI: What is Multi-Factor Authentication and why is it mandatory in E-Banking?",
+                "Ask Pi: What is Multi-Factor Authentication and why is it mandatory in E-Banking?",
             },
           ],
           questions: [
@@ -599,7 +599,7 @@ All of these devices may have built‑in management interfaces (CLI, web UI, SNM
               content:
                 "E-Health integrates ICT into healthcare administration and patient treatment. Key applications include Electronic Health Records (EHR) for centralized patient history, Telemedicine for remote specialist consultations, and AI diagnostic analysis tools. Major concerns involve strict data privacy, HIPAA compliance, and system availability.",
               aiPromptHint:
-                "Ask AI: How does Telemedicine benefit rural communities with limited specialists?",
+                "Ask Pi: How does Telemedicine benefit rural communities with limited specialists?",
             },
             {
               partNumber: 2,
@@ -607,7 +607,7 @@ All of these devices may have built‑in management interfaces (CLI, web UI, SNM
               content:
                 "E-Government uses IT platforms to deliver public services to citizens (G2C), businesses (G2B), and government agencies (G2G), such as online tax filing, passport renewals, and voting registries. Computer Assisted Learning (CAL) uses educational software, simulations, and Learning Management Systems (LMS) to facilitate self-paced, interactive instruction.",
               aiPromptHint:
-                "Ask AI: What are the benefits of G2C E-Government portals for public administration?",
+                "Ask Pi: What are the benefits of G2C E-Government portals for public administration?",
             },
           ],
           questions: [

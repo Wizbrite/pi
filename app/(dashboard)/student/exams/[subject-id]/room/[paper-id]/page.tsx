@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { usePracticeStore } from "@/stores/practice-store";
 
 // Interface Definitions
 export interface Question {
@@ -82,7 +83,7 @@ export default function ExamRoomPage({
 
   // Exam states
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
+  const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number | string>>({});
   const [bookmarkedQuestions, setBookmarkedQuestions] = useState<number[]>([]);
   const [timeLeftSeconds, setTimeLeftSeconds] = useState(0);
   const [timerStarted, setTimerStarted] = useState(false);
@@ -191,11 +192,18 @@ export default function ExamRoomPage({
   const TOTAL_TIME = (paperMeta?.durationMinutes || 90) * 60;
   const currentQ = questions[currentQuestionIndex];
 
-  // Option Selection
+  // Option Selection / Text Input
   const handleSelectOption = (optionIndex: number) => {
     setSelectedAnswers((prev) => ({
       ...prev,
       [currentQ.id]: optionIndex,
+    }));
+  };
+
+  const handleTextInput = (text: string) => {
+    setSelectedAnswers((prev) => ({
+      ...prev,
+      [currentQ.id]: text,
     }));
   };
 
@@ -230,14 +238,38 @@ export default function ExamRoomPage({
   const handleSubmitExam = () => {
     if (confirm("Are you sure you want to submit your exam?")) {
       const timeSpentSeconds = TOTAL_TIME - timeLeftSeconds;
+      const { addMistake } = usePracticeStore.getState();
 
       const processedQuestions = questions.map((q, idx) => {
-        const selectedIdx = selectedAnswers[q.id];
-        const isAnswered = selectedIdx !== undefined;
-        const isCorrect = isAnswered && selectedIdx === q.correctAnswerIndex;
-        const userAnswerText = isAnswered
-          ? (q.options[selectedIdx] || `Option ${selectedIdx + 1}`)
-          : "Unanswered";
+        const selectedVal = selectedAnswers[q.id];
+        const isAnswered = selectedVal !== undefined && selectedVal !== "";
+        let isCorrect = false;
+        let userAnswerText = "Unanswered";
+
+        if (q.type === "MCQ") {
+          isCorrect = isAnswered && selectedVal === q.correctAnswerIndex;
+          userAnswerText = isAnswered
+            ? (q.options[selectedVal as number] || `Option ${(selectedVal as number) + 1}`)
+            : "Unanswered";
+        } else {
+          userAnswerText = isAnswered ? (selectedVal as string) : "Unanswered";
+          // Basic auto-grade for structured (just checks if they wrote something to not mark as 0, but real grading needs AI)
+          // For now, if they answered, we don't automatically mark it as a "mistake" unless we strictly grade it.
+          // Let's assume strict grading isn't fully implemented for structured, but we still capture it.
+          isCorrect = false; // By default, structured needs manual/AI grading.
+        }
+
+        // Record mistake if incorrect and it's an MCQ (or if you want to record all wrong answers)
+        if (!isCorrect && isAnswered && q.type === "MCQ") {
+          addMistake({
+            subject: subjectId || "Subject",
+            topic: q.topic,
+            lesson: "Exam",
+            question: q.text,
+            incorrectAnswer: userAnswerText,
+            correctAnswer: q.correctAnswerText || q.options[q.correctAnswerIndex] || "",
+          });
+        }
 
         return {
           questionId: q.id,
@@ -371,7 +403,7 @@ export default function ExamRoomPage({
                 {currentQ.text}
               </p>
 
-              {currentQ.options.length > 0 && (
+              {currentQ.options.length > 0 ? (
                 <div className="space-y-2.5 sm:space-y-3">
                   {currentQ.options.map((option, idx) => {
                     const isSelected = selectedAnswers[currentQ.id] === idx;
@@ -398,6 +430,16 @@ export default function ExamRoomPage({
                       </button>
                     );
                   })}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold text-muted-foreground">Type your answer below:</p>
+                  <textarea
+                    value={(selectedAnswers[currentQ.id] as string) || ""}
+                    onChange={(e) => handleTextInput(e.target.value)}
+                    placeholder="Enter your detailed answer here..."
+                    className="w-full min-h-[150px] p-4 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-y"
+                  />
                 </div>
               )}
             </div>
