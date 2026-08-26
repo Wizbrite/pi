@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Send, Bot, User, Sparkles, RefreshCw } from "lucide-react";
+import { Send, Bot, User, Sparkles, RefreshCw, Loader2 } from "lucide-react";
+import { useAiTutor } from "@/hooks/use-ai-tutor";
+import ReactMarkdown from "react-markdown";
 
 interface Message {
   id: string;
@@ -15,13 +17,17 @@ export default function AITutorPage() {
     {
       id: "1",
       sender: "ai",
-      text: "Hello! I am your AI GCE Study Assistant. Ask me anything about your subjects, past questions, or difficult concepts!",
-      timestamp: "10:00 AM",
+      text: "Hello! I am Pi, your AI GCE Study Assistant. Ask me anything about your subjects, past questions, or difficult concepts!",
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     },
   ]);
   const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const { response: aiResponse, isLoading: aiLoading, error: aiError, ask, reset: resetAi } = useAiTutor({
+    systemPrompt: "You are Pi, an expert AI GCE Study Assistant. Your goal is to tutor students preparing for their O-Level and A-Level examinations. Be encouraging, concise, and accurate.",
+    stream: true,
+  });
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -29,11 +35,27 @@ export default function AITutorPage() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, loading]);
+  }, [messages, aiLoading, aiResponse]);
+
+  // When AI finishes streaming a response, push it to our permanent messages array
+  useEffect(() => {
+    if (!aiLoading && aiResponse) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          sender: "ai",
+          text: aiResponse,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        }
+      ]);
+      resetAi();
+    }
+  }, [aiLoading, aiResponse, resetAi]);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || loading) return;
+    if (!input.trim() || aiLoading) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -44,20 +66,15 @@ export default function AITutorPage() {
 
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
-    setLoading(true);
-
-    // Simulated API response - swap with your actual OpenRouter endpoint call
-    setTimeout(() => {
-      const aiResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        sender: "ai",
-        text: "That is a great question regarding your GCE preparation! Let's break down this concept step-by-step...",
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      };
-      setMessages((prev) => [...prev, aiResponse]);
-      setLoading(false);
-    }, 1200);
+    
+    // Trigger the hook to fetch from the backend
+    await ask(input);
   };
+
+  const handleClear = () => {
+    setMessages([messages[0]]);
+    resetAi();
+  }
 
   return (
     <div className="flex flex-col h-[calc(100vh-6rem)] max-w-5xl mx-auto p-4 space-y-4">
@@ -74,11 +91,10 @@ export default function AITutorPage() {
                 GCE Tutor
               </span>
             </h1>
-            
           </div>
         </div>
         <button
-          onClick={() => setMessages([messages[0]])}
+          onClick={handleClear}
           className="p-2 rounded-lg text-slate-500 hover:text-violet-600 dark:hover:text-violet-400 transition-colors"
           title="Clear Chat"
         >
@@ -112,7 +128,11 @@ export default function AITutorPage() {
                   : "bg-[#f4f6fc] dark:bg-[#0a0d1d] text-[#0a0d1d] dark:text-slate-200 border border-slate-200/80 dark:border-white/10 rounded-tl-none"
               }`}
             >
-              <p>{msg.text}</p>
+              <div className="prose prose-sm dark:prose-invert max-w-none">
+                <ReactMarkdown>
+                  {msg.text}
+                </ReactMarkdown>
+              </div>
               <span
                 className={`block text-[10px] mt-1.5 text-right ${
                   msg.sender === "user" ? "text-violet-200" : "text-slate-400"
@@ -124,12 +144,30 @@ export default function AITutorPage() {
           </div>
         ))}
 
-        {loading && (
-          <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 p-2">
-            <Sparkles className="w-4 h-4 animate-spin text-violet-500" />
-            <span>AI Tutor is thinking...</span>
-          </div>
+        {/* Live Streaming Response Block */}
+        {(aiLoading || (aiResponse && !aiLoading)) && (
+           <div className="flex items-start gap-3 flex-row">
+           <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 bg-slate-200 dark:bg-[#181e3d] text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-white/10">
+             <Sparkles className="w-4 h-4 text-violet-500" />
+           </div>
+           <div className="max-w-[80%] sm:max-w-[70%] p-3.5 rounded-2xl text-sm leading-relaxed bg-[#f4f6fc] dark:bg-[#0a0d1d] text-[#0a0d1d] dark:text-slate-200 border border-slate-200/80 dark:border-white/10 rounded-tl-none">
+             {aiLoading && !aiResponse && (
+               <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                 <Loader2 className="w-3.5 h-3.5 animate-spin" /> Pi is thinking...
+               </div>
+             )}
+             {aiResponse && (
+                <div className="prose prose-sm dark:prose-invert max-w-none">
+                  <ReactMarkdown>
+                    {aiResponse}
+                  </ReactMarkdown>
+                </div>
+             )}
+             {aiError && <p className="text-xs text-red-500 mt-2">{aiError}</p>}
+           </div>
+         </div>
         )}
+
         <div ref={messagesEndRef} />
       </div>
 
@@ -144,7 +182,7 @@ export default function AITutorPage() {
         />
         <button
           type="submit"
-          disabled={!input.trim() || loading}
+          disabled={!input.trim() || aiLoading}
           className="px-5 py-3 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg shadow-violet-600/20"
         >
           <span>Send</span>

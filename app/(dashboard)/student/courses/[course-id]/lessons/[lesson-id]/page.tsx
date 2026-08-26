@@ -1,15 +1,19 @@
 "use client";
 
-import React, { use, useState, useEffect, useCallback } from "react";
+import React, { use, useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
+import ReactMarkdown from "react-markdown";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { ArrowLeft, ArrowRight, BotMessageSquare, Send, Sparkles, X, Loader2, AlertTriangle, RefreshCcw } from "lucide-react";
-import { TopicQuizModal } from "@/components/student/topic-quiz-modal";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import ReactMarkdown from 'react-markdown';
+import {
+  ArrowLeft, ArrowRight, BotMessageSquare, Send, Sparkles, X,
+  Loader2, AlertTriangle, RefreshCcw, StopCircle,
+} from "lucide-react";
+import { TopicQuizModal } from "@/components/student/topic-quiz-modal";
+import { useAiTutor } from "@/hooks/use-ai-tutor";
+import { buildLessonSystemPrompt } from "@/lib/ai/prompts";
 
 interface LessonPageProps {
   params: Promise<{ "course-id": string; "lesson-id": string }>;
@@ -25,40 +29,62 @@ export default function LessonDetailPage({ params }: LessonPageProps) {
   const [topic, setTopic] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const [aiQuery, setAiQuery] = useState("");
-  const [aiHelpResponse, setAiHelpResponse] = useState<string | null>(null);
   const [isQuizOpen, setIsQuizOpen] = useState(false);
   const [isAiDrawerOpen, setIsAiDrawerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("part-1");
+  const [aiQuery, setAiQuery] = useState("");
+  const [activePartContent, setActivePartContent] = useState<string>("");
 
+  // Keep a stable ref for the input value to avoid re-render focus loss
+  const aiQueryRef = useRef(aiQuery);
+  aiQueryRef.current = aiQuery;
+
+  // ── AI Tutor hook ──────────────────────────────────────────────────────────
+  const systemPrompt = lesson
+    ? buildLessonSystemPrompt({
+        lessonTitle: lesson.title,
+        topicTitle: topic?.title ?? "Topic",
+        courseTitle: course?.title ?? "Course",
+        partContent: activePartContent,
+      })
+    : "You are Pi, an AI Tutor for GCE A-Level students.";
+
+  const { response: aiResponse, isLoading: aiLoading, error: aiError, ask, reset: resetAi } = useAiTutor({
+    systemPrompt,
+    stream: true,
+  });
+
+  // ── Fetch lesson + course data ─────────────────────────────────────────────
   const fetchLessonData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
       const [courseRes, lessonRes] = await Promise.all([
         fetch(`/api/courses/${courseId}`),
-        fetch(`/api/lessons/${lessonId}`)
+        fetch(`/api/lessons/${lessonId}`),
       ]);
-      
+
       if (!courseRes.ok || !lessonRes.ok) throw new Error("Failed to fetch data");
       const courseJson = await courseRes.json();
       const lessonJson = await lessonRes.json();
-      
+
       if (!courseJson.success) throw new Error(courseJson.message);
       if (!lessonJson.success) throw new Error(lessonJson.message);
 
       const courseData = courseJson.data.course;
       const fullLesson = lessonJson.data;
-
-      const foundTopic = courseData.topics.find((t: any) => t._id.toString() === fullLesson.topicId);
+      const foundTopic = courseData.topics.find(
+        (t: any) => t._id.toString() === fullLesson.topicId
+      );
 
       setCourse(courseData);
       setTopic(foundTopic || { title: "Topic" });
       setLesson(fullLesson);
-      
-      if (fullLesson.parts && fullLesson.parts.length > 0) {
-        setActiveTab(`part-${fullLesson.parts[0].partNumber}`);
+
+      if (fullLesson.parts?.length > 0) {
+        const firstPart = fullLesson.parts[0];
+        setActiveTab(`part-${firstPart.partNumber}`);
+        setActivePartContent(firstPart.content ?? "");
       }
     } catch (err: any) {
       console.error(err);
@@ -72,17 +98,26 @@ export default function LessonDetailPage({ params }: LessonPageProps) {
     fetchLessonData();
   }, [fetchLessonData]);
 
-  const handleAskAI = (e: React.FormEvent, predefinedHint?: string) => {
-    e.preventDefault();
-    const query = predefinedHint || aiQuery.trim();
-    if (!query) return;
-
-    setAiHelpResponse(
-      `AI Tutor (${lesson?.title || "Lesson"}): This is a simulated AI response for "${query}". In a fully integrated system, this would securely query the Mistral API using the lesson context.`
-    );
-    if (!predefinedHint) setAiQuery("");
+  // When the user switches tabs, update active part content for AI context
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    resetAi();
+    if (lesson?.parts) {
+      const partNum = parseInt(value.replace("part-", ""), 10);
+      const part = lesson.parts.find((p: any) => p.partNumber === partNum);
+      setActivePartContent(part?.content ?? "");
+    }
   };
 
+  const handleAskAI = async (e: React.FormEvent, predefinedHint?: string) => {
+    e.preventDefault();
+    const query = predefinedHint || aiQueryRef.current.trim();
+    if (!query) return;
+    if (!predefinedHint) setAiQuery("");
+    await ask(query);
+  };
+
+  // ── Loading & error states ─────────────────────────────────────────────────
   if (isLoading) {
     return (
       <div className="p-6 max-w-4xl mx-auto flex flex-col items-center justify-center min-h-[50vh] space-y-4">
@@ -115,8 +150,8 @@ export default function LessonDetailPage({ params }: LessonPageProps) {
   }
 
   return (
-    <div className="p-4 md:p-6 max-w-4xl mx-auto space-y-6 touch-action-manipulation">
-      {/* Back Navigation Bar */}
+    <div className="p-4 md:p-6 max-w-4xl mx-auto space-y-6">
+      {/* Back Navigation */}
       <div className="flex items-center justify-between border-b border-border/40 pb-3 md:border-none md:pb-0">
         <Link
           href={`/student/courses/${courseId}`}
@@ -135,20 +170,23 @@ export default function LessonDetailPage({ params }: LessonPageProps) {
           <Badge variant="accent" className="text-[10px] uppercase tracking-wider">
             {topic?.title || "Module"}
           </Badge>
-          <span className="hidden md:inline text-xs text-muted-foreground">• {lesson.parts?.length || 0} Parts</span>
+          <span className="hidden md:inline text-xs text-muted-foreground">
+            • {lesson.parts?.length || 0} Parts
+          </span>
         </div>
-        <h1 className="text-xl md:text-2xl font-bold text-foreground leading-tight">{lesson.title}</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-foreground leading-tight">
+          {lesson.title}
+        </h1>
       </div>
 
-      {/* Touch-Optimized Reader Card */}
+      {/* Lesson Reader Card */}
       <Card className="bg-card border-border text-card-foreground shadow-xs p-4 md:p-6 space-y-6">
-        
         {lesson.parts && lesson.parts.length > 0 ? (
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="w-full justify-start overflow-x-auto overflow-y-hidden hide-scrollbar bg-muted/50 p-1">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+            <TabsList className="w-full justify-start overflow-x-auto overflow-y-hidden bg-muted/50 p-1">
               {lesson.parts.map((part: any) => (
-                <TabsTrigger 
-                  key={part._id || part.partNumber} 
+                <TabsTrigger
+                  key={part.partNumber}
                   value={`part-${part.partNumber}`}
                   className="text-xs md:text-sm whitespace-nowrap"
                 >
@@ -156,10 +194,10 @@ export default function LessonDetailPage({ params }: LessonPageProps) {
                 </TabsTrigger>
               ))}
             </TabsList>
-            
+
             {lesson.parts.map((part: any) => (
-              <TabsContent 
-                key={part._id || part.partNumber} 
+              <TabsContent
+                key={part.partNumber}
                 value={`part-${part.partNumber}`}
                 className="mt-6 space-y-6 focus:outline-none"
               >
@@ -170,20 +208,28 @@ export default function LessonDetailPage({ params }: LessonPageProps) {
                   </div>
                 </div>
 
+                {/* Per-part AI Concept Check — only shows prompt hint, no response here */}
                 {part.aiPromptHint && (
-                  <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mt-6">
+                  <div className="bg-primary/5 border border-primary/20 rounded-xl p-4">
                     <div className="flex gap-2 items-start">
                       <Sparkles className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                      <div>
-                        <h4 className="text-sm font-semibold text-foreground mb-1">Concept Check</h4>
-                        <p className="text-xs md:text-sm text-muted-foreground mb-3">{part.aiPromptHint}</p>
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
+                      <div className="flex-1 space-y-2">
+                        <h4 className="text-sm font-semibold text-foreground">Concept Check</h4>
+                        <p className="text-xs md:text-sm text-muted-foreground">
+                          {part.aiPromptHint}
+                        </p>
+                        <Button
+                          size="sm"
+                          variant="outline"
                           className="text-xs"
                           onClick={(e) => handleAskAI(e, part.aiPromptHint)}
+                          disabled={aiLoading}
                         >
-                          Ask AI Tutor
+                          {aiLoading ? (
+                            <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Asking Pi...</>
+                          ) : (
+                            <><Sparkles className="w-3.5 h-3.5 mr-1.5" /> Ask Pi AI Tutor</>
+                          )}
                         </Button>
                       </div>
                     </div>
@@ -194,37 +240,65 @@ export default function LessonDetailPage({ params }: LessonPageProps) {
           </Tabs>
         ) : (
           <div className="p-4 bg-muted/60 rounded-xl border border-border/80">
-             <p className="text-sm md:text-base text-foreground leading-relaxed">This lesson has no content parts available.</p>
+            <p className="text-sm text-foreground">This lesson has no content parts yet.</p>
           </div>
         )}
 
-        {/* Inline AI Tutor Widget (Desktop View) */}
+        {/* Desktop AI Tutor Panel — single response location */}
         <div className="hidden md:block pt-6 border-t border-border space-y-3">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-primary" />
-            <h4 className="text-sm font-semibold text-foreground">Stuck on this lesson? Ask your AI Tutor</h4>
+            <h4 className="text-sm font-semibold text-foreground">
+              Stuck? Ask Pi your AI Tutor
+            </h4>
+            {(aiLoading || aiResponse) && (
+              <button
+                onClick={resetAi}
+                className="ml-auto text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+              >
+                <RefreshCcw className="w-3 h-3" /> Clear
+              </button>
+            )}
           </div>
 
+          {/* Inlined form — NOT a sub-component, so input never loses focus */}
           <form onSubmit={handleAskAI} className="flex gap-2">
-            <Input
+            <input
+              type="text"
               value={aiQuery}
               onChange={(e) => setAiQuery(e.target.value)}
               placeholder={`Ask a question about ${lesson.title}...`}
-              className="bg-background border-input text-foreground text-sm"
+              disabled={aiLoading}
+              className="flex-1 px-3 py-2 rounded-lg border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
-            <Button type="submit" className="bg-primary text-primary-foreground shrink-0">
-              <Send className="w-4 h-4 mr-1" /> Ask AI
+            <Button
+              type="submit"
+              disabled={aiLoading || !aiQuery.trim()}
+              className="bg-primary text-primary-foreground shrink-0"
+            >
+              {aiLoading ? <StopCircle className="w-4 h-4" /> : <Send className="w-4 h-4" />}
             </Button>
           </form>
 
-          {aiHelpResponse && (
-            <div className="p-4 bg-accent border border-primary/20 rounded-lg text-xs text-accent-foreground">
-              {aiHelpResponse}
+          {/* Single AI Response Box */}
+          {(aiLoading || aiResponse || aiError) && (
+            <div className="p-4 bg-accent/60 border border-primary/20 rounded-xl text-sm text-accent-foreground leading-relaxed min-h-[60px]">
+              {aiLoading && !aiResponse && (
+                <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" /> Pi is thinking...
+                </div>
+              )}
+              {aiResponse && (
+                <div className="prose prose-sm dark:prose-invert max-w-none">
+                  <ReactMarkdown>{aiResponse}</ReactMarkdown>
+                </div>
+              )}
+              {aiError && <p className="text-xs text-red-500 mt-1">{aiError}</p>}
             </div>
           )}
         </div>
 
-        {/* Bottom Desktop Actions */}
+        {/* Bottom Actions */}
         <div className="pt-4 border-t border-border flex justify-between items-center">
           <Link href={`/student/courses/${courseId}`}>
             <Button variant="outline" size="sm" className="border-border text-foreground">
@@ -240,50 +314,72 @@ export default function LessonDetailPage({ params }: LessonPageProps) {
         </div>
       </Card>
 
-      {/* Mobile Floating Action Button (FAB) for AI Tutor */}
+      {/* Mobile FAB — AI Tutor */}
       <button
         onClick={() => setIsAiDrawerOpen(true)}
-        aria-label="Open AI Tutor Drawer"
+        aria-label="Open AI Tutor"
         className="fixed bottom-20 right-4 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg active:scale-95 transition-all md:hidden"
       >
         <BotMessageSquare className="h-6 w-6" />
       </button>
 
-      {/* Mobile Slide-Up AI Drawer / Sheet */}
+      {/* Mobile AI Drawer */}
       {isAiDrawerOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex flex-col justify-end md:hidden animate-in fade-in">
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex flex-col justify-end md:hidden animate-in fade-in">
           <div className="bg-background border-t border-border rounded-t-2xl p-5 space-y-4 max-h-[80vh] overflow-y-auto animate-in slide-in-from-bottom duration-200">
             <div className="flex items-center justify-between border-b border-border pb-3">
               <div className="flex items-center gap-2 text-sm font-bold text-foreground">
-                <Sparkles className="w-4 h-4 text-primary" /> Ask AI Tutor
+                <Sparkles className="w-4 h-4 text-primary" /> Pi AI Tutor
               </div>
-              <button onClick={() => setIsAiDrawerOpen(false)} aria-label="Close AI Drawer" className="p-1 rounded-md text-muted-foreground">
+              <button
+                onClick={() => { setIsAiDrawerOpen(false); resetAi(); }}
+                aria-label="Close AI Drawer"
+                className="p-1 rounded-md text-muted-foreground"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleAskAI} className="space-y-3">
-              <Input
+            {/* Inlined mobile form — no focus loss */}
+            <form onSubmit={handleAskAI} className="flex gap-2">
+              <input
+                type="text"
                 value={aiQuery}
                 onChange={(e) => setAiQuery(e.target.value)}
                 placeholder="Type your question..."
-                className="bg-background border-input text-sm min-h-[48px]"
+                disabled={aiLoading}
+                className="flex-1 px-3 py-2 rounded-lg border border-input bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
               />
-              <Button type="submit" className="w-full min-h-[48px] bg-primary text-primary-foreground">
-                <Send className="w-4 h-4 mr-2" /> Send to AI Tutor
+              <Button
+                type="submit"
+                disabled={aiLoading || !aiQuery.trim()}
+                className="bg-primary text-primary-foreground shrink-0"
+              >
+                {aiLoading ? <StopCircle className="w-4 h-4" /> : <Send className="w-4 h-4" />}
               </Button>
             </form>
 
-            {aiHelpResponse && (
-              <div className="p-4 bg-accent border border-primary/20 rounded-xl text-xs text-accent-foreground leading-relaxed">
-                {aiHelpResponse}
+            {/* Single response box in mobile drawer */}
+            {(aiLoading || aiResponse || aiError) && (
+              <div className="p-4 bg-accent/60 border border-primary/20 rounded-xl text-sm text-accent-foreground leading-relaxed">
+                {aiLoading && !aiResponse && (
+                  <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                    <Loader2 className="w-4 h-4 animate-spin" /> Pi is thinking...
+                  </div>
+                )}
+                {aiResponse && (
+                  <div className="prose prose-sm dark:prose-invert max-w-none">
+                    <ReactMarkdown>{aiResponse}</ReactMarkdown>
+                  </div>
+                )}
+                {aiError && <p className="text-xs text-red-500">{aiError}</p>}
               </div>
             )}
           </div>
         </div>
       )}
 
-      {/* Integrated Assessment Drawer/Modal */}
+      {/* Mastery Quiz Modal */}
       {lesson && course && topic && (
         <TopicQuizModal
           isOpen={isQuizOpen}
@@ -291,7 +387,8 @@ export default function LessonDetailPage({ params }: LessonPageProps) {
           topicTitle={topic.title}
           lessonTitle={lesson.title}
           lessonId={lesson._id.toString()}
-          onQuizComplete={(finalScore: number, earnedXp: number, failedQuestions: any[]) => {
+          courseTitle={course.title}
+          onQuizComplete={(finalScore: number) => {
             console.log("Quiz completed. Score:", finalScore);
           }}
         />

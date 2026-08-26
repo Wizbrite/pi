@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState, useRef, useEffect } from "react";
 import {
   LayoutDashboard,
   BookOpen,
@@ -13,9 +14,11 @@ import {
   ShieldCheck,
   Target,
   Trophy,
+  MoreHorizontal,
+  X,
 } from "lucide-react";
 import { useAuthStore, type UserRole } from "@/stores/auth-store";
-import { HeaderStats } from "../student/header-stat"; // Named import matching your component export
+import { HeaderStats } from "../student/header-stat";
 
 interface NavItem {
   label: string;
@@ -55,41 +58,127 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
   ],
 };
 
+// Show at most 4 items in the bar; the rest go into "..."
+const PRIMARY_COUNT = 4;
+
 export function MobileBottomNav() {
   const pathname = usePathname();
   const { user } = useAuthStore();
   const role = user?.role || "student";
-
   const navItems = roleNavItems[role];
-  return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 flex h-16 items-center justify-around border-t border-border bg-background/85 px-2 backdrop-blur-md pb-safe touch-action-manipulation md:hidden">
-      {navItems.map((item) => {
-        const isActive =
-          pathname === item.href ||
-          (item.href !== `/${role}` && pathname.startsWith(`${item.href}/`));
-        const Icon = item.icon;
 
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
+  const primaryItems = navItems.slice(0, PRIMARY_COUNT);
+  const overflowItems = navItems.slice(PRIMARY_COUNT);
+  const hasOverflow = overflowItems.length > 0;
+
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    if (menuOpen) document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [menuOpen]);
+
+  const isActive = (href: string) =>
+    pathname === href || (href !== `/${role}` && pathname.startsWith(`${href}/`));
+
+  const NavLink = ({ item }: { item: NavItem }) => {
+    const active = isActive(item.href);
+    const Icon = item.icon;
+    return (
+      <Link
+        href={item.href}
+        onClick={() => setMenuOpen(false)}
+        className={`flex flex-col items-center justify-center gap-1 rounded-xl px-3 py-1.5 text-[11px] font-medium transition-all active:scale-95 ${
+          active ? "text-primary font-bold" : "text-muted-foreground hover:text-foreground"
+        }`}
+      >
+        <div className="relative">
+          <Icon className={`h-5 w-5 ${active ? "text-primary" : "text-muted-foreground"}`} />
+          {active && (
+            <span className="absolute -bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-primary" />
+          )}
+        </div>
+        <span className="truncate">{item.label}</span>
+      </Link>
+    );
+  };
+
+  // Check if any overflow item is active (so the "..." button lights up)
+  const overflowActive = overflowItems.some((item) => isActive(item.href));
+
+  return (
+    <>
+      {/* Overflow Popover */}
+      {menuOpen && (
+        <div
+          ref={menuRef}
+          className="fixed bottom-[4.5rem] right-2 z-[60] w-52 rounded-2xl border border-border bg-background/95 shadow-2xl backdrop-blur-md p-2 animate-in slide-in-from-bottom-2 fade-in duration-150"
+        >
+          <div className="flex items-center justify-between px-2 pb-2 border-b border-border mb-1">
+            <span className="text-xs font-semibold text-muted-foreground">More</span>
+            <button
+              onClick={() => setMenuOpen(false)}
+              className="p-1 rounded-md text-muted-foreground hover:text-foreground"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          {overflowItems.map((item) => {
+            const active = isActive(item.href);
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setMenuOpen(false)}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all active:scale-[0.98] ${
+                  active
+                    ? "bg-primary/10 text-primary"
+                    : "text-foreground hover:bg-muted"
+                }`}
+              >
+                <Icon className={`w-4 h-4 ${active ? "text-primary" : "text-muted-foreground"}`} />
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Bottom Nav Bar */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 flex h-16 items-center justify-around border-t border-border bg-background/85 px-2 backdrop-blur-md pb-safe touch-action-manipulation md:hidden">
+        {primaryItems.map((item) => (
+          <NavLink key={item.href} item={item} />
+        ))}
+
+        {hasOverflow && (
+          <button
+            onClick={() => setMenuOpen((prev) => !prev)}
+            aria-label="More navigation options"
             className={`flex flex-col items-center justify-center gap-1 rounded-xl px-3 py-1.5 text-[11px] font-medium transition-all active:scale-95 ${
-              isActive
+              overflowActive || menuOpen
                 ? "text-primary font-bold"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
             <div className="relative">
-              <Icon className={`h-5 w-5 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
-              {isActive && (
+              <MoreHorizontal className={`h-5 w-5 ${overflowActive || menuOpen ? "text-primary" : "text-muted-foreground"}`} />
+              {overflowActive && (
                 <span className="absolute -bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-primary" />
               )}
             </div>
-            <span className="truncate">{item.label}</span>
-          </Link>
-        );
-      })}
-    </nav>
+            <span>More</span>
+          </button>
+        )}
+      </nav>
+    </>
   );
 }
 
