@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, use } from "react";
+import React, { useState, useEffect, use } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -9,6 +9,7 @@ import {
   Award,
   Play,
   HelpCircle,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 // Interface Definitions
 interface ExamPaper {
   id: string;
+  slug: string;
   year: number;
   paperNumber: number;
   title: string;
@@ -32,6 +34,8 @@ interface ExamPaper {
 }
 
 interface SubjectDetail {
+  id: string;
+  slug: string;
   title: string;
   code: string;
   level: "O-Level" | "A-Level";
@@ -40,158 +44,56 @@ interface SubjectDetail {
   papers: ExamPaper[];
 }
 
-// 📍 COMPLETE SUBJECT DATABASE (Mapped to subject-id keys)
-const SUBJECT_DATABASE: Record<string, SubjectDetail> = {
-  // 1. Physics A-Level
-  "phy-a": {
-    title: "Physics",
-    code: "PHY701",
-    level: "A-Level",
-    category: "Science",
-    description: "Covers Mechanics, Thermal Physics, Electricity, Magnetism, and Modern Physics as per GCE A-Level Syllabus.",
-    papers: [
-      { id: "phy701-2023-p1", year: 2023, paperNumber: 1, title: "Paper 1 - Multiple Choice Questions", type: "MCQ", durationMinutes: 90, totalMarks: 50, questionCount: 50, lastAttempt: { score: 42, maxScore: 50, grade: "A", completedAt: "2 days ago" } },
-      { id: "phy701-2023-p2", year: 2023, paperNumber: 2, title: "Paper 2 - Structured & Essay Questions", type: "Structured", durationMinutes: 150, totalMarks: 100, questionCount: 7 },
-      { id: "phy701-2022-p1", year: 2022, paperNumber: 1, title: "Paper 1 - Multiple Choice Questions", type: "MCQ", durationMinutes: 90, totalMarks: 50, questionCount: 50, lastAttempt: { score: 38, maxScore: 50, grade: "B", completedAt: "1 week ago" } },
-      { id: "phy701-2022-p2", year: 2022, paperNumber: 2, title: "Paper 2 - Structured & Essay Questions", type: "Structured", durationMinutes: 150, totalMarks: 100, questionCount: 7 },
-    ],
-  },
-
-  // 2. Chemistry A-Level
-  "chem-a": {
-    title: "Chemistry",
-    code: "CHE702",
-    level: "A-Level",
-    category: "Science",
-    description: "Covers Physical, Organic, and Inorganic Chemistry GCE A-Level papers with detailed marking schemes.",
-    papers: [
-      { id: "che702-2023-p1", year: 2023, paperNumber: 1, title: "Paper 1 - Multiple Choice Questions", type: "MCQ", durationMinutes: 90, totalMarks: 50, questionCount: 50 },
-      { id: "che702-2023-p2", year: 2023, paperNumber: 2, title: "Paper 2 - Theory & Organic Synthesis", type: "Structured", durationMinutes: 150, totalMarks: 100, questionCount: 6 },
-    ],
-  },
-
-  // 3. Further Mathematics A-Level
-  "math-a": {
-    title: "Further Mathematics",
-    code: "MAT703",
-    level: "A-Level",
-    category: "Science",
-    description: "Advanced calculus, differential equations, vectors, matrices, and mechanics for GCE A-Level candidates.",
-    papers: [
-      { id: "mat703-2023-p1", year: 2023, paperNumber: 1, title: "Paper 1 - Pure Mathematics MCQs", type: "MCQ", durationMinutes: 90, totalMarks: 50, questionCount: 50, lastAttempt: { score: 48, maxScore: 50, grade: "A*", completedAt: "Yesterday" } },
-      { id: "mat703-2023-p2", year: 2023, paperNumber: 2, title: "Paper 2 - Applied Math & Mechanics", type: "Structured", durationMinutes: 180, totalMarks: 100, questionCount: 8 },
-    ],
-  },
-
-  // 4. Biology A-Level
-  "bio-a": {
-    title: "Biology",
-    code: "BIO704",
-    level: "A-Level",
-    category: "Science",
-    description: "Cell biology, genetics, ecology, physiology, and biochemistry GCE examination modules.",
-    papers: [
-      { id: "bio704-2023-p1", year: 2023, paperNumber: 1, title: "Paper 1 - Multiple Choice Questions", type: "MCQ", durationMinutes: 90, totalMarks: 50, questionCount: 50 },
-      { id: "bio704-2023-p2", year: 2023, paperNumber: 2, title: "Paper 2 - Theory & Genetics", type: "Structured", durationMinutes: 150, totalMarks: 100, questionCount: 6 },
-    ],
-  },
-
-  // 5. Economics A-Level
-  "econ-a": {
-    title: "Economics",
-    code: "ECO705",
-    level: "A-Level",
-    category: "Arts",
-    description: "Microeconomics, macroeconomics, international trade, and development economics past papers.",
-    papers: [
-      { id: "eco705-2023-p1", year: 2023, paperNumber: 1, title: "Paper 1 - Multiple Choice Questions", type: "MCQ", durationMinutes: 60, totalMarks: 40, questionCount: 40, lastAttempt: { score: 32, maxScore: 40, grade: "B", completedAt: "4 days ago" } },
-      { id: "eco705-2023-p2", year: 2023, paperNumber: 2, title: "Paper 2 - Data Response & Essays", type: "Structured", durationMinutes: 180, totalMarks: 100, questionCount: 4 },
-    ],
-  },
-
-  // 6. Literature in English A-Level
-  "lit-a": {
-    title: "Literature in English",
-    code: "LIT706",
-    level: "A-Level",
-    category: "Arts",
-    description: "Drama, poetry, and prose analysis for GCE Advanced Level set texts.",
-    papers: [
-      { id: "lit706-2023-p1", year: 2023, paperNumber: 1, title: "Paper 1 - Drama & Shakespeare Set Texts", type: "Structured", durationMinutes: 150, totalMarks: 100, questionCount: 4 },
-      { id: "lit706-2023-p2", year: 2023, paperNumber: 2, title: "Paper 2 - Prose & African Literature", type: "Structured", durationMinutes: 150, totalMarks: 100, questionCount: 4 },
-    ],
-  },
-
-  // 7. Physics O-Level
-  "phy-o": {
-    title: "Physics",
-    code: "PHY501",
-    level: "O-Level",
-    category: "Science",
-    description: "Fundamental physics concepts including measurements, forces, simple machines, light, and sound.",
-    papers: [
-      { id: "phy501-2023-p1", year: 2023, paperNumber: 1, title: "Paper 1 - Multiple Choice Questions", type: "MCQ", durationMinutes: 60, totalMarks: 50, questionCount: 50, lastAttempt: { score: 45, maxScore: 50, grade: "A", completedAt: "5 days ago" } },
-      { id: "phy501-2023-p2", year: 2023, paperNumber: 2, title: "Paper 2 - Theory & Calculations", type: "Structured", durationMinutes: 120, totalMarks: 100, questionCount: 8 },
-    ],
-  },
-
-  // 8. Chemistry O-Level
-  "chem-o": {
-    title: "Chemistry",
-    code: "CHE502",
-    level: "O-Level",
-    category: "Science",
-    description: "Introductory chemistry covering periodic table, chemical bonding, acids, bases, and stoichiometry.",
-    papers: [
-      { id: "che502-2023-p1", year: 2023, paperNumber: 1, title: "Paper 1 - Multiple Choice Questions", type: "MCQ", durationMinutes: 60, totalMarks: 50, questionCount: 50, lastAttempt: { score: 40, maxScore: 50, grade: "B", completedAt: "1 week ago" } },
-      { id: "che502-2023-p2", year: 2023, paperNumber: 2, title: "Paper 2 - Theory Questions", type: "Structured", durationMinutes: 120, totalMarks: 100, questionCount: 7 },
-    ],
-  },
-
-  // 9. Geography O-Level
-  "geo-o": {
-    title: "Geography",
-    code: "GEO503",
-    level: "O-Level",
-    category: "Arts",
-    description: "Physical geography, map reading, human geography, and environmental studies.",
-    papers: [
-      { id: "geo503-2023-p1", year: 2023, paperNumber: 1, title: "Paper 1 - Multiple Choice & Map Reading", type: "MCQ", durationMinutes: 75, totalMarks: 50, questionCount: 50 },
-      { id: "geo503-2023-p2", year: 2023, paperNumber: 2, title: "Paper 2 - Physical & Human Geography", type: "Structured", durationMinutes: 150, totalMarks: 100, questionCount: 5 },
-    ],
-  },
-
-  // 10. History O-Level
-  "hist-o": {
-    title: "History",
-    code: "HIS504",
-    level: "O-Level",
-    category: "Arts",
-    description: "Cameroon history, West African history, and international relations since 1919.",
-    papers: [
-      { id: "his504-2023-p1", year: 2023, paperNumber: 1, title: "Paper 1 - Multiple Choice Questions", type: "MCQ", durationMinutes: 60, totalMarks: 50, questionCount: 50 },
-      { id: "his504-2023-p2", year: 2023, paperNumber: 2, title: "Paper 2 - Essay Questions", type: "Structured", durationMinutes: 120, totalMarks: 100, questionCount: 4 },
-    ],
-  },
-};
-
 export default function SubjectExamPapersPage({
   params,
 }: {
   params: Promise<{ "subject-id": string }> | { "subject-id": string };
 }) {
-  // Unwrap params using hyphenated key matching folder name [subject-id]
   const resolvedParams = params instanceof Promise ? use(params) : params;
   const subjectId = resolvedParams?.["subject-id"];
 
-  // Retrieve subject data
-  const subject = subjectId ? SUBJECT_DATABASE[subjectId] : null;
+  const [subject, setSubject] = useState<SubjectDetail | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   const [selectedYear, setSelectedYear] = useState<string>("All");
   const [selectedType, setSelectedType] = useState<string>("All");
 
-  // Fallback view if subject ID is invalid or not found
-  if (!subject) {
+  // Fetch subject details + papers from API
+  useEffect(() => {
+    if (!subjectId) return;
+    async function fetchSubject() {
+      try {
+        setIsLoading(true);
+        const res = await fetch(`/api/exams/${subjectId}`);
+        if (res.ok) {
+          const json = await res.json();
+          setSubject(json.data);
+        } else {
+          setError(true);
+        }
+      } catch (err) {
+        console.error("Failed to fetch exam subject:", err);
+        setError(true);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchSubject();
+  }, [subjectId]);
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 gap-3">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground">Loading exam papers…</p>
+      </div>
+    );
+  }
+
+  // Error / not found state
+  if (error || !subject) {
     return (
       <div className="max-w-4xl mx-auto space-y-6 pt-12 text-center">
         <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto text-muted-foreground">
@@ -209,6 +111,9 @@ export default function SubjectExamPapersPage({
       </div>
     );
   }
+
+  // Get unique years for filter
+  const availableYears = [...new Set(subject.papers.map((p) => p.year.toString()))].sort().reverse();
 
   // Filter Papers Logic
   const filteredPapers = subject.papers.filter((paper) => {
@@ -265,7 +170,7 @@ export default function SubjectExamPapersPage({
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold text-muted-foreground">Year:</span>
           <div className="flex gap-1">
-            {["All", "2023", "2022", "2021"].map((yr) => (
+            {["All", ...availableYears].map((yr) => (
               <button
                 key={yr}
                 onClick={() => setSelectedYear(yr)}
@@ -318,7 +223,7 @@ export default function SubjectExamPapersPage({
                     className={
                       paper.type === "MCQ"
                         ? "bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20"
-                        : "bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20"
+                        : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
                     }
                   >
                     {paper.type}
@@ -350,7 +255,7 @@ export default function SubjectExamPapersPage({
                   </div>
                 )}
 
-                <Link href={`/student/exams/${subjectId}/room/${paper.id}`} className="w-full sm:w-auto">
+                <Link href={`/student/exams/${subjectId}/room/${paper.slug}`} className="w-full sm:w-auto">
                   <Button className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs h-10 px-5 gap-2 shadow-xs">
                     <Play className="w-3.5 h-3.5 fill-current" />
                     {paper.lastAttempt ? "Retake Exam" : "Start Exam"}

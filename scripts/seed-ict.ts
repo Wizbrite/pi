@@ -14,6 +14,11 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import path from "path";
+import * as crypto from "crypto";
+
+if (typeof globalThis.crypto === "undefined") {
+  (globalThis as any).crypto = crypto.webcrypto;
+}
 
 // Load environment variables from .env.local
 dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });

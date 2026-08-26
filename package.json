@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "seed:ict": "tsx --env-file=.env.local scripts/seed-ict.ts"
+    "seed:ict": "tsx scripts/seed-ict.ts",
+    "seed:exams": "tsx scripts/seed-exams.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

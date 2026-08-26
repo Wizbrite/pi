@@ -15,6 +15,7 @@ import {
   ChevronRight,
   X,
   Grid,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +25,8 @@ export interface Question {
   id: number;
   text: string;
   options: string[];
-  correctAnswer: number;
+  correctAnswerIndex: number;
+  correctAnswerText: string;
   type: "MCQ" | "Structured";
   marks: number;
   topic: string;
@@ -54,74 +56,13 @@ export interface ExamAttemptResult {
   }>;
 }
 
-// Mock Questions with detailed remediation details
-const MOCK_QUESTIONS: Question[] = [
-  {
-    id: 1,
-    text: "Which of the following physical quantities is a fundamental (base) SI unit?",
-    options: ["Newton (N)", "Ampere (A)", "Joule (J)", "Watt (W)"],
-    correctAnswer: 1,
-    type: "MCQ",
-    marks: 1,
-    topic: "Units & Dimensions",
-    markingSchemeNotes: "SI base units include Metre (m), Kilogram (kg), Second (s), Ampere (A), Kelvin (K), Mole (mol), and Candela (cd).",
-    aiExplanation: "Great job! Ampere is the base unit for electric current in the International System of Units (SI).",
-  },
-  {
-    id: 2,
-    text: "A projectile is launched with an initial velocity u at an angle θ to the horizontal. What is its horizontal velocity component at maximum height?",
-    options: ["Zero", "u sin θ", "u cos θ", "u tan θ"],
-    correctAnswer: 2,
-    type: "MCQ",
-    marks: 1,
-    topic: "Kinematics",
-    markingSchemeNotes: "In projectile motion without air resistance, horizontal velocity remains constant throughout flight: u_x = u cos θ.",
-    aiExplanation: "Correct! Vertical velocity decreases to zero at maximum height, but horizontal velocity remains unchanged as u cos θ.",
-  },
-  {
-    id: 3,
-    text: "According to Hooke's Law, the extension of a spring is directly proportional to the applied force provided that:",
-    options: [
-      "The limit of proportionality is not exceeded",
-      "The elastic limit is exceeded",
-      "The material is plastic",
-      "The temperature remains zero",
-    ],
-    correctAnswer: 0,
-    type: "MCQ",
-    marks: 1,
-    topic: "Elasticity",
-    markingSchemeNotes: "GCE Syllabus Rule: Hooke's Law holds strictly up to the limit of proportionality, beyond which F is no longer linear with extension x.",
-    aiExplanation: "Hooke's Law states F = kx, which only applies up to the limit of proportionality.",
-  },
-  {
-    id: 4,
-    text: "Calculate the kinetic energy of a body of mass 4 kg moving at a constant speed of 5 m/s.",
-    options: ["20 J", "50 J", "100 J", "10 J"],
-    correctAnswer: 1,
-    type: "MCQ",
-    marks: 1,
-    topic: "Work & Energy",
-    markingSchemeNotes: "KE = 1/2 * m * v^2 = 0.5 * 4 * (5)^2 = 0.5 * 4 * 25 = 50 Joules.",
-    aiExplanation: "Spot on! Using KE = ½mv², 0.5 × 4 kg × (5 m/s)² = 50 J.",
-  },
-  {
-    id: 5,
-    text: "In a transformer, electrical power is transferred from primary to secondary coil through:",
-    options: [
-      "Conduction",
-      "Electrostatic attraction",
-      "Mutual electromagnetic induction",
-      "Thermal expansion",
-    ],
-    correctAnswer: 2,
-    type: "MCQ",
-    marks: 1,
-    topic: "Electromagnetism",
-    markingSchemeNotes: "Alternating current in the primary coil creates a varying magnetic flux, inducing an emf in the secondary coil via mutual induction.",
-    aiExplanation: "Correct! The coils are electrically isolated but magnetically linked through the soft iron core via mutual electromagnetic induction.",
-  },
-];
+interface PaperMeta {
+  title: string;
+  type: "MCQ" | "Structured";
+  durationMinutes: number;
+  totalMarks: number;
+  year: number;
+}
 
 export default function ExamRoomPage({
   params,
@@ -133,12 +74,18 @@ export default function ExamRoomPage({
   const subjectId = resolvedParams?.["subject-id"];
   const paperId = resolvedParams?.["paper-id"];
 
-  // Exam States
+  // Data fetching states
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [paperMeta, setPaperMeta] = useState<PaperMeta | null>(null);
+  const [isLoadingPaper, setIsLoadingPaper] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  // Exam states
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
   const [bookmarkedQuestions, setBookmarkedQuestions] = useState<number[]>([]);
-  const TOTAL_TIME = 90 * 60; // 90 minutes
-  const [timeLeftSeconds, setTimeLeftSeconds] = useState(TOTAL_TIME);
+  const [timeLeftSeconds, setTimeLeftSeconds] = useState(0);
+  const [timerStarted, setTimerStarted] = useState(false);
   const [isAiOpen, setIsAiOpen] = useState(false);
   const [isNavGridOpenMobile, setIsNavGridOpenMobile] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
@@ -149,25 +96,100 @@ export default function ExamRoomPage({
     },
   ]);
 
+  // Fetch paper + questions from API
+  useEffect(() => {
+    if (!subjectId || !paperId) return;
+    async function fetchPaper() {
+      try {
+        setIsLoadingPaper(true);
+        const res = await fetch(`/api/exams/${subjectId}/papers/${paperId}`);
+        if (!res.ok) {
+          setFetchError("Failed to load exam paper.");
+          return;
+        }
+        const json = await res.json();
+        const data = json.data;
+
+        setPaperMeta({
+          title: data.title,
+          type: data.type || (data.questions?.[0]?.type === "MCQ" ? "MCQ" : "Structured"),
+          durationMinutes: data.durationMinutes,
+          totalMarks: data.totalMarks,
+          year: data.year,
+        });
+
+        const mappedQuestions: Question[] = (data.questions || []).map((q: any) => ({
+          id: q.id || q.questionNumber,
+          text: q.text,
+          options: q.options || [],
+          correctAnswerIndex: q.correctAnswerIndex ?? 0,
+          correctAnswerText: q.correctAnswerText || "",
+          type: q.type || (q.options?.length > 0 ? "MCQ" : "Structured"),
+          marks: q.marks,
+          topic: q.topic,
+          markingSchemeNotes: q.markingSchemeNotes || "",
+          aiExplanation: q.aiExplanation || "",
+        }));
+
+        setQuestions(mappedQuestions);
+        setTimeLeftSeconds(data.durationMinutes * 60);
+        setTimerStarted(true);
+      } catch (err) {
+        console.error("Failed to fetch exam paper:", err);
+        setFetchError("Failed to load exam paper.");
+      } finally {
+        setIsLoadingPaper(false);
+      }
+    }
+    fetchPaper();
+  }, [subjectId, paperId]);
+
   // Timer Effect
   useEffect(() => {
+    if (!timerStarted) return;
     const timer = setInterval(() => {
       setTimeLeftSeconds((prev) => (prev > 0 ? prev - 1 : 0));
     }, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [timerStarted]);
 
   // Format Time (HH:MM:SS)
   const formatTime = (totalSeconds: number) => {
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
-    return `${hours > 0 ? `${hours}:` : ""}${minutes < 10 ? "0" : ""}${minutes}:${
-      seconds < 10 ? "0" : ""
-    }${seconds}`;
+    return `${hours > 0 ? `${hours}:` : ""}${minutes < 10 ? "0" : ""}${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
   };
 
-  const currentQ = MOCK_QUESTIONS[currentQuestionIndex];
+  // Loading state
+  if (isLoadingPaper) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Loading exam paper…</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (fetchError || questions.length === 0) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <h2 className="text-lg font-bold text-foreground">Could not load exam</h2>
+          <p className="text-sm text-muted-foreground">{fetchError || "No questions found for this paper."}</p>
+          <Link href={`/student/exams/${subjectId}`}>
+            <Button size="sm" className="text-xs">Back to Papers</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const TOTAL_TIME = (paperMeta?.durationMinutes || 90) * 60;
+  const currentQ = questions[currentQuestionIndex];
 
   // Option Selection
   const handleSelectOption = (optionIndex: number) => {
@@ -198,7 +220,7 @@ export default function ExamRoomPage({
         ...prev,
         {
           sender: "ai",
-          text: `For Question ${currentQ.id} on ${currentQ.topic}: SI base units include metre (m), kilogram (kg), second (s), and Ampere (A). Derived units like Newton or Watt are combination units.`,
+          text: `For Question ${currentQ.id} on ${currentQ.topic}: Think about the key concepts related to this topic. Review your notes on ${currentQ.topic} for the relevant principles and definitions.`,
         },
       ]);
     }, 800);
@@ -209,11 +231,13 @@ export default function ExamRoomPage({
     if (confirm("Are you sure you want to submit your exam?")) {
       const timeSpentSeconds = TOTAL_TIME - timeLeftSeconds;
 
-      const processedQuestions = MOCK_QUESTIONS.map((q, idx) => {
+      const processedQuestions = questions.map((q, idx) => {
         const selectedIdx = selectedAnswers[q.id];
         const isAnswered = selectedIdx !== undefined;
-        const isCorrect = isAnswered && selectedIdx === q.correctAnswer;
-        const userAnswerText = isAnswered ? q.options[selectedIdx] : "Unanswered";
+        const isCorrect = isAnswered && selectedIdx === q.correctAnswerIndex;
+        const userAnswerText = isAnswered
+          ? (q.options[selectedIdx] || `Option ${selectedIdx + 1}`)
+          : "Unanswered";
 
         return {
           questionId: q.id,
@@ -221,7 +245,7 @@ export default function ExamRoomPage({
           text: q.text,
           topic: q.topic,
           userAnswer: userAnswerText,
-          correctAnswer: q.options[q.correctAnswer],
+          correctAnswer: q.correctAnswerText || q.options[q.correctAnswerIndex] || "",
           options: q.options,
           isCorrect,
           marksObtained: isCorrect ? q.marks : 0,
@@ -234,22 +258,20 @@ export default function ExamRoomPage({
       const examAttemptData: ExamAttemptResult = {
         paperId: paperId || "default-paper",
         subjectId: subjectId || "default-subject",
-        paperTitle: "2023 GCE Past Paper Exam",
-        totalMarks: MOCK_QUESTIONS.reduce((acc, q) => acc + q.marks, 0),
+        paperTitle: paperMeta?.title || "GCE Past Paper Exam",
+        totalMarks: questions.reduce((acc, q) => acc + q.marks, 0),
         timeSpentSeconds,
         questions: processedQuestions,
       };
 
-      // Store evaluation in localStorage for the results page
       localStorage.setItem(`exam_attempt_${paperId}`, JSON.stringify(examAttemptData));
-
       router.push(`/student/exams/${subjectId}/results/${paperId}`);
     }
   };
 
   return (
     <div className="min-h-screen bg-background flex flex-col -m-3 sm:-m-6 p-3 sm:p-6">
-      
+
       {/* 1. MOBILE-RESPONSIVE TOP EXAM HEADER */}
       <header className="bg-card border border-border rounded-2xl p-3 sm:p-4 shadow-xs space-y-3 mb-4 sm:mb-6 sticky top-2 sm:top-4 z-20 backdrop-blur-md bg-card/95">
         <div className="flex items-center justify-between gap-2">
@@ -264,10 +286,12 @@ export default function ExamRoomPage({
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="text-[10px] sm:text-xs font-mono font-bold text-muted-foreground uppercase">{subjectId}</span>
                 <Badge variant="outline" className="text-[9px] sm:text-[10px] py-0 px-1.5 font-semibold">
-                  Paper 1 (MCQ)
+                  {paperMeta?.type === "MCQ" ? "Paper (MCQ)" : "Paper (Structured)"}
                 </Badge>
               </div>
-              <h1 className="text-xs sm:text-sm font-bold text-foreground truncate">2023 GCE Past Paper Exam</h1>
+              <h1 className="text-xs sm:text-sm font-bold text-foreground truncate">
+                {paperMeta?.year} GCE — {paperMeta?.title}
+              </h1>
             </div>
           </div>
 
@@ -278,7 +302,7 @@ export default function ExamRoomPage({
             className="lg:hidden text-xs gap-1 h-8 px-2.5 shrink-0"
           >
             <Grid className="w-3.5 h-3.5" />
-            <span className="text-[10px] font-bold">{currentQuestionIndex + 1}/{MOCK_QUESTIONS.length}</span>
+            <span className="text-[10px] font-bold">{currentQuestionIndex + 1}/{questions.length}</span>
           </Button>
         </div>
 
@@ -314,7 +338,7 @@ export default function ExamRoomPage({
 
       {/* MAIN WORKSPACE GRID */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 flex-1 items-start">
-        
+
         {/* QUESTION CONTAINER */}
         <div className="lg:col-span-8 space-y-4">
           <div className="bg-card border border-border rounded-2xl p-4 sm:p-6 shadow-xs min-h-[380px] sm:min-h-[420px] flex flex-col justify-between">
@@ -322,9 +346,10 @@ export default function ExamRoomPage({
               <div className="flex items-center justify-between gap-2 border-b border-border pb-3 sm:pb-4 mb-4 sm:mb-5">
                 <div className="flex items-center gap-2 flex-wrap">
                   <Badge className="bg-primary/10 text-primary border-primary/20 text-[11px] sm:text-xs font-bold">
-                    Question {currentQuestionIndex + 1} of {MOCK_QUESTIONS.length}
+                    Question {currentQuestionIndex + 1} of {questions.length}
                   </Badge>
                   <span className="text-[11px] sm:text-xs font-semibold text-muted-foreground">• Topic: {currentQ.topic}</span>
+                  <Badge variant="outline" className="text-[10px]">{currentQ.marks} mark{currentQ.marks > 1 ? "s" : ""}</Badge>
                 </div>
 
                 <Button
@@ -342,37 +367,39 @@ export default function ExamRoomPage({
                 </Button>
               </div>
 
-              <p className="text-sm sm:text-base font-semibold text-foreground leading-relaxed mb-5 sm:mb-6">
+              <p className="text-sm sm:text-base font-semibold text-foreground leading-relaxed mb-5 sm:mb-6 whitespace-pre-line">
                 {currentQ.text}
               </p>
 
-              <div className="space-y-2.5 sm:space-y-3">
-                {currentQ.options.map((option, idx) => {
-                  const isSelected = selectedAnswers[currentQ.id] === idx;
-                  return (
-                    <button
-                      key={idx}
-                      onClick={() => handleSelectOption(idx)}
-                      className={`w-full text-left p-3.5 sm:p-4 rounded-xl border transition flex items-center gap-3 text-xs sm:text-sm font-medium ${
-                        isSelected
-                          ? "border-primary bg-primary/5 text-foreground ring-1 ring-primary"
-                          : "border-border bg-card hover:bg-muted/50 text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      <div
-                        className={`w-6 h-6 rounded-full border flex items-center justify-center font-bold text-xs shrink-0 ${
+              {currentQ.options.length > 0 && (
+                <div className="space-y-2.5 sm:space-y-3">
+                  {currentQ.options.map((option, idx) => {
+                    const isSelected = selectedAnswers[currentQ.id] === idx;
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => handleSelectOption(idx)}
+                        className={`w-full text-left p-3.5 sm:p-4 rounded-xl border transition flex items-center gap-3 text-xs sm:text-sm font-medium ${
                           isSelected
-                            ? "bg-primary text-primary-foreground border-primary"
-                            : "border-border bg-muted/40"
+                            ? "border-primary bg-primary/5 text-foreground ring-1 ring-primary"
+                            : "border-border bg-card hover:bg-muted/50 text-muted-foreground hover:text-foreground"
                         }`}
                       >
-                        {String.fromCharCode(65 + idx)}
-                      </div>
-                      <span className="leading-snug">{option}</span>
-                    </button>
-                  );
-                })}
-              </div>
+                        <div
+                          className={`w-6 h-6 rounded-full border flex items-center justify-center font-bold text-xs shrink-0 ${
+                            isSelected
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "border-border bg-muted/40"
+                          }`}
+                        >
+                          {String.fromCharCode(65 + idx)}
+                        </div>
+                        <span className="leading-snug">{option}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             <div className="flex items-center justify-between border-t border-border pt-4 sm:pt-5 mt-6 gap-2">
@@ -387,10 +414,10 @@ export default function ExamRoomPage({
               </Button>
 
               <span className="text-[11px] sm:text-xs text-muted-foreground font-mono font-medium text-center">
-                {Object.keys(selectedAnswers).length} / {MOCK_QUESTIONS.length}
+                {Object.keys(selectedAnswers).length} / {questions.length}
               </span>
 
-              {currentQuestionIndex < MOCK_QUESTIONS.length - 1 ? (
+              {currentQuestionIndex < questions.length - 1 ? (
                 <Button
                   size="sm"
                   onClick={() => setCurrentQuestionIndex((prev) => prev + 1)}
@@ -425,7 +452,7 @@ export default function ExamRoomPage({
             </div>
 
             <div className="grid grid-cols-5 gap-2">
-              {MOCK_QUESTIONS.map((q, idx) => {
+              {questions.map((q, idx) => {
                 const isCurrent = idx === currentQuestionIndex;
                 const isAnswered = selectedAnswers[q.id] !== undefined;
                 const isFlagged = bookmarkedQuestions.includes(q.id);
@@ -441,8 +468,8 @@ export default function ExamRoomPage({
                       isCurrent
                         ? "ring-2 ring-primary border-primary bg-primary text-primary-foreground"
                         : isAnswered
-                        ? "bg-muted border-border text-foreground font-extrabold"
-                        : "bg-muted/40 border-border text-muted-foreground hover:bg-muted"
+                          ? "bg-muted border-border text-foreground font-extrabold"
+                          : "bg-muted/40 border-border text-muted-foreground hover:bg-muted"
                     }`}
                   >
                     {idx + 1}
@@ -472,8 +499,8 @@ export default function ExamRoomPage({
 
       {/* FLOATING AI TUTOR DRAWER */}
       {isAiOpen && (
-        <div className="fixed bottom-16 right-3 sm:bottom-6 sm:right-6 w-[calc(100vw-24px)] sm:w-96 bg-card border border-purple-500/30 rounded-2xl shadow-2xl z-[60] flex flex-col overflow-hidden animate-in slide-in-from-bottom-5 max-h-[60vh] sm:max-h-[unset]">
-          <div className="bg-purple-950/20 dark:bg-purple-950/40 p-3 sm:p-3.5 border-b border-purple-500/20 flex items-center justify-between shrink-0">
+        <div className="fixed bottom-3 right-3 sm:bottom-6 sm:right-6 w-[calc(100vw-24px)] sm:w-96 bg-card border border-purple-500/30 rounded-2xl shadow-2xl z-50 flex flex-col overflow-hidden animate-in slide-in-from-bottom-5">
+          <div className="bg-purple-950/20 dark:bg-purple-950/40 p-3 sm:p-3.5 border-b border-purple-500/20 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-lg bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-500">
                 <Bot className="w-4 h-4" />
@@ -491,7 +518,7 @@ export default function ExamRoomPage({
             </button>
           </div>
 
-          <div className="p-3.5 space-y-3 flex-1 overflow-y-auto text-xs min-h-0">
+          <div className="p-3.5 space-y-3 h-56 sm:h-64 overflow-y-auto text-xs">
             {aiChat.map((msg, idx) => (
               <div
                 key={idx}
@@ -506,8 +533,7 @@ export default function ExamRoomPage({
             ))}
           </div>
 
-          {/* Input always visible — flex-shrink-0 keeps it from being pushed off screen */}
-          <form onSubmit={handleSendAiQuery} className="p-2.5 bg-muted/40 border-t border-border flex gap-2 shrink-0">
+          <form onSubmit={handleSendAiQuery} className="p-2.5 bg-muted/40 border-t border-border flex gap-2">
             <input
               type="text"
               value={aiPrompt}

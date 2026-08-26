@@ -32,12 +32,7 @@ export default function PracticeHubPage() {
       {/* Header Banner */}
       <div className="p-6 rounded-2xl bg-white dark:bg-[#131834] border border-slate-200/80 dark:border-white/10 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-violet-600/10 text-violet-600 dark:text-violet-400">
-              Duolingo-Style Review
-            </span>
-            <span className="text-xs text-slate-500 dark:text-slate-400">Spaced Repetition</span>
-          </div>
+         
           <h1 className="text-2xl font-bold text-[#0a0d1d] dark:text-white mt-1">Practice Hub</h1>
           <p className="text-sm text-slate-600 dark:text-slate-400 mt-0.5">
             Target your weak areas, review recorded mistakes, and run AI mini-sessions.
@@ -66,7 +61,7 @@ export default function PracticeHubPage() {
           }`}
         >
           <Sparkles className="w-4 h-4" />
-          <span>AI Mini Practice</span>
+          <span>Practice</span>
         </button>
 
         <button
@@ -92,7 +87,7 @@ export default function PracticeHubPage() {
               </div>
               <h3 className="text-lg font-bold text-[#0a0d1d] dark:text-white">Smart Adaptive Session</h3>
               <p className="text-sm text-slate-600 dark:text-slate-400">
-                AI dynamically creates 5 questions pulling strictly from completed lessons where your confidence score is lowest.
+                Pi dynamically creates 5 questions pulling strictly from completed lessons where your confidence score is lowest.
               </p>
             </div>
 
@@ -100,7 +95,7 @@ export default function PracticeHubPage() {
               href="/student/daily-challenge"
               className="w-full py-3 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-medium text-sm transition-colors text-center flex items-center justify-center gap-2 shadow-lg shadow-violet-600/20"
             >
-              <span>Start 5-Min AI Practice</span>
+              <span>Start 5 Minute Practice</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>

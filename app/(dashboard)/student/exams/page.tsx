@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import {
   Search,
@@ -9,17 +9,16 @@ import {
   CheckCircle2,
   Filter,
   ArrowRight,
-  GraduationCap,
-  Sparkles,
+  Loader2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuthStore } from "@/stores/auth-store";
 
-// 1. Mock Data for 10 Subjects
 interface ExamSubject {
   id: string;
+  slug: string;
   code: string;
   title: string;
   level: "O-Level" | "A-Level";
@@ -29,43 +28,44 @@ interface ExamSubject {
   completedPapers: number;
 }
 
-const MOCK_EXAM_SUBJECTS: ExamSubject[] = [
-  { id: "phy-a", code: "PHY701", title: "Physics", level: "A-Level", category: "Science", paperCount: 3, totalQuestions: 150, completedPapers: 1 },
-  { id: "chem-a", code: "CHE702", title: "Chemistry", level: "A-Level", category: "Science", paperCount: 3, totalQuestions: 140, completedPapers: 0 },
-  { id: "math-a", code: "MAT703", title: "Further Mathematics", level: "A-Level", category: "Science", paperCount: 3, totalQuestions: 120, completedPapers: 2 },
-  { id: "bio-a", code: "BIO704", title: "Biology", level: "A-Level", category: "Science", paperCount: 3, totalQuestions: 160, completedPapers: 0 },
-  { id: "econ-a", code: "ECO705", title: "Economics", level: "A-Level", category: "Arts", paperCount: 2, totalQuestions: 100, completedPapers: 1 },
-  { id: "lit-a", code: "LIT706", title: "Literature in English", level: "A-Level", category: "Arts", paperCount: 2, totalQuestions: 80, completedPapers: 0 },
-  { id: "phy-o", code: "PHY501", title: "Physics", level: "O-Level", category: "Science", paperCount: 2, totalQuestions: 100, completedPapers: 2 },
-  { id: "chem-o", code: "CHE502", title: "Chemistry", level: "O-Level", category: "Science", paperCount: 2, totalQuestions: 100, completedPapers: 1 },
-  { id: "geo-o", code: "GEO503", title: "Geography", level: "O-Level", category: "Arts", paperCount: 2, totalQuestions: 90, completedPapers: 0 },
-  { id: "hist-o", code: "HIS504", title: "History", level: "O-Level", category: "Arts", paperCount: 2, totalQuestions: 85, completedPapers: 0 },
-];
-
 export default function MockExamsPage() {
   const { user } = useAuthStore();
   const currentLevel = user?.gceLevel === "Advanced" ? "A-Level" : "O-Level";
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<"All" | "Science" | "Arts">("All");
+  const [subjects, setSubjects] = useState<ExamSubject[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // 2. Filter & Search Logic
+  // Fetch exam subjects from API
+  useEffect(() => {
+    async function fetchSubjects() {
+      try {
+        setIsLoading(true);
+        const res = await fetch(`/api/exams?level=${currentLevel}`);
+        if (res.ok) {
+          const json = await res.json();
+          setSubjects(json.data || []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch exam subjects:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchSubjects();
+  }, [currentLevel]);
+
+  // Filter & Search Logic
   const filteredSubjects = useMemo(() => {
-    return MOCK_EXAM_SUBJECTS.filter((subject) => {
-      // Search match
+    return subjects.filter((subject) => {
       const matchesSearch =
         subject.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         subject.code.toLowerCase().includes(searchQuery.toLowerCase());
-
-      // Level filter match
-      const matchesLevel = subject.level === currentLevel;
-
-      // Category filter match
       const matchesCategory = selectedCategory === "All" || subject.category === selectedCategory;
-
-      return matchesSearch && matchesLevel && matchesCategory;
+      return matchesSearch && matchesCategory;
     });
-  }, [searchQuery, currentLevel, selectedCategory]);
+  }, [searchQuery, selectedCategory, subjects]);
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-12">
@@ -93,7 +93,7 @@ export default function MockExamsPage() {
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             type="text"
-            placeholder="Search subject or code (e.g., Physics, CHE702)..."
+            placeholder="Search subject or code (e.g., ICT, PHY701)..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10 h-10 text-sm bg-background"
@@ -142,8 +142,14 @@ export default function MockExamsPage() {
         )}
       </div>
 
-      {/* SUBJECT EXAM CARDS GRID */}
-      {filteredSubjects.length > 0 ? (
+      {/* LOADING STATE */}
+      {isLoading ? (
+        <div className="flex flex-col items-center justify-center py-16 gap-3">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Loading exam subjects…</p>
+        </div>
+      ) : filteredSubjects.length > 0 ? (
+        /* SUBJECT EXAM CARDS GRID */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredSubjects.map((subject) => (
             <div
@@ -199,8 +205,8 @@ export default function MockExamsPage() {
                   </span>
                 </div>
 
-                {/* 📍 REDIRECT BUTTON: "Exam Papers" */}
-                <Link href={`/student/exams/${subject.id}`} className="block">
+                {/* REDIRECT BUTTON: "Exam Papers" */}
+                <Link href={`/student/exams/${subject.slug}`} className="block">
                   <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs h-10 gap-1.5 shadow-xs">
                     Exam Papers <ArrowRight className="w-4 h-4" />
                   </Button>
