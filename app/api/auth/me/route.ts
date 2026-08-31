@@ -1,38 +1,8 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { Types } from "mongoose";
 import { authService } from "@/modules/auth/services/auth.service";
 import userRepository from "@/modules/auth/repositories/user.repository";
-
-function extractUserId(payload: Record<string, any>): string {
-  if (!payload) return "";
-  const rawId = payload.id ?? payload.sub;
-  if (!rawId) return "";
-
-  if (typeof rawId === "string") {
-    return rawId;
-  }
-
-  // Handle object with buffer: { buffer: { '0': 106, '1': 112, ... } }
-  if (typeof rawId === "object") {
-    if (rawId.buffer && typeof rawId.buffer === "object") {
-      try {
-        const bytes = Object.values(rawId.buffer) as number[];
-        return Buffer.from(bytes).toString("hex");
-      } catch {
-        // Fall through
-      }
-    }
-    if (typeof rawId.toString === "function") {
-      const str = rawId.toString();
-      if (str !== "[object Object]") {
-        return str;
-      }
-    }
-  }
-
-  return String(rawId);
-}
+import { extractUserId } from "@/lib/auth/extract-user-id";
 
 export async function GET() {
   try {

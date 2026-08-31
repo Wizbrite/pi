@@ -20,8 +20,10 @@ interface AuthState {
   user: AuthUser | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  error: string | null;          // ← add this
   setUser: (user: AuthUser | null) => void;
   setLoading: (loading: boolean) => void;
+  clearError: () => void;        // ← add this
   logout: () => Promise<void>;
   fetchUser: () => Promise<void>;
 }
@@ -30,7 +32,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isLoading: true,
   isAuthenticated: false,
-
+  error: null,
   setUser: (user) =>
     set({
       user,
@@ -39,6 +41,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     }),
 
   setLoading: (loading) => set({ isLoading: loading }),
+  clearError: () => set({ error: null }),
 
   logout: async () => {
     try {

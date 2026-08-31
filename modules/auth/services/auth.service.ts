@@ -4,10 +4,11 @@ import * as jose from "jose";
 import { env } from "@/lib/config/env";
 import userRepository from "../repositories/user.repository";
 import { type IUser, type IUserDocument } from "../models/user.model";
+import { type RegisterInput } from "../validation/auth.schema";
+import { type LoginInput } from "../validation/auth.schema";
 
-function getJwtSecret() {
-  const secret = process.env.JWT_SECRET || env.JWT_SECRET;
-  return new TextEncoder().encode(secret);
+function getJwtSecret(): Uint8Array {
+  return new TextEncoder().encode(env.JWT_SECRET);
 }
 
 export class AuthService {
@@ -42,22 +43,16 @@ export class AuthService {
     }
   }
 
-  async register(userData: Partial<IUser>): Promise<{ user: IUserDocument; token: string }> {
-    if (!userData.email || !userData.password || !userData.name || !userData.role) {
-      throw new Error("Missing required fields");
-    }
-
-    const existingUser = await userRepository.findByEmail(userData.email);
-    if (existingUser) {
-      throw new Error("Email is already registered");
-    }
-
-    const hashedPassword = await bcrypt.hash(userData.password, 10);
+  async register(data: RegisterInput): Promise<{ user: IUserDocument; token: string }> {
+    const hashedPassword = await bcrypt.hash(data.password, 10);
 
     const user = await userRepository.create({
-      ...userData,
-      fullName: userData.fullName ?? userData.name,
+      name: data.name,
+      fullName: data.name,
+      email: data.email,
       passwordHash: hashedPassword,
+      role: data.role,
+      gceLevel: data.gceLevel,
     });
 
     const token = await this.generateToken(user);
@@ -65,12 +60,12 @@ export class AuthService {
   }
 
   async login(email: string, password: string): Promise<{ user: IUserDocument; token: string }> {
-    const user = await userRepository.findByEmail(email);
+    const user = await userRepository.findByEmail(email, { includePassword: true });
     if (!user) {
       throw new Error("Invalid email or password");
     }
 
-    const passwordHash = user.passwordHash ?? user.password;
+    const passwordHash = user.passwordHash;
     if (!passwordHash) {
       throw new Error("Invalid email or password");
     }
@@ -115,7 +110,6 @@ export class AuthService {
 
     const updatedUser = await userRepository.update(user._id.toString(), {
       passwordHash: hashedPassword,
-      password: hashedPassword,
       resetPasswordToken: null,
       resetPasswordExpires: null,
     });

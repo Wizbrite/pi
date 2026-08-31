@@ -10,7 +10,6 @@ export interface IUser {
   name?: string;
   email: string;
   passwordHash: string;
-  password?: string;
   role: UserRole;
   gceLevel?: GceLevel;
   teacherApprovalStatus?: TeacherApprovalStatus;
@@ -49,11 +48,7 @@ const UserSchema = new Schema<IUserDocument>(
       required: [true, "Password hash is required"],
       select: false,
     },
-    password: {
-      type: String,
-      select: false,
-      default: null,
-    },
+
     role: {
       type: String,
       enum: ["student", "teacher", "parent", "admin"],

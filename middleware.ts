@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import * as jose from "jose";
-
+import { extractUserId } from "@/lib/auth/extract-user-id";
 function getJwtSecret() {
   const secret = process.env.JWT_SECRET || "super_secret_jwt_key_at_least_32_characters_long";
   return new TextEncoder().encode(secret);
@@ -31,30 +31,30 @@ async function verifyToken(token: string) {
   }
 }
 
-function extractUserId(payload: Record<string, any>): string {
-  if (!payload) return "";
-  const rawId = payload.id ?? payload.sub;
-  if (!rawId) return "";
+// function extractUserId(payload: Record<string, any>): string {
+//   if (!payload) return "";
+//   const rawId = payload.id ?? payload.sub;
+//   if (!rawId) return "";
 
-  if (typeof rawId === "string") return rawId;
+//   if (typeof rawId === "string") return rawId;
 
-  if (typeof rawId === "object") {
-    if (rawId.buffer && typeof rawId.buffer === "object") {
-      try {
-        const bytes = Object.values(rawId.buffer) as number[];
-        return Buffer.from(bytes).toString("hex");
-      } catch {
-        // Fall through
-      }
-    }
-    if (typeof rawId.toString === "function") {
-      const str = rawId.toString();
-      if (str !== "[object Object]") return str;
-    }
-  }
+//   if (typeof rawId === "object") {
+//     if (rawId.buffer && typeof rawId.buffer === "object") {
+//       try {
+//         const bytes = Object.values(rawId.buffer) as number[];
+//         return Buffer.from(bytes).toString("hex");
+//       } catch {
+//         // Fall through
+//       }
+//     }
+//     if (typeof rawId.toString === "function") {
+//       const str = rawId.toString();
+//       if (str !== "[object Object]") return str;
+//     }
+//   }
 
-  return String(rawId);
-}
+//   return String(rawId);
+// }
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
