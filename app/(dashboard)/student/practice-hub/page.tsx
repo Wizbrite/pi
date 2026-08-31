@@ -108,7 +108,7 @@ export default function PracticeHubPage() {
       {activeTab === "mistake-bank" && (
         <div className="space-y-4">
           {mistakes.length > 0 && (
-            <div className="flex items-center justify-between p-4 rounded-xl bg-violet-600/10 border border-violet-600/20">
+            <div className="flex flex-col gap-3 items-center justify-between p-4 rounded-xl bg-violet-600/10 border border-violet-600/20">
               <div>
                 <h3 className="text-sm font-bold text-violet-950 dark:text-violet-300">Ready to clear your mistakes?</h3>
                 <p className="text-xs text-slate-600 dark:text-slate-400">
@@ -132,8 +132,8 @@ export default function PracticeHubPage() {
                 key={item.id}
                 className="p-5 rounded-xl bg-white dark:bg-[#131834] border border-slate-200/80 dark:border-white/10 shadow-sm space-y-3"
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                <div className="flex flex-col items-center justify-between">
+                  <div className="flex flex-col items-center gap-2">
                     <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-violet-600/10 text-violet-600 dark:text-violet-400">
                       {item.subject}
                     </span>

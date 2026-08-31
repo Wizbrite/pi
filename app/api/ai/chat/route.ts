@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error("[POST /api/ai/chat] Error:", error);
     return NextResponse.json(
-      { success: false, message: "Failed to get AI response" },
+      { success: false, message: "Sorry, but Pi Failed to provide a response" },
       { status: 500 }
     );
   }

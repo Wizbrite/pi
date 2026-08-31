@@ -30,7 +30,7 @@ class MistralProvider implements AiProvider {
   constructor(private apiKey: string) {}
 
   async chat(messages: AiMessage[], options: AiChatOptions = {}): Promise<Response> {
-    const { model = "mistral-large-latest", temperature = 0.7, maxTokens = 1024, stream = false } = options;
+    const { model = "mistral-small-latest", temperature = 0.7, maxTokens = 1024, stream = false } = options;
 
     return fetch(`${this.baseUrl}/chat/completions`, {
       method: "POST",

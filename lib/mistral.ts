@@ -8,7 +8,7 @@ export class MistralClient {
     this.apiKey = apiKey;
   }
 
-  async chat(messages: { role: "user" | "assistant" | "system"; content: string }[], model = "mistral-large-latest") {
+  async chat(messages: { role: "user" | "assistant" | "system"; content: string }[], model = "mistral-small-latest") {
     const response = await fetch(`${this.baseUrl}/chat/completions`, {
       method: "POST",
       headers: {
@@ -29,7 +29,7 @@ export class MistralClient {
     return response.json();
   }
 
-  async chatStream(messages: { role: "user" | "assistant" | "system"; content: string }[], model = "mistral-large-latest") {
+  async chatStream(messages: { role: "user" | "assistant" | "system"; content: string }[], model = "mistral-small-latest") {
     const response = await fetch(`${this.baseUrl}/chat/completions`, {
       method: "POST",
       headers: {

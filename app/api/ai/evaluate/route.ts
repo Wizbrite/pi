@@ -16,7 +16,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, message: "Missing required fields" }, { status: 400 });
     }
 
-    const systemPrompt = `You are a strict but fair GCE Examiner. 
+    const systemPrompt = `You are a strict but fair Cameroon GCE Examiner. 
 You are evaluating a student's answer to a structural question.
 Question: ${questionText}
 Official Correct Answer / Rubric: ${correctAnswer || "Use your expert knowledge to determine if it is correct."}
