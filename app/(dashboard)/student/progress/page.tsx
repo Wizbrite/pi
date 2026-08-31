@@ -651,14 +651,38 @@ export default function ProgressPage() {
   const [expandedSubject, setExpandedSubject] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"overview" | "exams" | "weaknesses">("overview");
 
-  // Simulate API call — replace with real fetch
+  // // Simulate API call — replace with real fetch
+  // useEffect(() => {
+  //   const timer = setTimeout(() => {
+  //     setData(MOCK_DATA);
+  //     setIsLoading(false);
+  //   }, 800);
+  //   return () => clearTimeout(timer);
+  // }, []);
+
   useEffect(() => {
-    const timer = setTimeout(() => {
+  async function fetchProgress() {
+    try {
+      const res = await fetch("/api/student/progress");
+      if (res.ok) {
+        const json = await res.json();
+        setData(json.data);
+      } else {
+        // Fallback to mock data in development
+        console.warn("Progress API failed, using mock data");
+        setData(MOCK_DATA);
+      }
+    } catch {
+      // Offline or network error — use mock data
+      console.warn("Network error, using mock data");
       setData(MOCK_DATA);
+    } finally {
       setIsLoading(false);
-    }, 800);
-    return () => clearTimeout(timer);
-  }, []);
+    }
+  }
+
+  fetchProgress();
+}, []);
 
   if (isLoading || !data) {
     return (

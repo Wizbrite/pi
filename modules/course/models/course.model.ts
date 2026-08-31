@@ -6,6 +6,7 @@ export interface ITopic {
   order: number;
 }
 
+
 export interface ICourse {
   title: string;
   level: "O-Level" | "A-Level";

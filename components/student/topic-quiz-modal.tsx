@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import {
   X, Trophy, ArrowRight, RotateCcw, CheckCircle2, XCircle,
@@ -52,16 +52,38 @@ export function TopicQuizModal({
   const [score, setScore] = useState(0);
   const [failedQuestions, setFailedQuestions] = useState<FailedQuestion[]>([]);
   const [quizFinished, setQuizFinished] = useState(false);
+  const [isSavingProgress, setIsSavingProgress] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Time tracking
+  const quizStartTimeRef = useRef<Date | null>(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   const [showAiInput, setShowAiInput] = useState(false);
   const [aiQuery, setAiQuery] = useState("");
 
   const XP_PER_CORRECT = 50;
 
+  // ── Timer effect ───────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!quizStartTimeRef.current || quizFinished) return;
+
+    const interval = setInterval(() => {
+      if (quizStartTimeRef.current) {
+        const elapsed = Math.floor(
+          (Date.now() - quizStartTimeRef.current.getTime()) / 1000
+        );
+        setElapsedSeconds(elapsed);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [quizFinished]);
+
   // ── Build quiz AI system prompt based on current question ─────────────────
   const currentQ = questions[currentQuestionIndex];
   const isNCQ = currentQ && (!currentQ.options || currentQ.options.length === 0);
-  const userAnswer = isNCQ ? ncqAnswer : (selectedOption ?? "");
+  const userAnswer = isNCQ ? ncqAnswer : selectedOption ?? "";
 
   const quizSystemPrompt = currentQ
     ? buildQuizSystemPrompt({
@@ -100,6 +122,8 @@ export function TopicQuizModal({
     if (isOpen) {
       fetchQuestions();
       handleReset();
+      // Start timer when modal opens
+      quizStartTimeRef.current = new Date();
     }
   }, [isOpen, fetchQuestions]);
 
@@ -136,7 +160,6 @@ export function TopicQuizModal({
           isCorrect = json.evaluation.isCorrect;
           setAiEvaluationText(json.evaluation.explanation);
         } else {
-          // Fallback if AI fails
           isCorrect = answer?.trim().toLowerCase() === currentQ.correctAnswer?.toLowerCase();
           setAiEvaluationText("AI evaluation failed. Using exact match fallback.");
         }
@@ -176,10 +199,49 @@ export function TopicQuizModal({
       setShowAiInput(false);
       resetAi();
     } else {
+      // Quiz finished — save progress
       setQuizFinished(true);
-      const totalXp = score * XP_PER_CORRECT;
-      fetch(`/api/lessons/${lessonId}/complete`, { method: "POST" }).catch(console.error);
-      if (onQuizComplete) onQuizComplete(score, totalXp, failedQuestions);
+      saveProgress();
+    }
+  };
+
+  const saveProgress = async () => {
+    setIsSavingProgress(true);
+    setSaveError(null);
+
+    const finalScore = score;
+    const totalQuestions = questions.length;
+    const timeSpentSeconds = elapsedSeconds;
+
+    try {
+      const res = await fetch(`/api/lessons/${lessonId}/complete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          score: finalScore,
+          totalQuestions,
+          timeSpentSeconds,
+        }),
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        const earnedXp = json.data?.xpEarned || finalScore * XP_PER_CORRECT;
+        if (onQuizComplete) onQuizComplete(finalScore, earnedXp, failedQuestions);
+      } else {
+        // Still call callback with calculated XP even if save fails
+        const earnedXp = finalScore * XP_PER_CORRECT;
+        if (onQuizComplete) onQuizComplete(finalScore, earnedXp, failedQuestions);
+        const errorData = await res.json().catch(() => ({}));
+        setSaveError(errorData.message || "Failed to save progress");
+      }
+    } catch (err) {
+      // Still call callback even if save fails
+      const earnedXp = finalScore * XP_PER_CORRECT;
+      if (onQuizComplete) onQuizComplete(finalScore, earnedXp, failedQuestions);
+      setSaveError("Network error. Progress saved locally.");
+    } finally {
+      setIsSavingProgress(false);
     }
   };
 
@@ -193,7 +255,11 @@ export function TopicQuizModal({
     setFailedQuestions([]);
     setQuizFinished(false);
     setShowAiInput(false);
+    setSaveError(null);
+    setElapsedSeconds(0);
     resetAi();
+    // Reset timer
+    quizStartTimeRef.current = new Date();
   };
 
   const handleAskAi = async (e: React.FormEvent) => {
@@ -211,6 +277,13 @@ export function TopicQuizModal({
     await ask(prompt);
   };
 
+  // Format time for display
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-background border border-border w-full max-w-lg rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
@@ -218,7 +291,13 @@ export function TopicQuizModal({
         {/* Header */}
         <div className="flex justify-between items-center px-4 py-3 border-b border-border bg-muted/30 shrink-0">
           <div>
-            <Badge variant="accent" className="text-[10px] uppercase">{topicTitle}</Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="accent" className="text-[10px] uppercase">{topicTitle}</Badge>
+              {/* Timer */}
+              <span className="text-[10px] font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                {formatTime(elapsedSeconds)}
+              </span>
+            </div>
             <h3 className="text-sm font-bold text-foreground mt-0.5">{lessonTitle} Assessment</h3>
           </div>
           <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 rounded-full">
@@ -250,6 +329,14 @@ export function TopicQuizModal({
                 <span className="font-semibold text-primary">
                   Potential XP: {questions.length * XP_PER_CORRECT}
                 </span>
+              </div>
+
+              {/* Progress bar */}
+              <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+                <div
+                  className="bg-primary h-full rounded-full transition-all duration-300"
+                  style={{ width: `${((currentQuestionIndex + 1) / questions.length) * 100}%` }}
+                />
               </div>
 
               {/* Question */}
@@ -369,9 +456,7 @@ export function TopicQuizModal({
                           </div>
                         ) : (
                           <div className="text-xs text-accent-foreground leading-relaxed">
-                            <ReactMarkdown>
-                              {aiResponse}
-                            </ReactMarkdown>
+                            <ReactMarkdown>{aiResponse}</ReactMarkdown>
                           </div>
                         )}
                       </div>
@@ -385,32 +470,51 @@ export function TopicQuizModal({
           ) : (
             /* ── Results screen ────────────────────────────────────────────── */
             <div className="text-center py-6 space-y-4">
-              <div className="w-16 h-16 rounded-full bg-violet-500/10 border border-violet-500/30 text-violet-500 flex items-center justify-center mx-auto shadow-inner">
-                <Trophy className="w-8 h-8" />
-              </div>
-              <div className="space-y-1">
-                <Badge className="bg-violet-500 text-black font-bold uppercase tracking-wider text-[10px]">
-                  Mastery Quiz Completed
-                </Badge>
-                <h4 className="text-2xl font-black text-foreground">+{score * XP_PER_CORRECT} XP</h4>
-                <p className="text-xs text-muted-foreground">
-                  You scored <span className="font-bold text-foreground">{score}/{questions.length}</span> correct answers.
-                </p>
-              </div>
-              <div className="w-full bg-muted rounded-full h-2 overflow-hidden max-w-xs mx-auto">
-                <div
-                  className="bg-violet-500 h-full rounded-full transition-all duration-700"
-                  style={{ width: `${(score / questions.length) * 100}%` }}
-                />
-              </div>
-              <div className="flex flex-col sm:flex-row gap-2 justify-center pt-2 max-w-xs mx-auto">
-                <Button onClick={handleReset} variant="outline" className="w-full">
-                  <RotateCcw className="w-4 h-4 mr-2" /> Retake Quiz
-                </Button>
-                <Button onClick={onClose} className="w-full bg-primary text-primary-foreground">
-                  Continue Learning
-                </Button>
-              </div>
+              {isSavingProgress ? (
+                <div className="flex flex-col items-center gap-3">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                  <p className="text-sm text-muted-foreground">Saving your progress...</p>
+                </div>
+              ) : (
+                <>
+                  <div className="w-16 h-16 rounded-full bg-violet-500/10 border border-violet-500/30 text-violet-500 flex items-center justify-center mx-auto shadow-inner">
+                    <Trophy className="w-8 h-8" />
+                  </div>
+                  <div className="space-y-1">
+                    <Badge className="bg-violet-500 text-black font-bold uppercase tracking-wider text-[10px]">
+                      Mastery Quiz Completed
+                    </Badge>
+                    <h4 className="text-2xl font-black text-foreground">+{score * XP_PER_CORRECT} XP</h4>
+                    <p className="text-xs text-muted-foreground">
+                      You scored <span className="font-bold text-foreground">{score}/{questions.length}</span> correct answers in {formatTime(elapsedSeconds)}.
+                    </p>
+                  </div>
+                  <div className="w-full bg-muted rounded-full h-2 overflow-hidden max-w-xs mx-auto">
+                    <div
+                      className="bg-violet-500 h-full rounded-full transition-all duration-700"
+                      style={{ width: `${(score / questions.length) * 100}%` }}
+                    />
+                  </div>
+
+                  {/* Save error warning */}
+                  {saveError && (
+                    <div className="max-w-xs mx-auto p-2.5 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                      <p className="text-[11px] text-yellow-600 dark:text-yellow-400">
+                        ⚠️ {saveError}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="flex flex-col sm:flex-row gap-2 justify-center pt-2 max-w-xs mx-auto">
+                    <Button onClick={handleReset} variant="outline" className="w-full">
+                      <RotateCcw className="w-4 h-4 mr-2" /> Retake Quiz
+                    </Button>
+                    <Button onClick={onClose} className="w-full bg-primary text-primary-foreground">
+                      Continue Learning
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>

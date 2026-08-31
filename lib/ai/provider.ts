@@ -16,6 +16,8 @@ export interface AiChatOptions {
   temperature?: number;
   maxTokens?: number;
   stream?: boolean;
+  /** Mistral structured-output mode. Unsupported providers may ignore it. */
+  responseFormat?: "json_object";
 }
 
 export interface AiProvider {
@@ -30,7 +32,13 @@ class MistralProvider implements AiProvider {
   constructor(private apiKey: string) {}
 
   async chat(messages: AiMessage[], options: AiChatOptions = {}): Promise<Response> {
-    const { model = "mistral-small-latest", temperature = 0.7, maxTokens = 1024, stream = false } = options;
+    const {
+      model = "mistral-small-latest",
+      temperature = 0.7,
+      maxTokens = 1024,
+      stream = false,
+      responseFormat,
+    } = options;
 
     return fetch(`${this.baseUrl}/chat/completions`, {
       method: "POST",
@@ -44,6 +52,7 @@ class MistralProvider implements AiProvider {
         temperature,
         max_tokens: maxTokens,
         stream,
+        ...(responseFormat ? { response_format: { type: responseFormat } } : {}),
       }),
     });
   }

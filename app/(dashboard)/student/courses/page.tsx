@@ -15,6 +15,7 @@ export default function StudentCoursesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Fetch courses based on the user's GCE level
   const fetchCourses = useCallback(async () => {
     setIsLoading(true);
     setError(null);

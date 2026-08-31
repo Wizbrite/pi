@@ -64,3 +64,49 @@ export async function GET(
     );
   }
 }
+
+//api endpoint for allowing admin to create a new course
+export async function POST(request: Request) {
+  try {
+    await connectToDatabase();
+    const body = await request.json();
+
+    const { title, level, subject, description, topics } = body;
+
+    // Validate required fields based on schema
+    if (!title || !level || !subject) {
+      return NextResponse.json(
+        { success: false, message: "Title, level, and subject are required." },
+        { status: 400 }
+      );
+    }
+
+    // Format and assign order indices to topics if provided
+    const formattedTopics = Array.isArray(topics)
+      ? topics.map((topic: { title: string; description?: string }, index: number) => ({
+          title: topic.title,
+          description: topic.description || "",
+          order: index + 1,
+        }))
+      : [];
+
+    const newCourse = await Course.create({
+      title,
+      level,
+      subject,
+      description,
+      topics: formattedTopics,
+    });
+
+    return NextResponse.json(
+      { success: true, data: newCourse, message: "Course created successfully!" },
+      { status: 201 }
+    );
+  } catch (error: any) {
+    console.error("[POST /api/courses] Error:", error);
+    return NextResponse.json(
+      { success: false, message: error.message || "Failed to create course" },
+      { status: 500 }
+    );
+  }
+}

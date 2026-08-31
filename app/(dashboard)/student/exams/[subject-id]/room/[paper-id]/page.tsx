@@ -16,6 +16,7 @@ import {
   X,
   Grid,
   Loader2,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -35,28 +36,6 @@ export interface Question {
   aiExplanation?: string;
 }
 
-export interface ExamAttemptResult {
-  paperId: string;
-  subjectId: string;
-  paperTitle: string;
-  totalMarks: number;
-  timeSpentSeconds: number;
-  questions: Array<{
-    questionId: number;
-    questionNumber: number;
-    text: string;
-    topic: string;
-    userAnswer: string;
-    correctAnswer: string;
-    options: string[];
-    isCorrect: boolean;
-    marksObtained: number;
-    totalMarks: number;
-    markingSchemeNotes: string;
-    aiExplanation: string;
-  }>;
-}
-
 interface PaperMeta {
   title: string;
   type: "MCQ" | "Structured";
@@ -68,7 +47,9 @@ interface PaperMeta {
 export default function ExamRoomPage({
   params,
 }: {
-  params: Promise<{ "subject-id": string; "paper-id": string }> | { "subject-id": string; "paper-id": string };
+  params:
+    | Promise<{ "subject-id": string; "paper-id": string }>
+    | { "subject-id": string; "paper-id": string };
 }) {
   const router = useRouter();
   const resolvedParams = params instanceof Promise ? use(params) : params;
@@ -83,19 +64,27 @@ export default function ExamRoomPage({
 
   // Exam states
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number | string>>({});
+  const [selectedAnswers, setSelectedAnswers] = useState<
+    Record<number, number | string>
+  >({});
   const [bookmarkedQuestions, setBookmarkedQuestions] = useState<number[]>([]);
   const [timeLeftSeconds, setTimeLeftSeconds] = useState(0);
   const [timerStarted, setTimerStarted] = useState(false);
   const [isAiOpen, setIsAiOpen] = useState(false);
   const [isNavGridOpenMobile, setIsNavGridOpenMobile] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
-  const [aiChat, setAiChat] = useState<{ sender: "user" | "ai"; text: string }[]>([
+  const [aiChat, setAiChat] = useState<
+    { sender: "user" | "ai"; text: string }[]
+  >([
     {
       sender: "ai",
       text: "Hello! I am your AI GCE Tutor. Stuck on this question? Ask me for hints or concept explanations!",
     },
   ]);
+
+  // Submission state
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Fetch paper + questions from API
   useEffect(() => {
@@ -113,24 +102,28 @@ export default function ExamRoomPage({
 
         setPaperMeta({
           title: data.title,
-          type: data.type || (data.questions?.[0]?.type === "MCQ" ? "MCQ" : "Structured"),
+          type:
+            data.type ||
+            (data.questions?.[0]?.type === "MCQ" ? "MCQ" : "Structured"),
           durationMinutes: data.durationMinutes,
           totalMarks: data.totalMarks,
           year: data.year,
         });
 
-        const mappedQuestions: Question[] = (data.questions || []).map((q: any) => ({
-          id: q.id || q.questionNumber,
-          text: q.text,
-          options: q.options || [],
-          correctAnswerIndex: q.correctAnswerIndex ?? 0,
-          correctAnswerText: q.correctAnswerText || "",
-          type: q.type || (q.options?.length > 0 ? "MCQ" : "Structured"),
-          marks: q.marks,
-          topic: q.topic,
-          markingSchemeNotes: q.markingSchemeNotes || "",
-          aiExplanation: q.aiExplanation || "",
-        }));
+        const mappedQuestions: Question[] = (data.questions || []).map(
+          (q: any) => ({
+            id: q.id || q.questionNumber,
+            text: q.text,
+            options: q.options || [],
+            correctAnswerIndex: q.correctAnswerIndex ?? 0,
+            correctAnswerText: q.correctAnswerText || "",
+            type: q.type || (q.options?.length > 0 ? "MCQ" : "Structured"),
+            marks: q.marks,
+            topic: q.topic,
+            markingSchemeNotes: q.markingSchemeNotes || "",
+            aiExplanation: q.aiExplanation || "",
+          })
+        );
 
         setQuestions(mappedQuestions);
         setTimeLeftSeconds(data.durationMinutes * 60);
@@ -168,7 +161,9 @@ export default function ExamRoomPage({
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">Loading exam paper…</p>
+          <p className="text-sm text-muted-foreground">
+            Loading exam paper…
+          </p>
         </div>
       </div>
     );
@@ -179,10 +174,16 @@ export default function ExamRoomPage({
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
-          <h2 className="text-lg font-bold text-foreground">Could not load exam</h2>
-          <p className="text-sm text-muted-foreground">{fetchError || "No questions found for this paper."}</p>
+          <h2 className="text-lg font-bold text-foreground">
+            Could not load exam
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {fetchError || "No questions found for this paper."}
+          </p>
           <Link href={`/student/exams/${subjectId}`}>
-            <Button size="sm" className="text-xs">Back to Papers</Button>
+            <Button size="sm" className="text-xs">
+              Back to Papers
+            </Button>
           </Link>
         </div>
       </div>
@@ -234,75 +235,154 @@ export default function ExamRoomPage({
     }, 800);
   };
 
-  // Submit Exam & Save Results to localStorage
-  const handleSubmitExam = () => {
-    if (confirm("Are you sure you want to submit your exam?")) {
-      const timeSpentSeconds = TOTAL_TIME - timeLeftSeconds;
-      const { addMistake } = usePracticeStore.getState();
+  // Submit Exam — saves to MongoDB AND localStorage (for backward compatibility)
+  const handleSubmitExam = async () => {
+    if (isSubmitting) return;
 
-      const processedQuestions = questions.map((q, idx) => {
-        const selectedVal = selectedAnswers[q.id];
-        const isAnswered = selectedVal !== undefined && selectedVal !== "";
-        let isCorrect = false;
-        let userAnswerText = "Unanswered";
+    const unansweredCount = questions.filter(
+      (q) => selectedAnswers[q.id] === undefined || selectedAnswers[q.id] === ""
+    ).length;
 
-        if (q.type === "MCQ") {
-          isCorrect = isAnswered && selectedVal === q.correctAnswerIndex;
-          userAnswerText = isAnswered
-            ? (q.options[selectedVal as number] || `Option ${(selectedVal as number) + 1}`)
-            : "Unanswered";
-        } else {
-          userAnswerText = isAnswered ? (selectedVal as string) : "Unanswered";
-          // Basic auto-grade for structured (just checks if they wrote something to not mark as 0, but real grading needs AI)
-          // For now, if they answered, we don't automatically mark it as a "mistake" unless we strictly grade it.
-          // Let's assume strict grading isn't fully implemented for structured, but we still capture it.
-          isCorrect = false; // By default, structured needs manual/AI grading.
-        }
+    const confirmMsg =
+      unansweredCount > 0
+        ? `You have ${unansweredCount} unanswered question(s). Are you sure you want to submit?`
+        : "Are you sure you want to submit your exam?";
 
-        // Record mistake if incorrect and it's an MCQ (or if you want to record all wrong answers)
-        if (!isCorrect && isAnswered && q.type === "MCQ") {
-          addMistake({
-            subject: subjectId || "Subject",
-            topic: q.topic,
-            lesson: "Exam",
-            question: q.text,
-            incorrectAnswer: userAnswerText,
-            correctAnswer: q.correctAnswerText || q.options[q.correctAnswerIndex] || "",
-          });
-        }
+    if (!confirm(confirmMsg)) return;
 
-        return {
-          questionId: q.id,
-          questionNumber: idx + 1,
-          text: q.text,
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    const timeSpentSeconds = TOTAL_TIME - timeLeftSeconds;
+    const { addMistake } = usePracticeStore.getState();
+
+    const processedQuestions = questions.map((q, idx) => {
+      const selectedVal = selectedAnswers[q.id];
+      const isAnswered = selectedVal !== undefined && selectedVal !== "";
+      let isCorrect = false;
+      let userAnswerText = "Unanswered";
+
+      if (q.type === "MCQ") {
+        isCorrect = isAnswered && selectedVal === q.correctAnswerIndex;
+        userAnswerText = isAnswered
+          ? q.options[(selectedVal as number)] || `Option ${(selectedVal as number) + 1}`
+          : "Unanswered";
+      } else {
+        userAnswerText = isAnswered ? (selectedVal as string) : "Unanswered";
+        isCorrect = false; // Structured questions need manual/AI grading
+      }
+
+      // Record mistake if incorrect MCQ
+      if (!isCorrect && isAnswered && q.type === "MCQ") {
+        addMistake({
+          subject: subjectId || "Subject",
           topic: q.topic,
-          userAnswer: userAnswerText,
-          correctAnswer: q.correctAnswerText || q.options[q.correctAnswerIndex] || "",
-          options: q.options,
-          isCorrect,
-          marksObtained: isCorrect ? q.marks : 0,
-          totalMarks: q.marks,
-          markingSchemeNotes: q.markingSchemeNotes || "Standard marking scheme guidelines apply.",
-          aiExplanation: q.aiExplanation || "Review the official core syllabus for this topic.",
-        };
+          lesson: "Exam",
+          question: q.text,
+          incorrectAnswer: userAnswerText,
+          correctAnswer:
+            q.correctAnswerText || q.options[q.correctAnswerIndex] || "",
+        });
+      }
+
+      return {
+        questionId: q.id,
+        questionNumber: idx + 1,
+        text: q.text,
+        topic: q.topic,
+        userAnswer: userAnswerText,
+        correctAnswer:
+          q.correctAnswerText || q.options[q.correctAnswerIndex] || "",
+        options: q.options,
+        isCorrect,
+        marksObtained: isCorrect ? q.marks : 0,
+        totalMarks: q.marks,
+        markingSchemeNotes:
+          q.markingSchemeNotes ||
+          "Standard marking scheme guidelines apply.",
+        aiExplanation:
+          q.aiExplanation ||
+          "Review the official core syllabus for this topic.",
+      };
+    });
+
+    const score = processedQuestions.reduce((sum, q) => sum + q.marksObtained, 0);
+    const totalMarks = questions.reduce((sum, q) => sum + q.marks, 0);
+
+    // Prepare payload for API
+    const apiPayload = {
+      paperId: paperId || "default-paper",
+      paperTitle: paperMeta?.title || "GCE Past Paper Exam",
+      totalMarks,
+      timeSpentSeconds,
+      questions: processedQuestions,
+    };
+
+    // Prepare payload for localStorage (backward compatibility)
+    const localStoragePayload = {
+      ...apiPayload,
+      subjectId: subjectId || "default-subject",
+    };
+
+    try {
+      // Save to MongoDB via API
+      const res = await fetch(`/api/exams/${subjectId}/attempts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(apiPayload),
       });
 
-      const examAttemptData: ExamAttemptResult = {
-        paperId: paperId || "default-paper",
-        subjectId: subjectId || "default-subject",
-        paperTitle: paperMeta?.title || "GCE Past Paper Exam",
-        totalMarks: questions.reduce((acc, q) => acc + q.marks, 0),
-        timeSpentSeconds,
-        questions: processedQuestions,
-      };
+      if (res.ok) {
+        const json = await res.json();
+        const attemptId = json.data.attemptId;
 
-      localStorage.setItem(`exam_attempt_${paperId}`, JSON.stringify(examAttemptData));
+        // Also save to localStorage for the results page (backward compat)
+        localStorage.setItem(
+          `exam_attempt_${attemptId}`,
+          JSON.stringify(localStoragePayload)
+        );
+
+        // Navigate to results with the NEW attempt ID from MongoDB
+        router.push(
+          `/student/exams/${subjectId}/results/${attemptId}`
+        );
+      } else {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to save exam");
+      }
+    } catch (error: any) {
+      console.error("Failed to submit exam:", error);
+      setSubmitError(error.message || "Failed to submit exam. Please try again.");
+
+      // Fallback: save to localStorage only and use paperId as attempt ID
+      console.warn("Falling back to localStorage-only save");
+      localStorage.setItem(
+        `exam_attempt_${paperId}`,
+        JSON.stringify(localStoragePayload)
+      );
       router.push(`/student/exams/${subjectId}/results/${paperId}`);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-background flex flex-col -m-3 sm:-m-6 p-3 sm:p-6">
+      {/* SUBMISSION ERROR BANNER */}
+      {submitError && (
+        <div className="mb-4 bg-destructive/10 border border-destructive/30 rounded-2xl p-4 flex items-center gap-3">
+          <AlertTriangle className="w-5 h-5 text-destructive shrink-0" />
+          <p className="text-sm text-destructive flex-1">{submitError}</p>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSubmitError(null)}
+            className="text-destructive h-8 px-2"
+          >
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
+      )}
 
       {/* 1. MOBILE-RESPONSIVE TOP EXAM HEADER */}
       <header className="bg-card border border-border rounded-2xl p-3 sm:p-4 shadow-xs space-y-3 mb-4 sm:mb-6 sticky top-2 sm:top-4 z-20 backdrop-blur-md bg-card/95">
@@ -316,9 +396,16 @@ export default function ExamRoomPage({
             </Link>
             <div className="truncate">
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-[10px] sm:text-xs font-mono font-bold text-muted-foreground uppercase">{subjectId}</span>
-                <Badge variant="outline" className="text-[9px] sm:text-[10px] py-0 px-1.5 font-semibold">
-                  {paperMeta?.type === "MCQ" ? "Paper (MCQ)" : "Paper (Structured)"}
+                <span className="text-[10px] sm:text-xs font-mono font-bold text-muted-foreground uppercase">
+                  {subjectId}
+                </span>
+                <Badge
+                  variant="outline"
+                  className="text-[9px] sm:text-[10px] py-0 px-1.5 font-semibold"
+                >
+                  {paperMeta?.type === "MCQ"
+                    ? "Paper (MCQ)"
+                    : "Paper (Structured)"}
                 </Badge>
               </div>
               <h1 className="text-xs sm:text-sm font-bold text-foreground truncate">
@@ -334,7 +421,9 @@ export default function ExamRoomPage({
             className="lg:hidden text-xs gap-1 h-8 px-2.5 shrink-0"
           >
             <Grid className="w-3.5 h-3.5" />
-            <span className="text-[10px] font-bold">{currentQuestionIndex + 1}/{questions.length}</span>
+            <span className="text-[10px] font-bold">
+              {currentQuestionIndex + 1}/{questions.length}
+            </span>
           </Button>
         </div>
 
@@ -358,11 +447,20 @@ export default function ExamRoomPage({
             <Button
               size="sm"
               onClick={handleSubmitExam}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs gap-1 h-8 px-3"
+              disabled={isSubmitting}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs gap-1 h-8 px-3 disabled:opacity-50"
             >
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Submit Exam</span>
-              <span className="sm:hidden">Submit</span>
+              {isSubmitting ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <CheckCircle2 className="w-3.5 h-3.5" />
+              )}
+              <span className="hidden sm:inline">
+                {isSubmitting ? "Submitting..." : "Submit Exam"}
+              </span>
+              <span className="sm:hidden">
+                {isSubmitting ? "..." : "Submit"}
+              </span>
             </Button>
           </div>
         </div>
@@ -370,7 +468,6 @@ export default function ExamRoomPage({
 
       {/* MAIN WORKSPACE GRID */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 flex-1 items-start">
-
         {/* QUESTION CONTAINER */}
         <div className="lg:col-span-8 space-y-4">
           <div className="bg-card border border-border rounded-2xl p-4 sm:p-6 shadow-xs min-h-[380px] sm:min-h-[420px] flex flex-col justify-between">
@@ -378,10 +475,16 @@ export default function ExamRoomPage({
               <div className="flex items-center justify-between gap-2 border-b border-border pb-3 sm:pb-4 mb-4 sm:mb-5">
                 <div className="flex items-center gap-2 flex-wrap">
                   <Badge className="bg-primary/10 text-primary border-primary/20 text-[11px] sm:text-xs font-bold">
-                    Question {currentQuestionIndex + 1} of {questions.length}
+                    Question {currentQuestionIndex + 1} of{" "}
+                    {questions.length}
                   </Badge>
-                  <span className="text-[11px] sm:text-xs font-semibold text-muted-foreground">• Topic: {currentQ.topic}</span>
-                  <Badge variant="outline" className="text-[10px]">{currentQ.marks} mark{currentQ.marks > 1 ? "s" : ""}</Badge>
+                  <span className="text-[11px] sm:text-xs font-semibold text-muted-foreground">
+                    • Topic: {currentQ.topic}
+                  </span>
+                  <Badge variant="outline" className="text-[10px]">
+                    {currentQ.marks} mark
+                    {currentQ.marks > 1 ? "s" : ""}
+                  </Badge>
                 </div>
 
                 <Button
@@ -395,7 +498,11 @@ export default function ExamRoomPage({
                   }`}
                 >
                   <Bookmark className="w-3.5 h-3.5 fill-current" />
-                  <span className="hidden sm:inline">{bookmarkedQuestions.includes(currentQ.id) ? "Flagged" : "Flag for Review"}</span>
+                  <span className="hidden sm:inline">
+                    {bookmarkedQuestions.includes(currentQ.id)
+                      ? "Flagged"
+                      : "Flag for Review"}
+                  </span>
                 </Button>
               </div>
 
@@ -433,7 +540,9 @@ export default function ExamRoomPage({
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <p className="text-xs font-semibold text-muted-foreground">Type your answer below:</p>
+                  <p className="text-xs font-semibold text-muted-foreground">
+                    Type your answer below:
+                  </p>
                   <textarea
                     value={(selectedAnswers[currentQ.id] as string) || ""}
                     onChange={(e) => handleTextInput(e.target.value)}
@@ -471,9 +580,15 @@ export default function ExamRoomPage({
                 <Button
                   size="sm"
                   onClick={handleSubmitExam}
-                  className="text-xs font-bold gap-1.5 h-9 px-4 bg-green-600 hover:bg-green-700 text-white animate-pulse shadow-lg shadow-green-600/40 ring-2 ring-green-400/50"
+                  disabled={isSubmitting}
+                  className="text-xs font-bold gap-1.5 h-9 px-4 bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-600/40 ring-2 ring-green-400/50 disabled:opacity-50 disabled:animate-none"
                 >
-                  <CheckCircle2 className="w-4 h-4" /> Submit
+                  {isSubmitting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="w-4 h-4" />
+                  )}
+                  Submit
                 </Button>
               )}
             </div>
@@ -481,10 +596,16 @@ export default function ExamRoomPage({
         </div>
 
         {/* QUESTION NAVIGATOR GRID */}
-        <div className={`lg:col-span-4 ${isNavGridOpenMobile ? "block" : "hidden lg:block"}`}>
+        <div
+          className={`lg:col-span-4 ${
+            isNavGridOpenMobile ? "block" : "hidden lg:block"
+          }`}
+        >
           <div className="bg-card border border-border rounded-2xl p-4 sm:p-5 shadow-xs space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">Question Navigator</h3>
+              <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">
+                Question Navigator
+              </h3>
               <button
                 onClick={() => setIsNavGridOpenMobile(false)}
                 className="lg:hidden text-muted-foreground p-1 hover:text-foreground"
@@ -496,7 +617,9 @@ export default function ExamRoomPage({
             <div className="grid grid-cols-5 gap-2">
               {questions.map((q, idx) => {
                 const isCurrent = idx === currentQuestionIndex;
-                const isAnswered = selectedAnswers[q.id] !== undefined;
+                const isAnswered =
+                  selectedAnswers[q.id] !== undefined &&
+                  selectedAnswers[q.id] !== "";
                 const isFlagged = bookmarkedQuestions.includes(q.id);
 
                 return (
@@ -525,18 +648,20 @@ export default function ExamRoomPage({
 
             <div className="pt-3 border-t border-border flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted-foreground font-medium">
               <span className="flex items-center gap-1">
-                <span className="w-2.5 h-2.5 rounded-full bg-primary" /> Active
+                <span className="w-2.5 h-2.5 rounded-full bg-primary" />{" "}
+                Active
               </span>
               <span className="flex items-center gap-1">
-                <span className="w-2.5 h-2.5 rounded-full bg-muted border border-border" /> Answered
+                <span className="w-2.5 h-2.5 rounded-full bg-muted border border-border" />{" "}
+                Answered
               </span>
               <span className="flex items-center gap-1">
-                <span className="w-2.5 h-2.5 rounded-full bg-violet-500" /> Flagged
+                <span className="w-2.5 h-2.5 rounded-full bg-violet-500" />{" "}
+                Flagged
               </span>
             </div>
           </div>
         </div>
-
       </div>
 
       {/* FLOATING AI TUTOR DRAWER */}
@@ -548,8 +673,12 @@ export default function ExamRoomPage({
                 <Bot className="w-4 h-4" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-foreground">AI Exam Assistant</h4>
-                <p className="text-[10px] text-muted-foreground">Pi AI • Concept Hints</p>
+                <h4 className="text-xs font-bold text-foreground">
+                  AI Exam Assistant
+                </h4>
+                <p className="text-[10px] text-muted-foreground">
+                  Pi AI • Concept Hints
+                </p>
               </div>
             </div>
             <button
@@ -575,7 +704,10 @@ export default function ExamRoomPage({
             ))}
           </div>
 
-          <form onSubmit={handleSendAiQuery} className="p-2.5 bg-muted/40 border-t border-border flex gap-2">
+          <form
+            onSubmit={handleSendAiQuery}
+            className="p-2.5 bg-muted/40 border-t border-border flex gap-2"
+          >
             <input
               type="text"
               value={aiPrompt}
@@ -583,13 +715,16 @@ export default function ExamRoomPage({
               placeholder="Ask for a hint or explanation..."
               className="flex-1 bg-card border border-border rounded-xl px-3 text-xs outline-none focus:border-purple-500/50 h-9"
             />
-            <Button size="sm" type="submit" className="bg-purple-600 hover:bg-purple-700 text-white h-9 px-3">
+            <Button
+              size="sm"
+              type="submit"
+              className="bg-purple-600 hover:bg-purple-700 text-white h-9 px-3"
+            >
               <Send className="w-3.5 h-3.5" />
             </Button>
           </form>
         </div>
       )}
-
     </div>
   );
 }

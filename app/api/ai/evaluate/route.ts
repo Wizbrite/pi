@@ -1,6 +1,22 @@
 import { NextResponse } from "next/server";
-import { mistral } from "@/lib/mistral";
+import { getAiProvider, type AiMessage } from "@/lib/ai/provider";
 import { getUserId } from "@/lib/auth/get-user";
+
+type Evaluation = {
+  isCorrect: boolean;
+  explanation: string;
+};
+
+function getProviderError(status: number, payload: unknown) {
+  if (payload && typeof payload === "object") {
+    const message = (payload as { message?: unknown; error?: { message?: unknown } }).error?.message
+      ?? (payload as { message?: unknown }).message;
+
+    if (typeof message === "string" && message.trim()) return message;
+  }
+
+  return `The AI provider returned an error (${status}).`;
+}
 
 export async function POST(request: Request) {
   try {
@@ -12,7 +28,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { questionText, correctAnswer, studentAnswer } = body;
 
-    if (!questionText || !studentAnswer) {
+    if (typeof questionText !== "string" || typeof studentAnswer !== "string" || !questionText.trim() || !studentAnswer.trim()) {
       return NextResponse.json({ success: false, message: "Missing required fields" }, { status: 400 });
     }
 
@@ -29,27 +45,45 @@ Respond strictly in JSON format with exactly two fields:
   "explanation": "A short, encouraging explanation of why they are right or wrong."
 }`;
 
-    const messages = [
+    const messages: AiMessage[] = [
       { role: "system", content: systemPrompt },
     ];
 
-    // Assuming we use Mistral for the evaluation, non-streaming.
-    const result = await mistral.chat(messages as any);
-    const content = result.choices?.[0]?.message?.content || "";
-    
-    // Parse the JSON block out of the response (sometimes models wrap in ```json)
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error("AI did not return valid JSON");
+    // Use the same provider as the chatbot. This prevents the two endpoints from
+    // disagreeing about credentials, model selection, or future provider changes.
+    const result = await getAiProvider().chat(messages, {
+      stream: false,
+      temperature: 0,
+      maxTokens: 250,
+      responseFormat: "json_object",
+    });
+
+    const payload = await result.json().catch(() => null);
+    if (!result.ok) {
+      return NextResponse.json(
+        { success: false, message: getProviderError(result.status, payload) },
+        { status: result.status }
+      );
     }
 
-    const evaluation = JSON.parse(jsonMatch[0]);
+    const content = payload?.choices?.[0]?.message?.content;
+    if (typeof content !== "string") {
+      throw new Error("The AI provider returned an empty evaluation.");
+    }
+
+    const evaluation = JSON.parse(content) as Partial<Evaluation>;
+    if (typeof evaluation.isCorrect !== "boolean" || typeof evaluation.explanation !== "string") {
+      throw new Error("The AI provider returned an invalid evaluation format.");
+    }
 
     return NextResponse.json({ success: true, evaluation });
   } catch (error: any) {
     console.error("[POST /api/ai/evaluate] Error:", error);
     return NextResponse.json(
-      { success: false, message: "Failed to evaluate answer" },
+      {
+        success: false,
+        message: error instanceof Error ? error.message : "Failed to evaluate answer",
+      },
       { status: 500 }
     );
   }
