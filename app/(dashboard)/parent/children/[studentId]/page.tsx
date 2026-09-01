@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, use } from "react";
 import Link from "next/link";
 import {
   ArrowLeft, Zap, Flame, Clock, BookOpen, FileText,
@@ -107,7 +107,8 @@ function StatCard({ icon: Icon, label, value, sub, color }: { icon: React.Elemen
   );
 }
 
-export default function StudentProgressView({ params }: { params: { studentId: string } }) {
+export default function StudentProgressView({ params }: { params: Promise<{ studentId: string }> }) {
+  const { studentId } = use(params);
   const [activeTab, setActiveTab] = useState<"overview" | "subjects" | "exams" | "milestones">("overview");
   const [expandedSubject, setExpandedSubject] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -115,7 +116,7 @@ export default function StudentProgressView({ params }: { params: { studentId: s
   const maxActivity = Math.max(...STUDENT.weeklyActivity.map((d) => d.lessonsCompleted), 1);
 
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(`${window.location.origin}/parent-view/${params.studentId}`);
+    navigator.clipboard.writeText(`${window.location.origin}/parent-view/${studentId}`);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
