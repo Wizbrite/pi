@@ -8,7 +8,6 @@ import {
   BookOpen,
   BarChart3,
   Users,
-  Settings,
   LogOut,
   GraduationCap,
   FileText,
@@ -17,8 +16,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Target,
-  User2,
   Trophy,
+  Bell,
+  Shield,
+  Gift,
 } from "lucide-react";
 import { useState } from "react";
 import { Logo } from "@/components/shared/logo";
@@ -39,6 +40,7 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { label: "Progress", href: "/student/progress", icon: BarChart3 },
     { label: "Practice Hub", href: "/student/practice-hub", icon: Target },
     { label: "Leaderboard", href: "/student/leaderboard", icon: Trophy },
+    { label: "Notifications", href: "/student/notifications", icon: Bell },
     { label: "Profile", href: "/student/profile", icon: User },
   ],
   teacher: [
@@ -51,6 +53,8 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
   parent: [
     { label: "Dashboard", href: "/parent", icon: LayoutDashboard },
     { label: "Children", href: "/parent/children", icon: UserCheck },
+    { label: "Milestones", href: "/parent/milestones", icon: Gift },
+    { label: "Requests", href: "/parent/requests", icon: Shield },
     { label: "Reports", href: "/parent/reports", icon: BarChart3 },
     { label: "Profile", href: "/parent/profile", icon: User },
   ],

@@ -15,6 +15,18 @@ import {
 import { useAuthStore } from "@/stores/auth-store";
 import { AiTutorBanner, AiTutorFab } from "@/components/student/ai-tutor-banner";
 import { RecommendedNextSteps } from "@/components/student/recommended-next-steps";
+import { ParentRequestNotification } from "@/components/student/parent-request-notification";
+
+// Mock pending parent requests - replace with real API call
+const MOCK_PENDING_PARENT_REQUESTS = [
+  {
+    id: "pr1",
+    parentName: "Mrs. Nkemdirim",
+    parentEmail: "parent@family.com",
+    message: "Hi! I'd like to monitor your GCE preparation and set some reward milestones for you!",
+    sentAt: new Date(Date.now() - 3600000).toISOString(),
+  },
+];
 
 export default function StudentDashboard() {
   const { user, setUser } = useAuthStore();
@@ -92,8 +104,22 @@ export default function StudentDashboard() {
         </div>
       </div>
 
+      {/* Parent Connection Requests (if any pending) */}
+      {MOCK_PENDING_PARENT_REQUESTS.length > 0 && (
+        <ParentRequestNotification
+          requests={MOCK_PENDING_PARENT_REQUESTS}
+          onAccept={async (id) => {
+            console.log("Accepted parent request:", id);
+          }}
+          onReject={async (id) => {
+            console.log("Rejected parent request:", id);
+          }}
+        />
+      )}
+
       {/* AI Tutor Prominent Banner */}
       <AiTutorBanner onAsk={handleAskAi} />
+
 
       {/* Stats Grid with Actionable Empty States */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

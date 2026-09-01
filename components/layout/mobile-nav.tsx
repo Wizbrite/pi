@@ -16,6 +16,9 @@ import {
   Trophy,
   MoreHorizontal,
   X,
+  Bell,
+  Shield,
+  Gift,
 } from "lucide-react";
 import { useAuthStore, type UserRole } from "@/stores/auth-store";
 import { HeaderStats } from "../student/header-stat";
@@ -34,6 +37,7 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { label: "Practice", href: "/student/practice-hub", icon: Target },
     { label: "Progress", href: "/student/progress", icon: BarChart3 },
     { label: "Ranks", href: "/student/leaderboard", icon: Trophy },
+    { label: "Alerts", href: "/student/notifications", icon: Bell },
     { label: "Profile", href: "/student/profile", icon: User },
   ],
   teacher: [
@@ -46,6 +50,8 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
   parent: [
     { label: "Dashboard", href: "/parent", icon: LayoutDashboard },
     { label: "Children", href: "/parent/children", icon: UserCheck },
+    { label: "Milestones", href: "/parent/milestones", icon: Gift },
+    { label: "Requests", href: "/parent/requests", icon: Shield },
     { label: "Reports", href: "/parent/reports", icon: BarChart3 },
     { label: "Profile", href: "/parent/profile", icon: User },
   ],
@@ -194,8 +200,22 @@ export function MobileTopHeader() {
       </div>
 
       <div className="flex items-center gap-2.5">
-        {/* Real-time XP & Streak Stats */}
-        <HeaderStats />
+        {/* Real-time XP & Streak Stats (students only) */}
+        {user?.role === "student" && <HeaderStats />}
+
+        {/* Notification Bell — students only */}
+        {user?.role === "student" && (
+          <Link
+            href="/student/notifications"
+            className="relative flex h-8 w-8 items-center justify-center rounded-full border border-border bg-background text-muted-foreground hover:text-foreground"
+            aria-label="Notifications"
+          >
+            <Bell className="h-4 w-4" />
+            <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
+              2
+            </span>
+          </Link>
+        )}
 
         {/* User Profile Avatar Icon */}
         {user && (
