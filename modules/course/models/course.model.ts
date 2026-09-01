@@ -1,11 +1,14 @@
-import mongoose, { Document, Schema } from "mongoose";
+import mongoose, { Document, Schema, Types } from "mongoose";
+
+export type TopicDifficulty = "beginner" | "intermediate" | "advanced";
 
 export interface ITopic {
   title: string;
   description?: string;
   order: number;
+  difficulty?: TopicDifficulty;
+  prerequisites?: Types.ObjectId[];
 }
-
 
 export interface ICourse {
   title: string;
@@ -18,7 +21,7 @@ export interface ICourse {
 }
 
 export interface ICourseDocument extends ICourse, Document {
-  _id: mongoose.Types.ObjectId;
+  _id: Types.ObjectId;
 }
 
 const topicSchema = new Schema<ITopic>(
@@ -26,8 +29,14 @@ const topicSchema = new Schema<ITopic>(
     title: { type: String, required: true },
     description: { type: String },
     order: { type: Number, required: true },
+    difficulty: {
+      type: String,
+      enum: ["beginner", "intermediate", "advanced"],
+      default: "beginner",
+    },
+    prerequisites: [{ type: Schema.Types.ObjectId }],
   },
-  { _id: true } // Generate object ids for subdocuments
+  { _id: true }
 );
 
 const courseSchema = new Schema<ICourseDocument>(
@@ -38,12 +47,9 @@ const courseSchema = new Schema<ICourseDocument>(
     description: { type: String, trim: true },
     topics: [topicSchema],
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
-// Indexes for faster querying
 courseSchema.index({ level: 1 });
 courseSchema.index({ subject: 1 });
 courseSchema.index({ level: 1, subject: 1 });

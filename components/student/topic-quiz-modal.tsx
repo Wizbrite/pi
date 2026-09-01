@@ -55,6 +55,9 @@ export function TopicQuizModal({
   const [isSavingProgress, setIsSavingProgress] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  // Track answers for adaptation engine
+  const [answerResults, setAnswerResults] = useState<{ questionId: string; isCorrect: boolean; isMcq: boolean }[]>([]);
+
   // Time tracking
   const quizStartTimeRef = useRef<Date | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -122,7 +125,6 @@ export function TopicQuizModal({
     if (isOpen) {
       fetchQuestions();
       handleReset();
-      // Start timer when modal opens
       quizStartTimeRef.current = new Date();
     }
   }, [isOpen, fetchQuestions]);
@@ -135,6 +137,7 @@ export function TopicQuizModal({
 
   const handleConfirmAnswer = async () => {
     if (!currentQ) return;
+
     setIsAnswered(true);
     resetAi();
     setShowAiInput(false);
@@ -173,6 +176,16 @@ export function TopicQuizModal({
       isCorrect = answer === currentQ.correctAnswer;
     }
 
+    // Track for adaptation engine
+    setAnswerResults((prev) => [
+      ...prev,
+      {
+        questionId: currentQ._id?.toString() || String(currentQ.id),
+        isCorrect,
+        isMcq: !isNCQ,
+      },
+    ]);
+
     if (isCorrect) {
       setIsIncorrect(false);
       setScore((prev) => prev + 1);
@@ -199,7 +212,6 @@ export function TopicQuizModal({
       setShowAiInput(false);
       resetAi();
     } else {
-      // Quiz finished — save progress
       setQuizFinished(true);
       saveProgress();
     }
@@ -214,29 +226,29 @@ export function TopicQuizModal({
     const timeSpentSeconds = elapsedSeconds;
 
     try {
-      const res = await fetch(`/api/lessons/${lessonId}/complete`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          score: finalScore,
-          totalQuestions,
-          timeSpentSeconds,
+      const [progressRes, adaptRes] = await Promise.all([
+        fetch(`/api/lessons/${lessonId}/complete`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ score: finalScore, totalQuestions, timeSpentSeconds }),
         }),
-      });
+        fetch("/api/student/adaptive/record-answer", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ answers: answerResults }),
+        }),
+      ]);
 
-      if (res.ok) {
-        const json = await res.json();
-        const earnedXp = json.data?.xpEarned || finalScore * XP_PER_CORRECT;
-        if (onQuizComplete) onQuizComplete(finalScore, earnedXp, failedQuestions);
-      } else {
-        // Still call callback with calculated XP even if save fails
-        const earnedXp = finalScore * XP_PER_CORRECT;
-        if (onQuizComplete) onQuizComplete(finalScore, earnedXp, failedQuestions);
-        const errorData = await res.json().catch(() => ({}));
-        setSaveError(errorData.message || "Failed to save progress");
+      const earnedXp = progressRes.ok
+        ? (await progressRes.json())?.data?.xpEarned || finalScore * XP_PER_CORRECT
+        : finalScore * XP_PER_CORRECT;
+
+      if (onQuizComplete) onQuizComplete(finalScore, earnedXp, failedQuestions);
+
+      if (!progressRes.ok && !adaptRes.ok) {
+        setSaveError("Failed to save progress");
       }
     } catch (err) {
-      // Still call callback even if save fails
       const earnedXp = finalScore * XP_PER_CORRECT;
       if (onQuizComplete) onQuizComplete(finalScore, earnedXp, failedQuestions);
       setSaveError("Network error. Progress saved locally.");
@@ -257,8 +269,8 @@ export function TopicQuizModal({
     setShowAiInput(false);
     setSaveError(null);
     setElapsedSeconds(0);
+    setAnswerResults([]);
     resetAi();
-    // Reset timer
     quizStartTimeRef.current = new Date();
   };
 
@@ -270,14 +282,12 @@ export function TopicQuizModal({
     await ask(q);
   };
 
-  // Auto-ask AI when a wrong answer is confirmed
   const handleAutoExplain = async () => {
     if (!currentQ) return;
     const prompt = `I answered "${userAnswer}" but the correct answer is "${currentQ.correctAnswer}". Can you explain why I was wrong and help me understand the concept?`;
     await ask(prompt);
   };
 
-  // Format time for display
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -293,7 +303,6 @@ export function TopicQuizModal({
           <div>
             <div className="flex items-center gap-2">
               <Badge variant="accent" className="text-[10px] uppercase">{topicTitle}</Badge>
-              {/* Timer */}
               <span className="text-[10px] font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded">
                 {formatTime(elapsedSeconds)}
               </span>
@@ -412,7 +421,7 @@ export function TopicQuizModal({
                     </div>
                   )}
 
-                  {/* AI Tutor — auto-explain or ask custom question */}
+                  {/* AI Tutor */}
                   <div className="space-y-2">
                     {!showAiInput ? (
                       <div className="flex gap-2 flex-wrap">
@@ -447,7 +456,6 @@ export function TopicQuizModal({
                       </form>
                     )}
 
-                    {/* AI Response */}
                     {(aiLoading || aiResponse) && (
                       <div className="p-3 bg-accent/60 border border-primary/20 rounded-lg min-h-[50px]">
                         {aiLoading && !aiResponse ? (
@@ -496,7 +504,6 @@ export function TopicQuizModal({
                     />
                   </div>
 
-                  {/* Save error warning */}
                   {saveError && (
                     <div className="max-w-xs mx-auto p-2.5 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
                       <p className="text-[11px] text-yellow-600 dark:text-yellow-400">
