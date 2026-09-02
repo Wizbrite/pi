@@ -93,7 +93,7 @@ export default function StudentCoursesPage() {
             const progress = course.progress || 0;
             const modulesCompleted = course.modulesCompleted || 0;
             const totalModules = course.topics?.length || 0;
-            const nextTopic = course.topics?.[0]?.title || "N/A";
+            const nextTopic = course.nextTopic || course.topics?.[0]?.title || "N/A";
 
             return (
               <Card key={course._id} className="bg-card text-card-foreground border-border hover:border-primary/50 transition-all shadow-xs">

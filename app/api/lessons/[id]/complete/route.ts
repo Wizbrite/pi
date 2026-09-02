@@ -5,6 +5,7 @@ import LessonProgress from "@/modules/course/models/lesson-progress.model";
 import ExamAttempt from "@/modules/progress/models/exam-attempt.model";
 import { getUserId } from "@/lib/auth/get-user";
 import { logDailyActivity } from "@/lib/progress/log-activity";
+import DailyActivity from "@/modules/progress/models/daily-activity.model";
 import { milestoneService } from "@/modules/parent/services/milestone.service";
 import mongoose from "mongoose";
 
@@ -138,13 +139,12 @@ export async function POST(
     ;(async () => {
       try {
         // Aggregate real student stats
-        const [lessonXpResult, examXpResult, lessonsCompleted, accuracyResult] = await Promise.all([
-          LessonProgress.aggregate([{ $match: { userId: userObjectId } }, { $group: { _id: null, total: { $sum: "$xpEarned" } } }]),
-          ExamAttempt.aggregate([{ $match: { userId: userObjectId } }, { $group: { _id: null, total: { $sum: "$xpEarned" } } }]),
+        const [dailyXpResult, lessonsCompleted, accuracyResult] = await Promise.all([
+          DailyActivity.aggregate([{ $match: { userId: userObjectId } }, { $group: { _id: null, total: { $sum: "$xpEarned" } } }]),
           LessonProgress.countDocuments({ userId: userObjectId, completed: true }),
           LessonProgress.aggregate([{ $match: { userId: userObjectId, completed: true, totalQuestions: { $gt: 0 } } }, { $group: { _id: null, totalCorrect: { $sum: "$score" }, totalQuestions: { $sum: "$totalQuestions" } } }]),
         ]);
-        const totalXp = (lessonXpResult[0]?.total || 0) + (examXpResult[0]?.total || 0);
+        const totalXp = dailyXpResult[0]?.total || 0;
         const overallAccuracy = accuracyResult[0]?.totalQuestions > 0
           ? Math.round((accuracyResult[0].totalCorrect / accuracyResult[0].totalQuestions) * 100)
           : 0;

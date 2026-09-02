@@ -47,8 +47,7 @@ export class ProgressService {
 
   private async getOverallStats(userId: Types.ObjectId): Promise<OverallStats> {
     const [
-      lessonXpResult,
-      examXpResult,
+      dailyXpResult,
       lessonsCompleted,
       examsTaken,
       accuracyResult,
@@ -56,13 +55,8 @@ export class ProgressService {
       courseIds,
       streakData,
     ] = await Promise.all([
-      // Total XP from lessons
-      LessonProgress.aggregate([
-        { $match: { userId } },
-        { $group: { _id: null, total: { $sum: "$xpEarned" } } },
-      ]),
-      // Total XP from exams
-      ExamAttempt.aggregate([
+      // Total XP from all activities (cumulative)
+      DailyActivity.aggregate([
         { $match: { userId } },
         { $group: { _id: null, total: { $sum: "$xpEarned" } } },
       ]),
@@ -94,8 +88,7 @@ export class ProgressService {
       this.calculateStreak(userId),
     ]);
 
-    const lessonXp = lessonXpResult[0]?.total || 0;
-    const examXp = examXpResult[0]?.total || 0;
+    const totalXp = dailyXpResult[0]?.total || 0;
     const totalCorrect = accuracyResult[0]?.totalCorrect || 0;
     const totalQuestions = accuracyResult[0]?.totalQuestions || 0;
     const totalTimeSeconds = timeResult[0]?.total || 0;
@@ -108,7 +101,7 @@ export class ProgressService {
     const examTimeSeconds = examTimeResult[0]?.total || 0;
 
     return {
-      totalXp: lessonXp + examXp,
+      totalXp: totalXp,
       currentStreak: streakData.current,
       longestStreak: streakData.longest,
       totalTimeSpentMinutes: Math.round((totalTimeSeconds + examTimeSeconds) / 60),
