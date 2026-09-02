@@ -1,6 +1,9 @@
 import { Milestone, type IMilestoneDocument, type MilestoneType, type IGift } from "../models/milestone.model";
 import { ParentConnection } from "../models/parent-connection.model";
 import { Notification } from "../models/notification.model";
+import LessonProgress from "@/modules/course/models/lesson-progress.model";
+import ExamAttempt from "@/modules/progress/models/exam-attempt.model";
+import DailyActivity from "@/modules/progress/models/daily-activity.model";
 import { Types } from "mongoose";
 
 interface CreateMilestoneDto {
@@ -43,11 +46,63 @@ export class MilestoneService {
   }
 
   async getParentMilestones(parentId: string) {
-    return Milestone.find({ parentId }).sort({ createdAt: -1 });
+    return Milestone.find({ parentId })
+      .populate("studentId", "name fullName email")
+      .sort({ createdAt: -1 });
   }
 
   async getStudentMilestones(studentId: string) {
-    return Milestone.find({ studentId }).sort({ createdAt: -1 });
+    const milestones = await Milestone.find({ studentId })
+      .populate("parentId", "name fullName email")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Compute live currentValue for each milestone based on real student stats
+    const userObjectId = new Types.ObjectId(studentId);
+    const [lessonXpResult, examXpResult, lessonsCompleted, accuracyResult, activities] = await Promise.all([
+      LessonProgress.aggregate([{ $match: { userId: userObjectId } }, { $group: { _id: null, total: { $sum: "$xpEarned" } } }]),
+      ExamAttempt.aggregate([{ $match: { userId: userObjectId } }, { $group: { _id: null, total: { $sum: "$xpEarned" } } }]),
+      LessonProgress.countDocuments({ userId: userObjectId, completed: true }),
+      LessonProgress.aggregate([{ $match: { userId: userObjectId, completed: true, totalQuestions: { $gt: 0 } } }, { $group: { _id: null, totalCorrect: { $sum: "$score" }, totalQuestions: { $sum: "$totalQuestions" } } }]),
+      DailyActivity.find({ userId: userObjectId }).sort({ date: -1 }).select("date").limit(90).lean(),
+    ]);
+
+    const totalXp = (lessonXpResult[0]?.total || 0) + (examXpResult[0]?.total || 0);
+    const overallAccuracy = accuracyResult[0]?.totalQuestions > 0
+      ? Math.round((accuracyResult[0].totalCorrect / accuracyResult[0].totalQuestions) * 100)
+      : 0;
+
+    // Calculate streak
+    let currentStreak = 0;
+    if (activities.length > 0) {
+      const today = new Date(); today.setHours(0,0,0,0);
+      const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+      const dates = activities.map(a => { const d = new Date(a.date); d.setHours(0,0,0,0); return d.getTime(); });
+      if (dates[0] === today.getTime() || dates[0] === yesterday.getTime()) {
+        currentStreak = 1;
+        for (let i = 1; i < dates.length; i++) {
+          if ((dates[i-1] - dates[i]) / 86400000 === 1) currentStreak++;
+          else break;
+        }
+      }
+    }
+
+    // Get best exam score
+    const bestExam = await ExamAttempt.findOne({ userId: userObjectId }).sort({ score: -1 }).lean();
+    const bestExamPercent = bestExam ? Math.round((bestExam.score / bestExam.totalMarks) * 100) : 0;
+
+    const valueMap: Record<MilestoneType, number> = {
+      xp: totalXp,
+      lessons_completed: lessonsCompleted,
+      accuracy: overallAccuracy,
+      streak: currentStreak,
+      exam_score: bestExamPercent,
+    };
+
+    return milestones.map((m: any) => ({
+      ...m,
+      currentValue: valueMap[m.type as MilestoneType] || 0,
+    }));
   }
 
   async checkAndUnlockMilestone(studentId: string, type: MilestoneType, currentValue: number) {

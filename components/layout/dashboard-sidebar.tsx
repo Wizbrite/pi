@@ -40,6 +40,7 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { label: "Progress", href: "/student/progress", icon: BarChart3 },
     { label: "Practice Hub", href: "/student/practice-hub", icon: Target },
     { label: "Leaderboard", href: "/student/leaderboard", icon: Trophy },
+    { label: "Milestones", href: "/student/milestones", icon: Gift },
     { label: "Notifications", href: "/student/notifications", icon: Bell },
     { label: "Profile", href: "/student/profile", icon: User },
   ],

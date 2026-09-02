@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Bell, CheckCircle2, X, UserPlus, Gift, Clock, Check, Loader2 } from "lucide-react";
+import { Bell, CheckCircle2, X, UserPlus, Gift, Clock, Check, Loader2, Target } from "lucide-react";
 import { ParentRequestNotification } from "@/components/student/parent-request-notification";
 import type { AppNotification } from "@/components/notifications/notification-bell";
 
@@ -10,6 +10,7 @@ const typeIcon: Record<string, React.ElementType> = {
   request_accepted: CheckCircle2,
   request_rejected: X,
   milestone_unlocked: Gift,
+  milestone_reminder: Target,
   general: Bell,
 };
 
@@ -18,7 +19,8 @@ const typeColor: Record<string, string> = {
   request_accepted: "bg-green-500/10 text-green-600 dark:text-green-400",
   request_rejected: "bg-red-500/10 text-red-500",
   milestone_unlocked: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
-  general: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+  milestone_reminder: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+  general: "bg-slate-500/10 text-slate-600 dark:text-slate-400",
 };
 
 function timeAgo(dateStr: string): string {

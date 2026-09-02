@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, Target, BookOpen, Flame, FileText, Zap, ChevronDown, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -59,6 +59,13 @@ export function SetMilestoneModal({
     gift: { emoji: "🎁", title: "", description: "", couponCode: "", externalLink: "" },
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Sync default studentId when students list loads
+  useEffect(() => {
+    if (!form.studentId && students.length > 0) {
+      setForm((f) => ({ ...f, studentId: defaultStudentId || students[0].id }));
+    }
+  }, [students, defaultStudentId, form.studentId]);
 
   if (!isOpen) return null;
 

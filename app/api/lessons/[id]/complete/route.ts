@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/db/mongodb";
 import Lesson from "@/modules/course/models/lesson.model";
 import LessonProgress from "@/modules/course/models/lesson-progress.model";
+import ExamAttempt from "@/modules/progress/models/exam-attempt.model";
 import { getUserId } from "@/lib/auth/get-user";
 import { logDailyActivity } from "@/lib/progress/log-activity";
+import { milestoneService } from "@/modules/parent/services/milestone.service";
 import mongoose from "mongoose";
 
 // Expected request body
@@ -131,6 +133,31 @@ export async function POST(
     }).catch((err) => {
       console.error("Failed to log daily activity:", err);
     });
+
+    // Auto-unlock milestones (non-blocking)
+    ;(async () => {
+      try {
+        // Aggregate real student stats
+        const [lessonXpResult, examXpResult, lessonsCompleted, accuracyResult] = await Promise.all([
+          LessonProgress.aggregate([{ $match: { userId: userObjectId } }, { $group: { _id: null, total: { $sum: "$xpEarned" } } }]),
+          ExamAttempt.aggregate([{ $match: { userId: userObjectId } }, { $group: { _id: null, total: { $sum: "$xpEarned" } } }]),
+          LessonProgress.countDocuments({ userId: userObjectId, completed: true }),
+          LessonProgress.aggregate([{ $match: { userId: userObjectId, completed: true, totalQuestions: { $gt: 0 } } }, { $group: { _id: null, totalCorrect: { $sum: "$score" }, totalQuestions: { $sum: "$totalQuestions" } } }]),
+        ]);
+        const totalXp = (lessonXpResult[0]?.total || 0) + (examXpResult[0]?.total || 0);
+        const overallAccuracy = accuracyResult[0]?.totalQuestions > 0
+          ? Math.round((accuracyResult[0].totalCorrect / accuracyResult[0].totalQuestions) * 100)
+          : 0;
+
+        await Promise.all([
+          milestoneService.checkAndUnlockMilestone(userId, "xp", totalXp),
+          milestoneService.checkAndUnlockMilestone(userId, "lessons_completed", lessonsCompleted),
+          milestoneService.checkAndUnlockMilestone(userId, "accuracy", overallAccuracy),
+        ]);
+      } catch (e) {
+        console.error("Milestone check error after lesson:", e);
+      }
+    })();
 
     return NextResponse.json({
       success: true,

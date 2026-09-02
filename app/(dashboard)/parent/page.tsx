@@ -493,8 +493,8 @@ export default function ParentDashboard() {
                         />
                       </div>
                       <p className="mt-1 text-[10px] text-muted-foreground">
-                        {m.currentValue.toLocaleString()} /{" "}
-                        {m.targetValue.toLocaleString()}
+                        {(m.currentValue ?? 0).toLocaleString()} /{" "}
+                        {(m.targetValue ?? 0).toLocaleString()}
                       </p>
                     </div>
                   );

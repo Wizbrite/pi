@@ -5,6 +5,7 @@ export type NotificationType =
   | "request_accepted"
   | "request_rejected"
   | "milestone_unlocked"
+  | "milestone_reminder"
   | "general";
 
 export interface INotification {
@@ -36,6 +37,7 @@ const NotificationSchema = new Schema<INotificationDocument>(
         "request_accepted",
         "request_rejected",
         "milestone_unlocked",
+        "milestone_reminder",
         "general",
       ],
       required: true,
