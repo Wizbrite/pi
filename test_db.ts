@@ -15,13 +15,21 @@ async function check() {
     console.log("Student not found");
     process.exit(1);
   }
-  console.log("Student:", student._id);
+  
+  const parent = await User.findOne({ email: "parent@gmail.com" });
+  if (!parent) {
+    console.log("Parent not found");
+    process.exit(1);
+  }
   
   const conns = await ParentConnection.find({ studentId: student._id });
-  console.log("Connections:", conns);
+  console.log("Connections found for student:", conns.length);
+  for (const c of conns) {
+    console.log(`- Connection ID: ${c._id}, Status: ${c.status}`);
+  }
   
-  const notifs = await Notification.find({ userId: student._id });
-  console.log("Notifications:", notifs);
+  const notifs = await Notification.find({ userId: student._id, type: 'parent_request' });
+  console.log("Parent request notifications for student:", notifs.length);
   
   process.exit(0);
 }

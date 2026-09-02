@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import connectToDatabase from "@/lib/db";
+import connectToDatabase from "@/lib/db/mongodb";
 import { User } from "@/modules/auth/models/user.model";
 import { ProgressService } from "@/modules/progress/services/progress.service";
 
@@ -24,37 +24,19 @@ export async function GET(
     // Initialize progress service
     const progressService = new ProgressService();
     
-    // Get aggregated stats
-    const stats = await progressService.getStudentProgressStats(studentId);
+    // Get aggregated stats using the correct method
+    const stats = await progressService.getFullProgress(studentId);
 
     // Build the data structure expected by the frontend parent view
     const progressData = {
       name: student.fullName || student.name,
+      email: student.email,
       gceLevel: student.gceLevel || "Ordinary",
-      overall: {
-        totalXp: stats.totalXp,
-        currentStreak: stats.currentStreak,
-        longestStreak: stats.longestStreak || stats.currentStreak,
-        totalTimeSpentMinutes: stats.totalTimeSpentMinutes,
-        totalLessonsCompleted: stats.lessonsCompleted,
-        totalExamsTaken: stats.examsCompleted,
-        overallAccuracy: stats.overallAccuracy,
-        subjectsEnrolled: stats.subjectsEnrolled || 0,
-      },
-      // Since we don't have all these detailed fields implemented in the progress service yet,
-      // we'll send empty arrays/mock data for the detailed charts to avoid breaking the frontend
-      weeklyActivity: [
-        { date: "Mon", lessonsCompleted: 0, xpEarned: 0 },
-        { date: "Tue", lessonsCompleted: 0, xpEarned: 0 },
-        { date: "Wed", lessonsCompleted: 0, xpEarned: 0 },
-        { date: "Thu", lessonsCompleted: 0, xpEarned: 0 },
-        { date: "Fri", lessonsCompleted: 0, xpEarned: 0 },
-        { date: "Sat", lessonsCompleted: 0, xpEarned: 0 },
-        { date: "Sun", lessonsCompleted: 0, xpEarned: 0 },
-      ],
-      subjects: [],
-      examHistory: [],
-      weakAreas: [],
+      overall: stats.overall,
+      weeklyActivity: stats.weeklyActivity,
+      subjects: stats.subjects,
+      examHistory: stats.examHistory,
+      weakAreas: stats.weakAreas,
     };
 
     return NextResponse.json({ progress: progressData });

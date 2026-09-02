@@ -1,43 +1,37 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Users, Plus, UserPlus, Search, CheckCircle2,
-  Clock, Zap, Flame, TrendingUp, BarChart3, Target, ChevronRight, Copy,
+  Clock, Zap, Flame, TrendingUp, BarChart3, Target, ChevronRight, Copy, Loader2
 } from "lucide-react";
 import { ConnectionRequestModal } from "@/components/parent/connection-request-modal";
 import { SetMilestoneModal } from "@/components/parent/set-milestone-modal";
 
-const MOCK_CHILDREN = [
-  {
-    id: "student_1",
-    name: "Favour Nkemdirim",
-    email: "favour@school.edu",
-    gceLevel: "Advanced" as const,
-    overallMastery: 72,
-    stats: { totalXp: 1240, currentStreak: 5, lessonsCompleted: 12, overallAccuracy: 74, totalLessons: 20, examsTaken: 4 },
-    lastActiveAt: new Date(Date.now() - 2 * 3600000).toISOString(),
-    connectedAt: new Date(Date.now() - 7 * 86400000).toISOString(),
-    activeMilestones: 1,
-  },
-  {
-    id: "student_2",
-    name: "Emmanuel Asante",
-    email: "emma@school.edu",
-    gceLevel: "Ordinary" as const,
-    overallMastery: 58,
-    stats: { totalXp: 650, currentStreak: 2, lessonsCompleted: 7, overallAccuracy: 61, totalLessons: 15, examsTaken: 2 },
-    lastActiveAt: new Date(Date.now() - 26 * 3600000).toISOString(),
-    connectedAt: new Date(Date.now() - 14 * 86400000).toISOString(),
-    activeMilestones: 1,
-  },
-];
+interface ChildData {
+  id: string;
+  name: string;
+  email: string;
+  gceLevel: string;
+  overallMastery: number;
+  stats: {
+    totalXp: number;
+    currentStreak: number;
+    lessonsCompleted: number;
+    overallAccuracy: number;
+    totalLessons: number;
+    examsTaken: number;
+  };
+  lastActiveAt: string;
+  connectedAt: string;
+  activeMilestones: number;
+}
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 60) return `${Math.max(0, mins)}m ago`;
   const hrs = Math.floor(mins / 60);
   if (hrs < 24) return `${hrs}h ago`;
   return `${Math.floor(hrs / 24)}d ago`;
@@ -49,8 +43,67 @@ export default function ChildrenPage() {
   const [selectedStudentId, setSelectedStudentId] = useState<string | undefined>();
   const [search, setSearch] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [children, setChildren] = useState<ChildData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState("");
 
-  const filtered = MOCK_CHILDREN.filter(
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const res = await fetch("/api/parent/connections");
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.message || "Failed to load");
+
+        const connections = data.connections || [];
+        
+        // Fetch progress for each accepted connection
+        const loadedChildren: ChildData[] = await Promise.all(
+          connections
+            .filter((c: any) => c.status === "accepted" && c.studentId)
+            .map(async (conn: any) => {
+              const sId = conn.studentId._id || conn.studentId;
+              let progressData: any = {};
+              try {
+                const pRes = await fetch(`/api/parent-view/${sId}`);
+                const pData = await pRes.json();
+                if (pData.progress) progressData = pData.progress;
+              } catch (e) {
+                console.warn("Failed to load progress for student", sId);
+              }
+
+              return {
+                id: sId,
+                name: conn.studentId.fullName || conn.studentId.name || "Student",
+                email: conn.studentId.email || "",
+                gceLevel: conn.studentId.gceLevel || "Advanced",
+                overallMastery: progressData.overall?.overallAccuracy || 0,
+                stats: {
+                  totalXp: progressData.overall?.totalXp || 0,
+                  currentStreak: progressData.overall?.currentStreak || 0,
+                  lessonsCompleted: progressData.overall?.totalLessonsCompleted || 0,
+                  overallAccuracy: progressData.overall?.overallAccuracy || 0,
+                  totalLessons: progressData.overall?.totalLessonsCompleted || 10,
+                  examsTaken: progressData.overall?.totalExamsTaken || 0,
+                },
+                lastActiveAt: new Date().toISOString(), // Mocking last active since not explicitly in progressData
+                connectedAt: conn.createdAt || new Date().toISOString(),
+                activeMilestones: 0, // Mock for now until we aggregate milestones
+              };
+            })
+        );
+        
+        setChildren(loadedChildren);
+      } catch (err: any) {
+        setErrorMsg(err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, []);
+
+  const filtered = children.filter(
     (c) => c.name.toLowerCase().includes(search.toLowerCase()) || c.email.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -60,18 +113,44 @@ export default function ChildrenPage() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const handleSendRequest = async (email: string, message?: string) => {
+    const res = await fetch("/api/parent/connections", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ studentEmail: email, message })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || "Failed to send request");
+  };
+
+  const handleSetMilestone = async (formData: any) => {
+    const res = await fetch("/api/parent/milestones", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(formData)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || "Failed to set milestone");
+  };
+
+  if (loading) {
+    return <div className="flex h-[400px] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  }
+
   return (
     <>
       <div className="space-y-6 pb-12">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground sm:text-3xl">My Children</h1>
-            <p className="mt-1 text-sm text-muted-foreground">{MOCK_CHILDREN.length} student{MOCK_CHILDREN.length !== 1 ? "s" : ""} linked</p>
+            <p className="mt-1 text-sm text-muted-foreground">{children.length} student{children.length !== 1 ? "s" : ""} linked</p>
           </div>
           <button onClick={() => setShowRequestModal(true)} className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-primary/90">
             <Plus className="h-4 w-4" /> Add Child
           </button>
         </div>
+
+        {errorMsg && <p className="text-sm font-semibold text-red-500">{errorMsg}</p>}
 
         <div className="relative">
           <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -123,7 +202,7 @@ export default function ChildrenPage() {
                         <span>{child.stats.lessonsCompleted}/{child.stats.totalLessons} lessons</span>
                       </div>
                       <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                        <div className="h-full rounded-full bg-gradient-to-r from-violet-500 to-purple-500 transition-all duration-700" style={{ width: `${(child.stats.lessonsCompleted / child.stats.totalLessons) * 100}%` }} />
+                        <div className="h-full rounded-full bg-gradient-to-r from-violet-500 to-purple-500 transition-all duration-700" style={{ width: `${(child.stats.lessonsCompleted / Math.max(child.stats.totalLessons, 1)) * 100}%` }} />
                       </div>
                     </div>
 
@@ -168,8 +247,19 @@ export default function ChildrenPage() {
         )}
       </div>
 
-      <ConnectionRequestModal isOpen={showRequestModal} onClose={() => setShowRequestModal(false)} />
-      <SetMilestoneModal isOpen={showMilestoneModal} onClose={() => { setShowMilestoneModal(false); setSelectedStudentId(undefined); }} students={MOCK_CHILDREN.map((c) => ({ id: c.id, name: c.name }))} defaultStudentId={selectedStudentId} />
+      <ConnectionRequestModal 
+        isOpen={showRequestModal} 
+        onClose={() => setShowRequestModal(false)} 
+        onSend={handleSendRequest}
+      />
+      
+      <SetMilestoneModal 
+        isOpen={showMilestoneModal} 
+        onClose={() => { setShowMilestoneModal(false); setSelectedStudentId(undefined); }} 
+        students={children.map((c) => ({ id: c.id, name: c.name }))} 
+        defaultStudentId={selectedStudentId} 
+        onSave={handleSetMilestone}
+      />
     </>
   );
 }

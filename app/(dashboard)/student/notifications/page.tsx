@@ -1,48 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { Bell, CheckCircle2, X, UserPlus, Gift, Clock, Check } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Bell, CheckCircle2, X, UserPlus, Gift, Clock, Check, Loader2 } from "lucide-react";
 import { ParentRequestNotification } from "@/components/student/parent-request-notification";
 import type { AppNotification } from "@/components/notifications/notification-bell";
 
-const MOCK_PARENT_REQUESTS = [
-  {
-    id: "pr1",
-    parentName: "Mrs. Nkemdirim",
-    parentEmail: "parent@family.com",
-    message: "Hi Favour, I'd like to monitor your GCE prep progress and set some reward milestones for you!",
-    sentAt: new Date(Date.now() - 3600000).toISOString(),
-  },
-];
-
-const MOCK_NOTIFICATIONS: AppNotification[] = [
-  {
-    id: "n1",
-    type: "milestone_unlocked",
-    title: "🎉 Milestone Unlocked!",
-    message: "You completed 7 days in a row! Your parent unlocked a reward: Pizza Night 🍕",
-    isRead: false,
-    createdAt: new Date(Date.now() - 1800000).toISOString(),
-  },
-  {
-    id: "n2",
-    type: "parent_request",
-    title: "New Parent Request",
-    message: "Mrs. Nkemdirim sent a parent request to monitor your progress.",
-    isRead: false,
-    createdAt: new Date(Date.now() - 3600000).toISOString(),
-  },
-  {
-    id: "n3",
-    type: "general",
-    title: "Welcome to Pi Learning!",
-    message: "Start your first lesson to earn XP and build your streak.",
-    isRead: true,
-    createdAt: new Date(Date.now() - 2 * 86400000).toISOString(),
-  },
-];
-
-const typeIcon: Record<AppNotification["type"], React.ElementType> = {
+const typeIcon: Record<string, React.ElementType> = {
   parent_request: UserPlus,
   request_accepted: CheckCircle2,
   request_rejected: X,
@@ -50,7 +13,7 @@ const typeIcon: Record<AppNotification["type"], React.ElementType> = {
   general: Bell,
 };
 
-const typeColor: Record<AppNotification["type"], string> = {
+const typeColor: Record<string, string> = {
   parent_request: "bg-violet-500/10 text-violet-600 dark:text-violet-400",
   request_accepted: "bg-green-500/10 text-green-600 dark:text-green-400",
   request_rejected: "bg-red-500/10 text-red-500",
@@ -59,6 +22,7 @@ const typeColor: Record<AppNotification["type"], string> = {
 };
 
 function timeAgo(dateStr: string): string {
+  if (!dateStr) return "just now";
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return "just now";
@@ -69,28 +33,108 @@ function timeAgo(dateStr: string): string {
 }
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
-  const [parentRequests, setParentRequests] = useState(MOCK_PARENT_REQUESTS);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [parentRequests, setParentRequests] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadNotifications() {
+      try {
+        const [notifRes, connRes] = await Promise.all([
+          fetch("/api/notifications"),
+          fetch("/api/parent/connections")
+        ]);
+
+        if (notifRes.ok) {
+          const notifData = await notifRes.json();
+          // Filter out 'parent_request' notifications since we handle them in a separate section via connections API
+          setNotifications(notifData.notifications?.filter((n: any) => n.type !== "parent_request") || []);
+        }
+
+        if (connRes.ok) {
+          const connData = await connRes.json();
+          if (connData.pending) {
+            setParentRequests(
+              connData.pending.map((p: any) => ({
+                id: p._id,
+                parentName: p.parentId?.fullName || p.parentId?.name || "A parent",
+                parentEmail: p.parentId?.email || "",
+                message: p.message || "I would like to monitor your progress.",
+                sentAt: p.createdAt,
+              }))
+            );
+          }
+        }
+      } catch (e) {
+        console.error("Failed to load notifications", e);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadNotifications();
+  }, []);
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
-  const markRead = (id: string) => {
+  const markRead = async (id: string) => {
+    // Optimistic UI update
     setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, isRead: true } : n));
+    try {
+      await fetch(`/api/notifications/${id}/read`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isRead: true }) });
+    } catch (e) {
+      console.error(e);
+    }
   };
 
-  const markAllRead = () => {
+  const markAllRead = async () => {
+    // Optimistic UI update
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    try {
+      await fetch("/api/notifications", { method: "PATCH" });
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const handleAcceptRequest = async (id: string) => {
-    await new Promise((r) => setTimeout(r, 800));
-    setParentRequests((prev) => prev.filter((r) => r.id !== id));
+    try {
+      const res = await fetch(`/api/parent/connections/${id}/respond`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accept: true })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setParentRequests((prev) => prev.filter((r) => r.id !== id));
+      } else {
+        alert(data.message || "Failed to accept request");
+      }
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const handleRejectRequest = async (id: string) => {
-    await new Promise((r) => setTimeout(r, 800));
-    setParentRequests((prev) => prev.filter((r) => r.id !== id));
+    try {
+      const res = await fetch(`/api/parent/connections/${id}/respond`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accept: false })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setParentRequests((prev) => prev.filter((r) => r.id !== id));
+      } else {
+        alert(data.message || "Failed to reject request");
+      }
+    } catch (e) {
+      console.error(e);
+    }
   };
+
+  if (loading) {
+    return <div className="flex h-[400px] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  }
 
   return (
     <div className="space-y-6 pb-12">
@@ -130,8 +174,8 @@ export default function NotificationsPage() {
         ) : (
           <div className="space-y-2">
             {notifications.map((n) => {
-              const Icon = typeIcon[n.type];
-              const colorClass = typeColor[n.type];
+              const Icon = typeIcon[n.type] || Bell;
+              const colorClass = typeColor[n.type] || typeColor.general;
               return (
                 <div
                   key={n.id}

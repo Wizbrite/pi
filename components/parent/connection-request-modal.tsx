@@ -44,9 +44,9 @@ export function ConnectionRequestModal({
         await new Promise((r) => setTimeout(r, 1500));
       }
       setStep("success");
-    } catch {
+    } catch (err: any) {
       setStep("error");
-      setErrorMsg("Failed to send request. Please try again.");
+      setErrorMsg(err.message || "Failed to send request. Please try again.");
     }
   };
 
