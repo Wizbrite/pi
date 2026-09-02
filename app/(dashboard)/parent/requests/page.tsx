@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, Send, Clock, CheckCircle2, X, Mail, UserPlus, ChevronRight, Inbox } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, Send, Clock, CheckCircle2, X, Mail, UserPlus, ChevronRight, Inbox, Loader2 } from "lucide-react";
 import { ConnectionRequestModal } from "@/components/parent/connection-request-modal";
 
 type RequestStatus = "pending" | "accepted" | "rejected";
@@ -15,24 +15,6 @@ interface OutgoingRequest {
   respondedAt?: string;
 }
 
-interface IncomingRequest {
-  id: string;
-  studentName: string;
-  studentEmail: string;
-  message?: string;
-  sentAt: string;
-}
-
-const OUTGOING: OutgoingRequest[] = [
-  { id: "r1", studentName: "Madeleine Fon", studentEmail: "madeleine@school.edu", status: "pending", sentAt: new Date(Date.now() - 3600000).toISOString() },
-  { id: "r2", studentName: "Favour Nkemdirim", studentEmail: "favour@school.edu", status: "accepted", sentAt: new Date(Date.now() - 7 * 86400000).toISOString(), respondedAt: new Date(Date.now() - 6 * 86400000).toISOString() },
-  { id: "r3", studentName: "Jean-Pierre Nkolo", studentEmail: "jp@school.edu", status: "rejected", sentAt: new Date(Date.now() - 10 * 86400000).toISOString(), respondedAt: new Date(Date.now() - 9 * 86400000).toISOString() },
-];
-
-const INCOMING: IncomingRequest[] = [
-  { id: "ir1", studentName: "Amara Diallo", studentEmail: "amara@school.edu", message: "Hello, I'd like you to monitor my progress!", sentAt: new Date(Date.now() - 1800000).toISOString() },
-];
-
 const statusConfig: Record<RequestStatus, { label: string; cls: string }> = {
   pending: { label: "Pending", cls: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400" },
   accepted: { label: "Accepted ✓", cls: "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400" },
@@ -40,8 +22,10 @@ const statusConfig: Record<RequestStatus, { label: string; cls: string }> = {
 };
 
 function timeAgo(dateStr: string): string {
+  if (!dateStr) return "just now";
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
   if (mins < 60) return `${mins}m ago`;
   const hrs = Math.floor(mins / 60);
   if (hrs < 24) return `${hrs}h ago`;
@@ -51,10 +35,59 @@ function timeAgo(dateStr: string): string {
 export default function RequestsPage() {
   const [showModal, setShowModal] = useState(false);
   const [activeTab, setActiveTab] = useState<"outgoing" | "incoming">("outgoing");
-  const [accepted, setAccepted] = useState<Set<string>>(new Set());
-  const [rejected, setRejected] = useState<Set<string>>(new Set());
+  
+  const [outgoing, setOutgoing] = useState<OutgoingRequest[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const pendingIncoming = INCOMING.filter((r) => !accepted.has(r.id) && !rejected.has(r.id));
+  // Reload connections
+  const loadConnections = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch("/api/parent/connections");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.connections) {
+          setOutgoing(
+            data.connections.map((c: any) => ({
+              id: c._id,
+              studentName: c.studentId?.fullName || c.studentId?.name || "Student",
+              studentEmail: c.studentId?.email || "",
+              status: c.status,
+              sentAt: c.createdAt,
+              respondedAt: c.updatedAt !== c.createdAt ? c.updatedAt : undefined,
+            }))
+          );
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadConnections();
+  }, []);
+
+  const handleSendRequest = async (email: string, message?: string) => {
+    const res = await fetch("/api/parent/connections", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ studentEmail: email, message })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || "Failed to send request");
+    
+    // Reload data on success
+    await loadConnections();
+  };
+
+  const incoming: any[] = []; // Incoming requests from students to parents (future feature)
+
+  if (loading && outgoing.length === 0) {
+    return <div className="flex h-[400px] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  }
 
   return (
     <>
@@ -76,12 +109,12 @@ export default function RequestsPage() {
         <div className="flex items-center gap-1 bg-muted p-1 rounded-xl w-fit">
           <button onClick={() => setActiveTab("outgoing")} className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${activeTab === "outgoing" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
             <Send className="h-3.5 w-3.5" /> Sent
-            <span className="ml-1 rounded-full bg-muted-foreground/20 px-1.5 py-0.5 text-[9px] font-bold">{OUTGOING.length}</span>
+            <span className="ml-1 rounded-full bg-muted-foreground/20 px-1.5 py-0.5 text-[9px] font-bold">{outgoing.length}</span>
           </button>
           <button onClick={() => setActiveTab("incoming")} className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${activeTab === "incoming" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
             <Inbox className="h-3.5 w-3.5" /> Received
-            {pendingIncoming.length > 0 && (
-              <span className="ml-1 rounded-full bg-primary px-1.5 py-0.5 text-[9px] font-bold text-white">{pendingIncoming.length}</span>
+            {incoming.length > 0 && (
+              <span className="ml-1 rounded-full bg-primary px-1.5 py-0.5 text-[9px] font-bold text-white">{incoming.length}</span>
             )}
           </button>
         </div>
@@ -89,7 +122,7 @@ export default function RequestsPage() {
         {/* Outgoing Requests */}
         {activeTab === "outgoing" && (
           <div className="space-y-3">
-            {OUTGOING.length === 0 ? (
+            {outgoing.length === 0 ? (
               <div className="flex flex-col items-center rounded-2xl border border-dashed border-border bg-muted/30 py-12 text-center">
                 <Send className="h-10 w-10 text-muted-foreground/30" />
                 <p className="mt-3 text-base font-bold text-foreground">No requests sent yet</p>
@@ -99,7 +132,7 @@ export default function RequestsPage() {
                 </button>
               </div>
             ) : (
-              OUTGOING.map((req) => {
+              outgoing.map((req) => {
                 const { label, cls } = statusConfig[req.status];
                 return (
                   <div key={req.id} className="rounded-2xl border border-border bg-card p-4 shadow-xs transition-all hover:shadow-md">
@@ -135,61 +168,12 @@ export default function RequestsPage() {
                         <span className="text-xs text-amber-700 dark:text-amber-400">Waiting for student to accept. An email was sent to {req.studentEmail}.</span>
                       </div>
                     )}
-                  </div>
-                );
-              })
-            )}
-          </div>
-        )}
-
-        {/* Incoming Requests (students inviting parent) */}
-        {activeTab === "incoming" && (
-          <div className="space-y-3">
-            {INCOMING.length === 0 ? (
-              <div className="flex flex-col items-center rounded-2xl border border-dashed border-border bg-muted/30 py-12 text-center">
-                <Inbox className="h-10 w-10 text-muted-foreground/30" />
-                <p className="mt-3 text-base font-bold text-foreground">No incoming requests</p>
-                <p className="mt-1 text-sm text-muted-foreground">Students can also invite you to monitor their progress.</p>
-              </div>
-            ) : (
-              INCOMING.map((req) => {
-                const isAccepted = accepted.has(req.id);
-                const isRejected = rejected.has(req.id);
-                return (
-                  <div key={req.id} className={`rounded-2xl border bg-card p-4 shadow-xs transition-all ${isAccepted ? "border-green-300/50 bg-green-50/30 dark:bg-green-500/5" : isRejected ? "border-muted bg-muted/20 opacity-60" : "border-violet-200/50"}`}>
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 text-xs font-bold text-white">
-                        {req.studentName.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-bold text-foreground">{req.studentName}</p>
-                        <p className="text-xs text-muted-foreground">{req.studentEmail}</p>
-                        {req.message && (
-                          <div className="mt-2 rounded-lg border border-border/50 bg-muted/30 px-3 py-2">
-                            <p className="text-xs italic text-muted-foreground">&ldquo;{req.message}&rdquo;</p>
-                          </div>
-                        )}
-                        <p className="mt-1 text-[10px] text-muted-foreground">Sent {timeAgo(req.sentAt)}</p>
-                      </div>
-                    </div>
-                    {!isAccepted && !isRejected ? (
-                      <div className="mt-3 flex gap-2">
-                        <button onClick={() => setAccepted((p) => new Set([...p, req.id]))} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-white hover:bg-primary/90">
-                          <CheckCircle2 className="h-3.5 w-3.5" /> Accept
-                        </button>
-                        <button onClick={() => setRejected((p) => new Set([...p, req.id]))} className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-border bg-background px-3 py-2 text-xs font-bold text-muted-foreground hover:border-red-300 hover:text-red-600">
-                          <X className="h-3.5 w-3.5" /> Decline
-                        </button>
-                      </div>
-                    ) : isAccepted ? (
-                      <div className="mt-3 flex items-center gap-1.5 rounded-xl bg-green-50 px-3 py-2 dark:bg-green-500/10">
-                        <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
-                        <span className="text-xs text-green-700 dark:text-green-400">Accepted! You are now monitoring this student.</span>
-                      </div>
-                    ) : (
-                      <div className="mt-3 flex items-center gap-1.5 rounded-xl bg-muted px-3 py-2">
-                        <X className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="text-xs text-muted-foreground">Request declined.</span>
+                    {req.status === "rejected" && (
+                      <div className="mt-3 flex items-center gap-1.5 rounded-xl bg-red-50 px-3 py-2 dark:bg-red-500/10">
+                        <X className="h-3.5 w-3.5 text-red-500" />
+                        <span className="text-xs text-red-700 dark:text-red-400">
+                          Request declined. {req.respondedAt ? `Declined ${timeAgo(req.respondedAt)}` : ""}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -198,9 +182,24 @@ export default function RequestsPage() {
             )}
           </div>
         )}
+
+        {/* Incoming Requests */}
+        {activeTab === "incoming" && (
+          <div className="space-y-3">
+            <div className="flex flex-col items-center rounded-2xl border border-dashed border-border bg-muted/30 py-12 text-center">
+              <Inbox className="h-10 w-10 text-muted-foreground/30" />
+              <p className="mt-3 text-base font-bold text-foreground">No incoming requests</p>
+              <p className="mt-1 text-sm text-muted-foreground">Students can also invite you to monitor their progress.</p>
+            </div>
+          </div>
+        )}
       </div>
 
-      <ConnectionRequestModal isOpen={showModal} onClose={() => setShowModal(false)} />
+      <ConnectionRequestModal 
+        isOpen={showModal} 
+        onClose={() => setShowModal(false)}
+        onSend={handleSendRequest}
+      />
     </>
   );
 }

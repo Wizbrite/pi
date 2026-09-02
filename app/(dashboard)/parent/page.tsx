@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Users,
@@ -19,85 +19,11 @@ import {
   Shield,
   Send,
   ExternalLink,
+  Loader2,
 } from "lucide-react";
 import { useAuthStore } from "@/stores/auth-store";
 import { ConnectionRequestModal } from "@/components/parent/connection-request-modal";
 import { SetMilestoneModal } from "@/components/parent/set-milestone-modal";
-
-// ─── MOCK DATA ────────────────────────────────────────────────────────────────
-
-const MOCK_CHILDREN = [
-  {
-    id: "student_1",
-    name: "Favour Nkemdirim",
-    email: "favour@school.edu",
-    gceLevel: "Advanced" as const,
-    overallMastery: 72,
-    stats: { totalXp: 1240, currentStreak: 5, lessonsCompleted: 12, overallAccuracy: 74 },
-    lastActiveAt: new Date(Date.now() - 2 * 3600000).toISOString(),
-    connectedAt: new Date(Date.now() - 7 * 86400000).toISOString(),
-  },
-  {
-    id: "student_2",
-    name: "Emmanuel Asante",
-    email: "emma@school.edu",
-    gceLevel: "Ordinary" as const,
-    overallMastery: 58,
-    stats: { totalXp: 650, currentStreak: 2, lessonsCompleted: 7, overallAccuracy: 61 },
-    lastActiveAt: new Date(Date.now() - 26 * 3600000).toISOString(),
-    connectedAt: new Date(Date.now() - 14 * 86400000).toISOString(),
-  },
-];
-
-const MOCK_MILESTONES = [
-  {
-    id: "m1",
-    studentId: "student_1",
-    studentName: "Favour Nkemdirim",
-    title: "Complete 15 Lessons",
-    type: "lessons_completed" as const,
-    targetValue: 15,
-    currentValue: 12,
-    isUnlocked: false,
-    gift: { emoji: "🎮", title: "Gaming Voucher ($20)", description: "Any game on Steam" },
-  },
-  {
-    id: "m2",
-    studentId: "student_2",
-    studentName: "Emmanuel Asante",
-    title: "Reach 1000 XP",
-    type: "xp" as const,
-    targetValue: 1000,
-    currentValue: 650,
-    isUnlocked: false,
-    gift: { emoji: "📱", title: "Airtime Top-up", description: "500 FCFA airtime" },
-  },
-];
-
-const MOCK_PENDING_REQUESTS = [
-  {
-    id: "req_1",
-    studentName: "Madeleine Fon",
-    studentEmail: "madeleine@school.edu",
-    status: "pending" as const,
-    sentAt: new Date(Date.now() - 3600000).toISOString(),
-  },
-];
-
-const MOCK_NOTIFICATIONS = [
-  {
-    id: "n1",
-    message: "Favour completed 3 lessons yesterday",
-    time: "2h ago",
-    type: "activity",
-  },
-  {
-    id: "n2",
-    message: "Emmanuel's streak dropped — last active 26h ago",
-    time: "1h ago",
-    type: "alert",
-  },
-];
 
 // ─── QUICK STAT CARD ─────────────────────────────────────────────────────────
 
@@ -144,8 +70,122 @@ export default function ParentDashboard() {
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [showMilestoneModal, setShowMilestoneModal] = useState(false);
 
+  const [children, setChildren] = useState<any[]>([]);
+  const [pendingRequests, setPendingRequests] = useState<any[]>([]);
+  const [milestones, setMilestones] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [connRes, mileRes, notifRes] = await Promise.all([
+        fetch("/api/parent/connections"),
+        fetch("/api/parent/milestones"),
+        fetch("/api/notifications")
+      ]);
+
+      let connectionsData: any = { connections: [], pending: [] };
+      if (connRes.ok) connectionsData = await connRes.json();
+      
+      let milestonesData: any = { milestones: [] };
+      if (mileRes.ok) milestonesData = await mileRes.json();
+
+      let notificationsData: any = { notifications: [] };
+      if (notifRes.ok) notificationsData = await notifRes.json();
+
+      const acceptedConnections = connectionsData.connections?.filter((c: any) => c.status === "accepted" && c.studentId) || [];
+      
+      // Load progress for accepted children
+      const loadedChildren = await Promise.all(
+        acceptedConnections.map(async (conn: any) => {
+          const sId = conn.studentId._id || conn.studentId;
+          let progressData: any = {};
+          try {
+            const pRes = await fetch(`/api/parent-view/${sId}`);
+            if (pRes.ok) {
+              const pData = await pRes.json();
+              if (pData.progress) progressData = pData.progress;
+            }
+          } catch (e) {
+            console.error(e);
+          }
+          return {
+            id: sId,
+            name: conn.studentId.fullName || conn.studentId.name || "Student",
+            email: conn.studentId.email || "",
+            gceLevel: conn.studentId.gceLevel || "Ordinary",
+            overallMastery: progressData.overall?.overallAccuracy || 0,
+            stats: {
+              totalXp: progressData.overall?.totalXp || 0,
+              currentStreak: progressData.overall?.currentStreak || 0,
+              overallAccuracy: progressData.overall?.overallAccuracy || 0,
+            },
+            lastActiveAt: new Date().toISOString(), // Fallback
+          };
+        })
+      );
+
+      setChildren(loadedChildren);
+      setPendingRequests(
+        (connectionsData.connections || []).filter((c: any) => c.status === "pending").map((c: any) => ({
+          id: c._id,
+          studentName: c.studentId?.fullName || c.studentId?.name || "Student",
+          studentEmail: c.studentId?.email || "",
+        }))
+      );
+      setMilestones(milestonesData.milestones || []);
+      setNotifications(notificationsData.notifications || []);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const handleSendRequest = async (email: string, message?: string) => {
+    const res = await fetch("/api/parent/connections", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ studentEmail: email, message })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || "Failed to send request");
+    await loadData();
+  };
+
+  const handleSetMilestone = async (formData: any) => {
+    const res = await fetch("/api/parent/milestones", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(formData)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || "Failed to set milestone");
+    await loadData();
+  };
+
+  function timeAgo(dateStr: string): string {
+    if (!dateStr) return "just now";
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 60) return `${Math.max(0, mins)}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+  }
+
   const firstName = user?.name?.split(" ")[0] || "Parent";
-  const totalUnlocked = MOCK_MILESTONES.filter((m) => m.isUnlocked).length;
+  const totalUnlocked = milestones.filter((m) => m.isUnlocked).length;
+  const activeMilestones = milestones.filter((m) => !m.isUnlocked);
+
+  if (loading && children.length === 0) {
+    return <div className="flex h-[400px] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  }
 
   return (
     <>
@@ -163,7 +203,6 @@ export default function ParentDashboard() {
           </div>
           <div className="flex gap-2">
             <button
-              id="add-child-btn"
               onClick={() => setShowRequestModal(true)}
               className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-all hover:bg-primary/90 active:scale-95"
             >
@@ -171,7 +210,6 @@ export default function ParentDashboard() {
               Add Child
             </button>
             <button
-              id="set-milestone-btn"
               onClick={() => setShowMilestoneModal(true)}
               className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-bold text-foreground shadow-sm transition-all hover:bg-muted"
             >
@@ -186,7 +224,7 @@ export default function ParentDashboard() {
           <StatCard
             icon={Users}
             label="Children Linked"
-            value={MOCK_CHILDREN.length}
+            value={children.length}
             sublabel="Active connections"
             gradient="from-violet-500 to-purple-600"
             href="/parent/children"
@@ -194,7 +232,7 @@ export default function ParentDashboard() {
           <StatCard
             icon={Target}
             label="Active Milestones"
-            value={MOCK_MILESTONES.filter((m) => !m.isUnlocked).length}
+            value={activeMilestones.length}
             sublabel="Goals in progress"
             gradient="from-blue-500 to-cyan-600"
             href="/parent/milestones"
@@ -203,14 +241,14 @@ export default function ParentDashboard() {
             icon={Gift}
             label="Gifts Unlocked"
             value={totalUnlocked}
-            sublabel={`of ${MOCK_MILESTONES.length} total`}
+            sublabel={`of ${milestones.length} total`}
             gradient="from-amber-500 to-orange-500"
             href="/parent/milestones"
           />
           <StatCard
             icon={Bell}
             label="Pending Requests"
-            value={MOCK_PENDING_REQUESTS.length}
+            value={pendingRequests.length}
             sublabel="Awaiting response"
             gradient="from-rose-500 to-pink-600"
             href="/parent/requests"
@@ -231,7 +269,7 @@ export default function ParentDashboard() {
             </Link>
           </div>
 
-          {MOCK_CHILDREN.length === 0 ? (
+          {children.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-border bg-muted/30 px-6 py-12 text-center">
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
                 <Users className="h-8 w-8 text-muted-foreground/40" />
@@ -253,10 +291,10 @@ export default function ParentDashboard() {
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
-              {MOCK_CHILDREN.map((child) => {
+              {children.map((child) => {
                 const initials = child.name
                   .split(" ")
-                  .map((n) => n[0])
+                  .map((n: string) => n[0])
                   .join("")
                   .toUpperCase()
                   .slice(0, 2);
@@ -416,7 +454,7 @@ export default function ParentDashboard() {
               </Link>
             </div>
 
-            {MOCK_MILESTONES.filter((m) => !m.isUnlocked).length === 0 ? (
+            {activeMilestones.length === 0 ? (
               <div className="flex flex-col items-center py-6 text-center">
                 <Target className="h-8 w-8 text-muted-foreground/30" />
                 <p className="mt-2 text-xs text-muted-foreground">
@@ -425,46 +463,42 @@ export default function ParentDashboard() {
               </div>
             ) : (
               <div className="space-y-3">
-                {MOCK_MILESTONES.filter((m) => !m.isUnlocked)
-                  .slice(0, 3)
-                  .map((m) => {
-                    const progress = Math.round(
-                      (m.currentValue / m.targetValue) * 100
-                    );
-                    return (
-                      <div
-                        key={m.id}
-                        className="rounded-xl border border-border bg-muted/30 p-3"
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className="text-xs font-bold text-foreground truncate">
-                              {m.title}
-                            </p>
-                            <p className="text-[10px] text-muted-foreground">
-                              {m.studentName}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-1 shrink-0">
-                            <span className="text-lg">{m.gift.emoji}</span>
-                            <span className="text-xs font-bold text-foreground">
-                              {progress}%
-                            </span>
-                          </div>
+                {activeMilestones.slice(0, 3).map((m: any) => {
+                  const progress = Math.min(100, Math.round((m.currentValue / m.targetValue) * 100));
+                  return (
+                    <div
+                      key={m._id}
+                      className="rounded-xl border border-border bg-muted/30 p-3"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-foreground truncate">
+                            {m.title}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground">
+                            {m.studentId?.fullName || m.studentId?.name || "Student"}
+                          </p>
                         </div>
-                        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                          <div
-                            className="h-full rounded-full bg-gradient-to-r from-violet-500 to-purple-500 transition-all duration-700"
-                            style={{ width: `${progress}%` }}
-                          />
+                        <div className="flex items-center gap-1 shrink-0">
+                          <span className="text-lg">{m.gift?.emoji || "🎁"}</span>
+                          <span className="text-xs font-bold text-foreground">
+                            {progress}%
+                          </span>
                         </div>
-                        <p className="mt-1 text-[10px] text-muted-foreground">
-                          {m.currentValue.toLocaleString()} /{" "}
-                          {m.targetValue.toLocaleString()}
-                        </p>
                       </div>
-                    );
-                  })}
+                      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-violet-500 to-purple-500 transition-all duration-700"
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                      <p className="mt-1 text-[10px] text-muted-foreground">
+                        {m.currentValue.toLocaleString()} /{" "}
+                        {m.targetValue.toLocaleString()}
+                      </p>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -485,13 +519,13 @@ export default function ParentDashboard() {
                 </Link>
               </div>
 
-              {MOCK_PENDING_REQUESTS.length === 0 ? (
+              {pendingRequests.length === 0 ? (
                 <p className="text-xs text-muted-foreground">
                   No pending requests.
                 </p>
               ) : (
                 <div className="space-y-2">
-                  {MOCK_PENDING_REQUESTS.map((req) => (
+                  {pendingRequests.map((req) => (
                     <div
                       key={req.id}
                       className="flex items-center gap-3 rounded-xl border border-amber-200/50 bg-amber-50/50 p-3 dark:border-amber-500/20 dark:bg-amber-500/10"
@@ -521,31 +555,35 @@ export default function ParentDashboard() {
               <h2 className="mb-3 text-base font-bold text-foreground">
                 Recent Activity
               </h2>
-              <div className="space-y-2">
-                {MOCK_NOTIFICATIONS.map((n) => (
-                  <div key={n.id} className="flex items-start gap-3">
-                    <div
-                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${
-                        n.type === "alert"
-                          ? "bg-red-500/10"
-                          : "bg-green-500/10"
-                      }`}
-                    >
-                      {n.type === "alert" ? (
-                        <Clock className="h-3.5 w-3.5 text-red-500" />
-                      ) : (
-                        <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
-                      )}
+              {notifications.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No recent activity.</p>
+              ) : (
+                <div className="space-y-2">
+                  {notifications.slice(0, 5).map((n) => (
+                    <div key={n._id} className="flex items-start gap-3">
+                      <div
+                        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${
+                          n.type === "alert" || n.type === "request_rejected"
+                            ? "bg-red-500/10"
+                            : "bg-green-500/10"
+                        }`}
+                      >
+                        {n.type === "alert" || n.type === "request_rejected" ? (
+                          <Clock className="h-3.5 w-3.5 text-red-500" />
+                        ) : (
+                          <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-foreground">{n.message}</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {timeAgo(n.createdAt)}
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-foreground">{n.message}</p>
-                      <p className="text-[10px] text-muted-foreground">
-                        {n.time}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -627,11 +665,13 @@ export default function ParentDashboard() {
       <ConnectionRequestModal
         isOpen={showRequestModal}
         onClose={() => setShowRequestModal(false)}
+        onSend={handleSendRequest}
       />
       <SetMilestoneModal
         isOpen={showMilestoneModal}
         onClose={() => setShowMilestoneModal(false)}
-        students={MOCK_CHILDREN.map((c) => ({ id: c.id, name: c.name }))}
+        students={children.map((c) => ({ id: c.id, name: c.name }))}
+        onSave={handleSetMilestone}
       />
     </>
   );

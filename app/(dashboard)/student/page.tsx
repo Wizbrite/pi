@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   BookOpen,
@@ -10,26 +11,41 @@ import {
   Target,
   Plus,
   Calendar,
-  Sparkles,
 } from "lucide-react";
 import { useAuthStore } from "@/stores/auth-store";
 import { AiTutorBanner, AiTutorFab } from "@/components/student/ai-tutor-banner";
 import { RecommendedNextSteps } from "@/components/student/recommended-next-steps";
 import { ParentRequestNotification } from "@/components/student/parent-request-notification";
 
-// Mock pending parent requests - replace with real API call
-const MOCK_PENDING_PARENT_REQUESTS = [
-  {
-    id: "pr1",
-    parentName: "Mrs. Nkemdirim",
-    parentEmail: "parent@family.com",
-    message: "Hi! I'd like to monitor your GCE preparation and set some reward milestones for you!",
-    sentAt: new Date(Date.now() - 3600000).toISOString(),
-  },
-];
-
 export default function StudentDashboard() {
   const { user, setUser } = useAuthStore();
+  const [pendingRequests, setPendingRequests] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function loadRequests() {
+      try {
+        const res = await fetch("/api/parent/connections");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.pending) {
+            setPendingRequests(
+              data.pending.map((p: any) => ({
+                id: p._id,
+                parentName: p.parentId?.fullName || p.parentId?.name || "A parent",
+                parentEmail: p.parentId?.email || "",
+                message: p.message || "I would like to monitor your progress.",
+                sentAt: p.createdAt,
+              }))
+            );
+          }
+        }
+      } catch (e) {
+        console.error("Failed to load parent requests", e);
+      }
+    }
+    loadRequests();
+  }, []);
+
   const handleLevelChange = (level: "Ordinary" | "Advanced") => {
     if (user) {
       setUser({ ...user, gceLevel: level });
@@ -44,7 +60,8 @@ export default function StudentDashboard() {
       });
     }
   };
-  // Mock data state - easily connected to backend
+  
+  // Mock data state - easily connected to backend in future iteration
   const subjectsCount = 0;
   const mockExamsCount = 0;
   const averageScore = "—";
@@ -56,6 +73,36 @@ export default function StudentDashboard() {
   const handleAskAi = (question: string) => {
     // Navigates or opens AI tutor chat session
     console.log("Asking AI Tutor:", question);
+  };
+
+  const handleAcceptRequest = async (id: string) => {
+    try {
+      const res = await fetch(`/api/parent/connections/${id}/respond`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accept: true })
+      });
+      if (res.ok) {
+        setPendingRequests((prev) => prev.filter((r) => r.id !== id));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleRejectRequest = async (id: string) => {
+    try {
+      const res = await fetch(`/api/parent/connections/${id}/respond`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accept: false })
+      });
+      if (res.ok) {
+        setPendingRequests((prev) => prev.filter((r) => r.id !== id));
+      }
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   return (
@@ -105,15 +152,11 @@ export default function StudentDashboard() {
       </div>
 
       {/* Parent Connection Requests (if any pending) */}
-      {MOCK_PENDING_PARENT_REQUESTS.length > 0 && (
+      {pendingRequests.length > 0 && (
         <ParentRequestNotification
-          requests={MOCK_PENDING_PARENT_REQUESTS}
-          onAccept={async (id) => {
-            console.log("Accepted parent request:", id);
-          }}
-          onReject={async (id) => {
-            console.log("Rejected parent request:", id);
-          }}
+          requests={pendingRequests}
+          onAccept={handleAcceptRequest}
+          onReject={handleRejectRequest}
         />
       )}
 
@@ -296,4 +339,3 @@ export default function StudentDashboard() {
     </div>
   );
 }
-
