@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   ArrowLeft, Zap, Flame, Clock, BookOpen, FileText,
   Target, TrendingUp, AlertTriangle, CheckCircle2,
-  BarChart3, Award, Loader2, FileEdit, Send, ShieldAlert
+  BarChart3, Award, Loader2, FileEdit, Send, ShieldAlert, Plus
 } from "lucide-react";
 import { SendExerciseModal } from "@/components/teacher/send-exercise-modal";
 import type { AssignmentType } from "@/modules/teacher/models/teacher-assignment.model";
@@ -195,7 +195,7 @@ export default function TeacherStudentDetailView({
             <div className="rounded-3xl border border-border bg-card p-5 shadow-xs sm:p-6">
               <h3 className="text-base font-bold text-foreground mb-4">Subject Mastery & Progress</h3>
               <div className="grid gap-3 sm:grid-cols-2">
-                {progress.subjects.map((sub: any) => (
+                {(progress?.subjects || []).map((sub: any) => (
                   <div key={sub.courseId} className="rounded-2xl border border-border bg-muted/30 p-4">
                     <div className="flex items-start justify-between">
                       <div>
@@ -215,7 +215,7 @@ export default function TeacherStudentDetailView({
             {/* Exam Attempt History */}
             <div className="rounded-3xl border border-border bg-card p-5 shadow-xs sm:p-6">
               <h3 className="text-base font-bold text-foreground mb-4">Mock Exam History</h3>
-              {progress.examHistory.length === 0 ? (
+              {(!progress?.examHistory || progress.examHistory.length === 0) ? (
                 <p className="text-xs text-muted-foreground italic">No mock exams taken yet.</p>
               ) : (
                 <div className="space-y-2">

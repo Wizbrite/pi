@@ -127,12 +127,13 @@ export default function TeacherStudentsPage() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.map((conn) => {
-              const sId = conn.studentId._id;
+              if (!conn.studentId) return null;
+              const sId = conn.studentId._id || conn.studentId.id;
               const sName = conn.studentId.fullName || conn.studentId.name || "Student";
               const initials = sName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
 
               return (
-                <div key={conn.id} className="flex flex-col justify-between rounded-3xl border border-border bg-card p-5 shadow-xs transition-all hover:border-violet-300 hover:shadow-md">
+                <div key={conn._id || conn.id} className="flex flex-col justify-between rounded-3xl border border-border bg-card p-5 shadow-xs transition-all hover:border-violet-300 hover:shadow-md">
                   <div>
                     <div className="flex items-start gap-3">
                       <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 text-sm font-bold text-white shadow-sm">
@@ -182,10 +183,12 @@ export default function TeacherStudentsPage() {
       <SendExerciseModal
         isOpen={showExerciseModal}
         onClose={() => setShowExerciseModal(false)}
-        students={students.map((c) => ({
-          id: c.studentId._id,
-          name: c.studentId.fullName || c.studentId.name || "Student",
-        }))}
+        students={students
+          .filter((c) => c.studentId)
+          .map((c) => ({
+            id: c.studentId._id || c.studentId.id,
+            name: c.studentId.fullName || c.studentId.name || "Student",
+          }))}
         defaultStudentId={selectedStudentId}
         onSend={handleSendExercise}
       />

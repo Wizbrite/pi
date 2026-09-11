@@ -14,8 +14,10 @@ import type { AssignmentType } from "@/modules/teacher/models/teacher-assignment
 
 interface StudentConnection {
   id: string;
+  _id?: string;
   studentId: {
     _id: string;
+    id?: string;
     fullName?: string;
     name?: string;
     email: string;
@@ -76,7 +78,8 @@ export default function TeacherDashboard() {
         const progressMap: Record<string, StudentProgressSummary> = {};
         await Promise.all(
           accepted.map(async (c: StudentConnection) => {
-            const sId = c.studentId._id;
+            if (!c.studentId) return;
+            const sId = c.studentId._id || c.studentId.id;
             try {
               const res = await fetch(`/api/teacher/students/${sId}`);
               if (res.ok) {
@@ -190,7 +193,7 @@ export default function TeacherDashboard() {
             {acceptedStudents.length > 0 && (
               <button
                 onClick={() => {
-                  setSelectedStudentId(acceptedStudents[0]?.studentId._id);
+                  setSelectedStudentId(acceptedStudents[0]?.studentId?._id || acceptedStudents[0]?.studentId?.id);
                   setShowExerciseModal(true);
                 }}
                 className="flex items-center gap-2 rounded-xl border border-violet-200 bg-card px-4 py-2.5 text-xs font-bold text-violet-700 shadow-xs hover:bg-violet-50 dark:border-violet-800 dark:text-violet-300 dark:hover:bg-violet-950/50"
@@ -280,11 +283,13 @@ export default function TeacherDashboard() {
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               {pendingRequests.map((req) => {
+                if (!req.studentId) return null;
+                const reqId = req._id || req.id;
                 const sName = req.studentId.fullName || req.studentId.name || "Student";
                 const isStudentInitiated = req.initiatedBy === "student";
 
                 return (
-                  <div key={req.id} className="flex items-center justify-between rounded-2xl border border-border bg-card p-4 shadow-xs">
+                  <div key={reqId} className="flex items-center justify-between rounded-2xl border border-border bg-card p-4 shadow-xs">
                     <div className="min-w-0 pr-3">
                       <div className="flex items-center gap-2">
                         <p className="text-xs font-bold text-foreground truncate">{sName}</p>
@@ -299,13 +304,13 @@ export default function TeacherDashboard() {
                     {isStudentInitiated ? (
                       <div className="flex items-center gap-1.5 shrink-0">
                         <button
-                          onClick={() => handleRespondRequest(req.id, "accepted")}
+                          onClick={() => handleRespondRequest(reqId, "accepted")}
                           className="flex items-center gap-1 rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-emerald-700"
                         >
                           <CheckCircle2 className="h-3.5 w-3.5" /> Accept
                         </button>
                         <button
-                          onClick={() => handleRespondRequest(req.id, "rejected")}
+                          onClick={() => handleRespondRequest(reqId, "rejected")}
                           className="rounded-xl border border-border p-1.5 text-muted-foreground hover:bg-muted"
                         >
                           <X className="h-3.5 w-3.5" />
@@ -362,13 +367,14 @@ export default function TeacherDashboard() {
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {filteredStudents.map((conn) => {
-                const sId = conn.studentId._id;
+                if (!conn.studentId) return null;
+                const sId = conn.studentId._id || conn.studentId.id;
                 const sName = conn.studentId.fullName || conn.studentId.name || "Student";
                 const prog = studentsProgress[sId];
                 const initials = sName.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 
                 return (
-                  <div key={conn.id} className="flex flex-col justify-between rounded-3xl border border-border bg-card p-5 shadow-xs transition-all hover:border-violet-300 hover:shadow-md">
+                  <div key={conn._id || conn.id} className="flex flex-col justify-between rounded-3xl border border-border bg-card p-5 shadow-xs transition-all hover:border-violet-300 hover:shadow-md">
                     <div>
                       <div className="flex items-start gap-3">
                         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 text-sm font-bold text-white shadow-sm">
