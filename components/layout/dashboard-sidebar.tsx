@@ -20,6 +20,7 @@ import {
   Bell,
   Shield,
   Gift,
+  Brain,
 } from "lucide-react";
 import { useState } from "react";
 import { Logo } from "@/components/shared/logo";
@@ -37,6 +38,8 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { label: "Dashboard", href: "/student", icon: LayoutDashboard },
     { label: "My Courses", href: "/student/courses", icon: BookOpen },
     { label: "Mock Exams", href: "/student/exams", icon: FileText },
+    { label: "AI Reports", href: "/student/reports", icon: Brain },
+    { label: "Teachers & Tasks", href: "/student/teachers", icon: UserCheck },
     { label: "Progress", href: "/student/progress", icon: BarChart3 },
     { label: "Practice Hub", href: "/student/practice-hub", icon: Target },
     { label: "Leaderboard", href: "/student/leaderboard", icon: Trophy },
@@ -46,7 +49,8 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
   ],
   teacher: [
     { label: "Dashboard", href: "/teacher", icon: LayoutDashboard },
-    { label: "My Classes", href: "/teacher/classes", icon: Users },
+    { label: "My Students", href: "/teacher/students", icon: Users },
+    { label: "Tasks & Corrections", href: "/teacher/assignments", icon: FileText },
     { label: "Questions", href: "/teacher/questions", icon: FileText },
     { label: "Analytics", href: "/teacher/analytics", icon: BarChart3 },
     { label: "Profile", href: "/teacher/profile", icon: User },
@@ -56,7 +60,6 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { label: "Children", href: "/parent/children", icon: UserCheck },
     { label: "Milestones", href: "/parent/milestones", icon: Gift },
     { label: "Requests", href: "/parent/requests", icon: Shield },
-    { label: "Reports", href: "/parent/reports", icon: BarChart3 },
     { label: "Profile", href: "/parent/profile", icon: User },
   ],
   admin: [
@@ -107,7 +110,7 @@ export function DashboardSidebar() {
             <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2 truncate">
               Current Progress
             </p>
-            <HeaderStats xp={150} streakDays={3} />
+            <HeaderStats />
           </div>
         </div>
       )}

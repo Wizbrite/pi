@@ -25,10 +25,11 @@ import {
   Calendar,
   Award,
   Brain,
+  Timer,
 } from "lucide-react";
 import type { ProgressData } from "@/lib/types/progress";
 
-// ─── MOCK DATA (Replace with API call) ───────────────────────────────────────
+// ─── MOCK DATA FALLBACK ──────────────────────────────────────────────────────
 
 const MOCK_DATA: ProgressData = {
   overall: {
@@ -379,9 +380,9 @@ function WeeklyActivityChart({ data }: { data: ProgressData["weeklyActivity"] })
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-base font-bold text-foreground">
-              This Week&apos;s Activity
+              This Week&apos;s Activity & Timing
             </CardTitle>
-            <p className="text-xs text-muted-foreground mt-0.5">Lessons completed per day</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Lessons completed & time spent per day</p>
           </div>
           <Badge variant="outline" className="text-[10px]">
             <Calendar className="w-3 h-3 mr-1" />
@@ -390,15 +391,20 @@ function WeeklyActivityChart({ data }: { data: ProgressData["weeklyActivity"] })
         </div>
       </CardHeader>
       <CardContent className="p-5">
-        <div className="flex items-end justify-between gap-2 h-32">
+        <div className="flex items-end justify-between gap-2 h-36">
           {data.map((day, idx) => {
             const height = (day.lessonsCompleted / maxLessons) * 100;
             const isToday = idx === data.length - 1;
             return (
-              <div key={day.date} className="flex-1 flex flex-col items-center gap-2">
-                <span className="text-[10px] font-bold text-foreground">
-                  {day.lessonsCompleted > 0 ? day.lessonsCompleted : ""}
-                </span>
+              <div key={day.date} className="flex-1 flex flex-col items-center gap-1.5">
+                <div className="text-center">
+                  <span className="text-[10px] font-bold text-foreground block">
+                    {day.lessonsCompleted > 0 ? `${day.lessonsCompleted} L` : ""}
+                  </span>
+                  <span className="text-[9px] font-semibold text-blue-600 dark:text-blue-400 block">
+                    {day.timeSpentMinutes > 0 ? `${day.timeSpentMinutes}m` : ""}
+                  </span>
+                </div>
                 <div className="w-full bg-muted rounded-full h-24 flex items-end overflow-hidden">
                   <div
                     className={`w-full rounded-full transition-all duration-500 ${
@@ -420,6 +426,171 @@ function WeeklyActivityChart({ data }: { data: ProgressData["weeklyActivity"] })
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function StudyTimingSection({ data }: { data: ProgressData }) {
+  const weeklyTotalMinutes = data.weeklyActivity.reduce(
+    (sum, d) => sum + (d.timeSpentMinutes || 0),
+    0
+  );
+  const avgDailyMinutes = Math.round(weeklyTotalMinutes / 7);
+  const avgLessonMinutes =
+    data.overall.totalLessonsCompleted > 0
+      ? Math.round(data.overall.totalTimeSpentMinutes / data.overall.totalLessonsCompleted)
+      : 0;
+
+  const totalSubjectTime = data.subjects.reduce(
+    (sum, s) => sum + (s.totalTimeSpentMinutes || 0),
+    0
+  );
+
+  const examTimeMinutes = data.examHistory.reduce(
+    (sum, e) => sum + Math.round(e.timeSpentSeconds / 60),
+    0
+  );
+
+  return (
+    <div className="space-y-6">
+      {/* Timing Stats Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatCard
+          icon={Clock}
+          label="Total Study Time"
+          value={formatMinutes(data.overall.totalTimeSpentMinutes)}
+          sublabel="Lifetime investment"
+          iconBg="bg-blue-500/10"
+          iconColor="text-blue-500"
+        />
+        <StatCard
+          icon={Calendar}
+          label="This Week's Time"
+          value={formatMinutes(weeklyTotalMinutes)}
+          sublabel={`Avg ${avgDailyMinutes}m / day`}
+          iconBg="bg-purple-500/10"
+          iconColor="text-purple-500"
+        />
+        <StatCard
+          icon={BookOpen}
+          label="Avg Lesson Time"
+          value={`${avgLessonMinutes} min`}
+          sublabel="Per completed lesson"
+          iconBg="bg-teal-500/10"
+          iconColor="text-teal-500"
+        />
+        <StatCard
+          icon={FileText}
+          label="Exams Time"
+          value={formatMinutes(examTimeMinutes)}
+          sublabel={`${data.overall.totalExamsTaken} mock exams completed`}
+          iconBg="bg-orange-500/10"
+          iconColor="text-orange-500"
+        />
+      </div>
+
+      {/* Daily Time Spent Bar Chart */}
+      <Card className="border-border shadow-xs">
+        <CardHeader className="border-b border-border bg-muted/30 px-5 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base font-bold text-foreground">
+                Daily Study Duration (Minutes)
+              </CardTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Exact minutes logged per day over the past week
+              </p>
+            </div>
+            <Badge variant="outline" className="text-[10px]">
+              <Timer className="w-3 h-3 mr-1" />
+              Weekly Timing
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="p-5">
+          <div className="flex items-end justify-between gap-2 h-36">
+            {data.weeklyActivity.map((day, idx) => {
+              const maxMinutes = Math.max(
+                ...data.weeklyActivity.map((d) => d.timeSpentMinutes),
+                60
+              );
+              const height = (day.timeSpentMinutes / maxMinutes) * 100;
+              const isToday = idx === data.weeklyActivity.length - 1;
+              return (
+                <div key={day.date} className="flex-1 flex flex-col items-center gap-2">
+                  <span className="text-[10px] font-bold text-foreground">
+                    {day.timeSpentMinutes > 0 ? `${day.timeSpentMinutes}m` : "0m"}
+                  </span>
+                  <div className="w-full bg-muted rounded-full h-24 flex items-end overflow-hidden">
+                    <div
+                      className={`w-full rounded-full transition-all duration-500 ${
+                        isToday
+                          ? "bg-blue-600"
+                          : day.timeSpentMinutes > 0
+                          ? "bg-blue-500/60"
+                          : "bg-muted"
+                      }`}
+                      style={{ height: `${Math.max(height, 4)}%` }}
+                    />
+                  </div>
+                  <span
+                    className={`text-[10px] font-medium ${
+                      isToday ? "text-blue-600 font-bold" : "text-muted-foreground"
+                    }`}
+                  >
+                    {getDayName(day.date)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Subject Time Allocation */}
+      <Card className="border-border shadow-xs">
+        <CardHeader className="border-b border-border bg-muted/30 px-5 py-4">
+          <CardTitle className="text-base font-bold text-foreground">
+            Subject Time Allocation & Distribution
+          </CardTitle>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Distribution of study time spent per subject
+          </p>
+        </CardHeader>
+        <CardContent className="p-5 space-y-4">
+          {data.subjects.length === 0 ? (
+            <p className="text-xs text-muted-foreground text-center py-4">
+              No subject timing data recorded yet. Start studying to track your time.
+            </p>
+          ) : (
+            data.subjects.map((subject) => {
+              const percent =
+                totalSubjectTime > 0
+                  ? Math.round((subject.totalTimeSpentMinutes / totalSubjectTime) * 100)
+                  : 0;
+
+              return (
+                <div key={subject.courseId} className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-foreground">
+                      {subject.title} ({subject.subject})
+                    </span>
+                    <span className="font-semibold text-muted-foreground">
+                      {formatMinutes(subject.totalTimeSpentMinutes)} ({percent}%)
+                    </span>
+                  </div>
+                  <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                    <div
+                      className="bg-blue-500 h-full rounded-full transition-all"
+                      style={{ width: `${Math.max(percent, 2)}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
@@ -450,9 +621,10 @@ function SubjectProgressCard({
                 </Badge>
               </div>
               <h3 className="text-sm font-bold text-foreground truncate">{subject.title}</h3>
-              <p className="text-[11px] text-muted-foreground mt-1">
+              <p className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1">
+                <Clock className="w-3 h-3" />
                 {subject.completedLessons}/{subject.totalLessons} lessons •{" "}
-                {formatMinutes(subject.totalTimeSpentMinutes)} spent
+                <strong className="text-foreground">{formatMinutes(subject.totalTimeSpentMinutes)}</strong> spent
               </p>
             </div>
             <div className="flex items-center gap-3 shrink-0">
@@ -492,6 +664,9 @@ function SubjectProgressCard({
                     )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-[10px] font-semibold text-muted-foreground flex items-center gap-1">
+                      <Clock className="w-3 h-3" /> {topic.timeSpentMinutes}m
+                    </span>
                     <span className="text-[10px] font-bold text-muted-foreground">
                       {topic.completedCount}/{topic.totalLessons}
                     </span>
@@ -544,7 +719,8 @@ function SubjectProgressCard({
                               {lesson.accuracy}% accuracy
                             </span>
                             {lesson.timeSpentSeconds && (
-                              <span className="text-[10px] text-muted-foreground">
+                              <span className="text-[10px] text-muted-foreground font-bold flex items-center gap-0.5">
+                                <Clock className="w-3 h-3 text-muted-foreground" />
                                 {Math.round(lesson.timeSpentSeconds / 60)}m
                               </span>
                             )}
@@ -585,8 +761,9 @@ function ExamHistoryCard({ exam }: { exam: ProgressData["examHistory"][0] }) {
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0 flex-1">
               <h4 className="text-xs font-bold text-foreground truncate">{exam.paperTitle}</h4>
-              <p className="text-[10px] text-muted-foreground mt-1">
-                {formatDate(exam.completedAt)} • {formatMinutes(Math.round(exam.timeSpentSeconds / 60))}
+              <p className="text-[10px] text-muted-foreground mt-1 flex items-center gap-1">
+                <Clock className="w-3 h-3 text-muted-foreground" />
+                {formatDate(exam.completedAt)} • <strong className="text-foreground">{formatMinutes(Math.round(exam.timeSpentSeconds / 60))}</strong>
               </p>
               <div className="flex items-center gap-2 mt-2">
                 <Badge
@@ -649,46 +826,35 @@ export default function ProgressPage() {
   const [data, setData] = useState<ProgressData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedSubject, setExpandedSubject] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"overview" | "exams" | "weaknesses">("overview");
-
-  // // Simulate API call — replace with real fetch
-  // useEffect(() => {
-  //   const timer = setTimeout(() => {
-  //     setData(MOCK_DATA);
-  //     setIsLoading(false);
-  //   }, 800);
-  //   return () => clearTimeout(timer);
-  // }, []);
+  const [activeTab, setActiveTab] = useState<"overview" | "timing" | "exams" | "weaknesses">("overview");
 
   useEffect(() => {
-  async function fetchProgress() {
-    try {
-      const res = await fetch("/api/student/progress");
-      if (res.ok) {
-        const json = await res.json();
-        setData(json.data);
-      } else {
-        // Fallback to mock data in development
-        console.warn("Progress API failed, using mock data");
+    async function fetchProgress() {
+      try {
+        const res = await fetch("/api/student/progress");
+        if (res.ok) {
+          const json = await res.json();
+          setData(json.data);
+        } else {
+          console.warn("Progress API failed, using mock data");
+          setData(MOCK_DATA);
+        }
+      } catch {
+        console.warn("Network error, using mock data");
         setData(MOCK_DATA);
+      } finally {
+        setIsLoading(false);
       }
-    } catch {
-      // Offline or network error — use mock data
-      console.warn("Network error, using mock data");
-      setData(MOCK_DATA);
-    } finally {
-      setIsLoading(false);
     }
-  }
 
-  fetchProgress();
-}, []);
+    fetchProgress();
+  }, []);
 
   if (isLoading || !data) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        <p className="text-sm text-muted-foreground">Loading your progress...</p>
+        <p className="text-sm text-muted-foreground">Loading your progress & timing stats...</p>
       </div>
     );
   }
@@ -697,15 +863,15 @@ export default function ProgressPage() {
     <div className="space-y-6 pb-12">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-foreground sm:text-3xl">Your Progress</h1>
+        <h1 className="text-2xl font-bold text-foreground sm:text-3xl">Your Progress & Timing</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Track your learning journey across all subjects
+          Track your learning journey, study timing, and mastery levels across all subjects
         </p>
       </div>
 
       {/* Tab Navigation */}
       <div className="flex items-center gap-1 bg-muted p-1 rounded-xl w-fit">
-        {(["overview", "exams", "weaknesses"] as const).map((tab) => (
+        {(["overview", "timing", "exams", "weaknesses"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -715,7 +881,7 @@ export default function ProgressPage() {
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            {tab}
+            {tab === "timing" ? "Study Timing" : tab}
           </button>
         ))}
       </div>
@@ -783,12 +949,12 @@ export default function ProgressPage() {
             </Card>
           </div>
 
-          {/* Weekly Activity Chart */}
+          {/* Weekly Activity & Timing Chart */}
           <WeeklyActivityChart data={data.weeklyActivity} />
 
           {/* Subject Progress */}
           <div>
-            <h2 className="text-lg font-bold text-foreground mb-4">Subject Progress</h2>
+            <h2 className="text-lg font-bold text-foreground mb-4">Subject Progress & Timing</h2>
             <div className="space-y-3">
               {data.subjects.map((subject) => (
                 <SubjectProgressCard
@@ -845,10 +1011,12 @@ export default function ProgressPage() {
         </>
       )}
 
+      {activeTab === "timing" && <StudyTimingSection data={data} />}
+
       {activeTab === "exams" && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-foreground">Exam History</h2>
+            <h2 className="text-lg font-bold text-foreground">Exam History & Timing</h2>
             <Link href="/student/exams">
               <Button variant="outline" size="sm" className="text-xs gap-1">
                 Take New Exam <ArrowRight className="w-3 h-3" />
@@ -862,7 +1030,7 @@ export default function ProgressPage() {
                 <FileText className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" />
                 <p className="text-sm font-medium text-muted-foreground">No exams taken yet</p>
                 <p className="text-xs text-muted-foreground/60 mt-1">
-                  Complete a mock exam to see your results here
+                  Complete a mock exam to see your duration and score breakdown here
                 </p>
               </CardContent>
             </Card>

@@ -19,7 +19,7 @@ export async function GET() {
       success: true,
       data: { nextSteps, weakAreas },
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("[GET /api/student/adaptive/next-steps] Error:", error);
     return NextResponse.json(
       { success: false, message: "Failed to load recommendations" },

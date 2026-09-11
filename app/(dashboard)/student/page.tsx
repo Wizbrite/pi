@@ -11,22 +11,31 @@ import {
   Target,
   Plus,
   Calendar,
+  CheckCircle2,
+  Zap,
 } from "lucide-react";
 import { useAuthStore } from "@/stores/auth-store";
 import { AiTutorBanner, AiTutorFab } from "@/components/student/ai-tutor-banner";
 import { RecommendedNextSteps } from "@/components/student/recommended-next-steps";
 import { ParentRequestNotification } from "@/components/student/parent-request-notification";
+import type { ProgressData } from "@/lib/types/progress";
 
 export default function StudentDashboard() {
   const { user, setUser } = useAuthStore();
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
+  const [progressData, setProgressData] = useState<ProgressData | null>(null);
+  const [isLoadingProgress, setIsLoadingProgress] = useState(true);
 
   useEffect(() => {
-    async function loadRequests() {
+    async function loadDashboardData() {
       try {
-        const res = await fetch("/api/parent/connections");
-        if (res.ok) {
-          const data = await res.json();
+        const [connRes, progRes] = await Promise.all([
+          fetch("/api/parent/connections"),
+          fetch("/api/student/progress"),
+        ]);
+
+        if (connRes.ok) {
+          const data = await connRes.json();
           if (data.pending) {
             setPendingRequests(
               data.pending.map((p: any) => ({
@@ -39,11 +48,21 @@ export default function StudentDashboard() {
             );
           }
         }
+
+        if (progRes.ok) {
+          const progJson = await progRes.json();
+          if (progJson.success && progJson.data) {
+            setProgressData(progJson.data);
+          }
+        }
       } catch (e) {
-        console.error("Failed to load parent requests", e);
+        console.error("Failed to load dashboard data", e);
+      } finally {
+        setIsLoadingProgress(false);
       }
     }
-    loadRequests();
+
+    loadDashboardData();
   }, []);
 
   const handleLevelChange = (level: "Ordinary" | "Advanced") => {
@@ -56,22 +75,29 @@ export default function StudentDashboard() {
         email: "student@example.com",
         role: "student",
         gceLevel: level,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
       });
     }
   };
-  
-  // Mock data state - easily connected to backend in future iteration
-  const subjectsCount = 0;
-  const mockExamsCount = 0;
-  const averageScore = "—";
-  const studyStreak = "0 days";
+
+  // Real stats from database via progress API
+  const subjectsCount = progressData?.overall?.subjectsEnrolled ?? 0;
+  const mockExamsCount = progressData?.overall?.totalExamsTaken ?? 0;
+  const averageScore =
+    progressData?.overall?.overallAccuracy != null && progressData.overall.overallAccuracy > 0
+      ? `${progressData.overall.overallAccuracy}%`
+      : "—";
+  const studyStreak =
+    progressData?.overall?.currentStreak != null
+      ? `${progressData.overall.currentStreak} ${
+          progressData.overall.currentStreak === 1 ? "day" : "days"
+        }`
+      : "0 days";
 
   // Calculated Days to GCE Exam (target June 1st)
   const daysUntilGce = 280;
 
   const handleAskAi = (question: string) => {
-    // Navigates or opens AI tutor chat session
     console.log("Asking AI Tutor:", question);
   };
 
@@ -80,7 +106,7 @@ export default function StudentDashboard() {
       const res = await fetch(`/api/parent/connections/${id}/respond`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accept: true })
+        body: JSON.stringify({ accept: true }),
       });
       if (res.ok) {
         setPendingRequests((prev) => prev.filter((r) => r.id !== id));
@@ -95,7 +121,7 @@ export default function StudentDashboard() {
       const res = await fetch(`/api/parent/connections/${id}/respond`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accept: false })
+        body: JSON.stringify({ accept: false }),
       });
       if (res.ok) {
         setPendingRequests((prev) => prev.filter((r) => r.id !== id));
@@ -104,6 +130,9 @@ export default function StudentDashboard() {
       console.error(e);
     }
   };
+
+  // Extract recent activities (exams or completed lessons)
+  const recentExams = progressData?.examHistory?.slice(0, 3) || [];
 
   return (
     <div className="space-y-8 pb-12">
@@ -114,7 +143,7 @@ export default function StudentDashboard() {
             Welcome back, {user?.name?.split(" ")[0] || "Student"}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Here&apos;s your learning overview
+            Here&apos;s your learning overview from your database records
           </p>
         </div>
 
@@ -146,7 +175,10 @@ export default function StudentDashboard() {
           {/* GCE Countdown Banner Pill */}
           <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-xs font-semibold text-primary shadow-xs backdrop-blur-xs">
             <Calendar className="h-4 w-4 text-primary" />
-            <span><strong className="font-extrabold text-primary">{daysUntilGce} Days</strong> until GCE Exams</span>
+            <span>
+              <strong className="font-extrabold text-primary">{daysUntilGce} Days</strong> until
+              GCE Exams
+            </span>
           </div>
         </div>
       </div>
@@ -163,19 +195,14 @@ export default function StudentDashboard() {
       {/* AI Tutor Prominent Banner */}
       <AiTutorBanner onAsk={handleAskAi} />
 
-
-      {/* Stats Grid with Actionable Empty States */}
+      {/* Stats Grid with Live DB Data */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {/* Subjects Enrolled */}
         <div className="group flex flex-col justify-between rounded-2xl border border-border bg-card p-5 shadow-xs transition-all duration-300 hover:border-primary/50 hover:shadow-md">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs font-medium text-muted-foreground">
-                Courses Enrolled
-              </p>
-              <p className="mt-1 text-2xl font-bold text-foreground">
-                {subjectsCount > 0 ? subjectsCount : "0"}
-              </p>
+              <p className="text-xs font-medium text-muted-foreground">Courses Enrolled</p>
+              <p className="mt-1 text-2xl font-bold text-foreground">{subjectsCount}</p>
             </div>
             <div className="rounded-xl bg-teal-500 p-2.5 shadow-sm">
               <BookOpen className="h-5 w-5 text-white" />
@@ -190,7 +217,7 @@ export default function StudentDashboard() {
               Enroll in Courses
             </Link>
           ) : (
-            <p className="mt-3 text-xs text-muted-foreground">Active courses</p>
+            <p className="mt-3 text-xs text-muted-foreground">Active enrolled courses</p>
           )}
         </div>
 
@@ -198,12 +225,8 @@ export default function StudentDashboard() {
         <div className="group flex flex-col justify-between rounded-2xl border border-border bg-card p-5 shadow-xs transition-all duration-300 hover:border-primary/50 hover:shadow-md">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs font-medium text-muted-foreground">
-                Mock Exams Taken
-              </p>
-              <p className="mt-1 text-2xl font-bold text-foreground">
-                {mockExamsCount}
-              </p>
+              <p className="text-xs font-medium text-muted-foreground">Mock Exams Taken</p>
+              <p className="mt-1 text-2xl font-bold text-foreground">{mockExamsCount}</p>
             </div>
             <div className="rounded-xl bg-orange-500 p-2.5 shadow-sm">
               <FileText className="h-5 w-5 text-white" />
@@ -218,7 +241,7 @@ export default function StudentDashboard() {
               Take Mock
             </Link>
           ) : (
-            <p className="mt-3 text-xs text-muted-foreground">Completed exams</p>
+            <p className="mt-3 text-xs text-muted-foreground">Completed mock exams</p>
           )}
         </div>
 
@@ -226,36 +249,28 @@ export default function StudentDashboard() {
         <div className="group flex flex-col justify-between rounded-2xl border border-border bg-card p-5 shadow-xs transition-all duration-300 hover:border-primary/50 hover:shadow-md">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs font-medium text-muted-foreground">
-                Average Score
-              </p>
-              <p className="mt-1 text-2xl font-bold text-foreground">
-                {averageScore}
-              </p>
+              <p className="text-xs font-medium text-muted-foreground">Average Score</p>
+              <p className="mt-1 text-2xl font-bold text-foreground">{averageScore}</p>
             </div>
             <div className="rounded-xl bg-purple-500 p-2.5 shadow-sm">
               <TrendingUp className="h-5 w-5 text-white" />
             </div>
           </div>
-          <p className="mt-3 text-xs text-muted-foreground">No score data yet</p>
+          <p className="mt-3 text-xs text-muted-foreground">Overall quiz & exam accuracy</p>
         </div>
 
         {/* Study Streak */}
         <div className="group flex flex-col justify-between rounded-2xl border border-border bg-card p-5 shadow-xs transition-all duration-300 hover:border-primary/50 hover:shadow-md">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs font-medium text-muted-foreground">
-                Study Streak
-              </p>
-              <p className="mt-1 text-2xl font-bold text-foreground">
-                {studyStreak}
-              </p>
+              <p className="text-xs font-medium text-muted-foreground">Study Streak</p>
+              <p className="mt-1 text-2xl font-bold text-foreground">{studyStreak}</p>
             </div>
             <div className="rounded-xl bg-rose-500 p-2.5 shadow-sm">
               <Target className="h-5 w-5 text-white" />
             </div>
           </div>
-          <p className="mt-3 text-xs text-muted-foreground">Start studying today</p>
+          <p className="mt-3 text-xs text-muted-foreground">Continuous daily study streak</p>
         </div>
       </div>
 
@@ -271,9 +286,7 @@ export default function StudentDashboard() {
             </div>
             <div>
               <h3 className="font-semibold text-foreground">Browse Courses</h3>
-              <p className="text-xs text-muted-foreground">
-                Explore GCE courses and start studying
-              </p>
+              <p className="text-xs text-muted-foreground">Explore GCE courses and start studying</p>
             </div>
           </div>
         </Link>
@@ -288,9 +301,7 @@ export default function StudentDashboard() {
             </div>
             <div>
               <h3 className="font-semibold text-foreground">Start Mock Exam</h3>
-              <p className="text-xs text-muted-foreground">
-                Practice with timed GCE-style questions
-              </p>
+              <p className="text-xs text-muted-foreground">Practice with timed GCE-style questions</p>
             </div>
           </div>
         </Link>
@@ -305,9 +316,7 @@ export default function StudentDashboard() {
             </div>
             <div>
               <h3 className="font-semibold text-foreground">View Progress</h3>
-              <p className="text-xs text-muted-foreground">
-                Track your improvement over time
-              </p>
+              <p className="text-xs text-muted-foreground">Track your improvement over time</p>
             </div>
           </div>
         </Link>
@@ -317,15 +326,39 @@ export default function StudentDashboard() {
       <div className="space-y-6 rounded-2xl border border-border bg-card p-6 shadow-xs">
         <div>
           <h2 className="text-lg font-semibold text-foreground">Recent Activity</h2>
-          <div className="mt-4 flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-muted/50 py-6 text-center">
-            <Clock className="h-8 w-8 text-slate-300" />
-            <p className="mt-2 text-sm font-medium text-muted-foreground">
-              No activity yet
-            </p>
-            <p className="text-xs text-slate-400">
-              Start studying or take a practice quiz below to track your progress here.
-            </p>
-          </div>
+          {recentExams.length === 0 ? (
+            <div className="mt-4 flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-muted/50 py-6 text-center">
+              <Clock className="h-8 w-8 text-slate-300" />
+              <p className="mt-2 text-sm font-medium text-muted-foreground">No recent exams taken</p>
+              <p className="text-xs text-slate-400">
+                Start studying or take a practice quiz below to log your activities.
+              </p>
+            </div>
+          ) : (
+            <div className="mt-4 divide-y divide-border rounded-xl border border-border bg-card">
+              {recentExams.map((exam) => (
+                <div key={exam.attemptId} className="flex items-center justify-between p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                      <FileText className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-foreground">{exam.paperTitle}</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        Completed: {new Date(exam.completedAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xs font-black text-foreground">{exam.percentage}%</span>
+                    <span className="block text-[10px] text-muted-foreground">
+                      {exam.score}/{exam.totalMarks} marks
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Guided Recommended Next Steps */}
@@ -335,7 +368,9 @@ export default function StudentDashboard() {
       </div>
 
       {/* Floating Action Button (FAB) for AI Tutor */}
-      <Link href="/student/ai-tutor"><AiTutorFab onClick={() => handleAskAi("Quick Help")} /></Link>
+      <Link href="/student/ai-tutor">
+        <AiTutorFab onClick={() => handleAskAi("Quick Help")} />
+      </Link>
     </div>
   );
 }

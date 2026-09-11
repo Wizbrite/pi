@@ -19,6 +19,7 @@ import {
   Bell,
   Shield,
   Gift,
+  Brain,
 } from "lucide-react";
 import { useAuthStore, type UserRole } from "@/stores/auth-store";
 import { HeaderStats } from "../student/header-stat";
@@ -34,6 +35,8 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { label: "Dashboard", href: "/student", icon: LayoutDashboard },
     { label: "Courses", href: "/student/courses", icon: BookOpen },
     { label: "Exams", href: "/student/exams", icon: FileText },
+    { label: "AI Report", href: "/student/reports", icon: Brain },
+    { label: "Teachers", href: "/student/teachers", icon: UserCheck },
     { label: "Practice", href: "/student/practice-hub", icon: Target },
     { label: "Progress", href: "/student/progress", icon: BarChart3 },
     { label: "Ranks", href: "/student/leaderboard", icon: Trophy },
@@ -43,7 +46,8 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
   ],
   teacher: [
     { label: "Dashboard", href: "/teacher", icon: LayoutDashboard },
-    { label: "Classes", href: "/teacher/classes", icon: Users },
+    { label: "Students", href: "/teacher/students", icon: Users },
+    { label: "Tasks", href: "/teacher/assignments", icon: FileText },
     { label: "Questions", href: "/teacher/questions", icon: FileText },
     { label: "Analytics", href: "/teacher/analytics", icon: BarChart3 },
     { label: "Profile", href: "/teacher/profile", icon: User },
@@ -53,7 +57,6 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
     { label: "Children", href: "/parent/children", icon: UserCheck },
     { label: "Milestones", href: "/parent/milestones", icon: Gift },
     { label: "Requests", href: "/parent/requests", icon: Shield },
-    { label: "Reports", href: "/parent/reports", icon: BarChart3 },
     { label: "Profile", href: "/parent/profile", icon: User },
   ],
   admin: [

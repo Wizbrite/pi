@@ -16,7 +16,7 @@ export async function GET() {
     // Check if user is parent or student to return appropriate connections
     const user = await User.findById(userId);
     if (!user) {
-      return NextResponse.json({ message: "User not found" }, { status: 404 });
+      return NextResponse.json({ message: "User not found" }, { status: 401 });
     }
 
     if (user.role === "parent") {

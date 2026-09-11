@@ -91,20 +91,40 @@ export class ProgressService {
     const totalXp = dailyXpResult[0]?.total || 0;
     const totalCorrect = accuracyResult[0]?.totalCorrect || 0;
     const totalQuestions = accuracyResult[0]?.totalQuestions || 0;
-    const totalTimeSeconds = timeResult[0]?.total || 0;
+    const lessonTimeSeconds = timeResult[0]?.total || 0;
 
-    // Also add exam time
-    const examTimeResult = await ExamAttempt.aggregate([
-      { $match: { userId } },
-      { $group: { _id: null, total: { $sum: "$timeSpentSeconds" } } },
+    // Aggregate cumulative exam time and daily activity time
+    const [examTimeResult, dailyTimeResult] = await Promise.all([
+      ExamAttempt.aggregate([
+        { $match: { userId } },
+        { $group: { _id: null, total: { $sum: "$timeSpentSeconds" } } },
+      ]),
+      DailyActivity.aggregate([
+        { $match: { userId } },
+        {
+          $group: {
+            _id: null,
+            totalMins: { $sum: "$timeSpentMinutes" },
+            totalSecs: { $sum: "$timeSpentSeconds" },
+          },
+        },
+      ]),
     ]);
+
     const examTimeSeconds = examTimeResult[0]?.total || 0;
+    const dailyMins = dailyTimeResult[0]?.totalMins || 0;
+    const dailySecs = dailyTimeResult[0]?.totalSecs || 0;
+
+    // Use accumulated daily activity time or total lesson + exam seconds (whichever is higher)
+    const accumulatedFromDaily = Math.max(dailyMins, Math.round(dailySecs / 60));
+    const accumulatedFromActivities = Math.round((lessonTimeSeconds + examTimeSeconds) / 60);
+    const totalTimeSpentMinutes = Math.max(accumulatedFromDaily, accumulatedFromActivities);
 
     return {
       totalXp: totalXp,
       currentStreak: streakData.current,
       longestStreak: streakData.longest,
-      totalTimeSpentMinutes: Math.round((totalTimeSeconds + examTimeSeconds) / 60),
+      totalTimeSpentMinutes,
       totalLessonsCompleted: lessonsCompleted,
       totalExamsTaken: examsTaken,
       overallAccuracy:

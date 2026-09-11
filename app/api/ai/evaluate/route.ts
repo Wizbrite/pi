@@ -60,9 +60,15 @@ Respond strictly in JSON format with exactly two fields:
 
     const payload = await result.json().catch(() => null);
     if (!result.ok) {
+      // Map rate-limit (503 from provider layer) to a user-friendly message
+      const message =
+        result.status === 503 || result.status === 429
+          ? "The AI evaluator is temporarily busy due to high demand. Please try again in a moment."
+          : getProviderError(result.status, payload);
+
       return NextResponse.json(
-        { success: false, message: getProviderError(result.status, payload) },
-        { status: result.status }
+        { success: false, message },
+        { status: 503 }
       );
     }
 

@@ -11,7 +11,7 @@ interface LeaderboardTableProps {
 export function LeaderboardTable({ students, currentUserId, allStudents }: LeaderboardTableProps) {
   
   // Find current user's rank
-  const currentUserObj = allStudents.find(s => s.name === "Njini Favour" || s.id === currentUserId);
+  const currentUserObj = allStudents.find(s => s.id === currentUserId) || allStudents.find(s => s.name === "Njini Favour");
   const isCurrentUserInVisibleList = students.some(s => s.id === currentUserObj?.id);
   const isCurrentUserInTop3 = currentUserObj && currentUserObj.rank <= 3;
 

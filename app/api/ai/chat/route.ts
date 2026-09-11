@@ -44,11 +44,15 @@ export async function POST(request: NextRequest) {
       const upstream = await provider.chat(messages, { model, maxTokens, stream: true });
 
       if (!upstream.ok) {
-        const err = await upstream.text();
-        return NextResponse.json(
-          { success: false, message: `AI provider error: ${err}` },
-          { status: upstream.status }
-        );
+        // Parse error body for a user-friendly message
+        const errBody = await upstream.json().catch(() => null);
+        const errMsg =
+          errBody?.error?.message ||
+          (upstream.status === 503
+            ? "The AI assistant is temporarily busy. Please wait a moment and try again."
+            : `AI provider error (${upstream.status})`);
+
+        return NextResponse.json({ success: false, message: errMsg }, { status: 503 });
       }
 
       // Pipe the SSE stream from the AI provider directly to the client
@@ -65,11 +69,14 @@ export async function POST(request: NextRequest) {
     const res = await provider.chat(messages, { model, maxTokens, stream: false });
 
     if (!res.ok) {
-      const err = await res.text();
-      return NextResponse.json(
-        { success: false, message: `AI provider error: ${err}` },
-        { status: res.status }
-      );
+      const errBody = await res.json().catch(() => null);
+      const errMsg =
+        errBody?.error?.message ||
+        (res.status === 503
+          ? "The AI assistant is temporarily busy. Please wait a moment and try again."
+          : `AI provider error (${res.status})`);
+
+      return NextResponse.json({ success: false, message: errMsg }, { status: 503 });
     }
 
     const data = await res.json();
@@ -79,7 +86,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error("[POST /api/ai/chat] Error:", error);
     return NextResponse.json(
-      { success: false, message: "Sorry, but Pi Failed to provide a response" },
+      { success: false, message: "Sorry, Pi failed to provide a response. Please try again." },
       { status: 500 }
     );
   }

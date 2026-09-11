@@ -25,8 +25,10 @@ export class UserRepository implements IUserRepository {
     id: string | Types.ObjectId,
     options?: { includePassword?: boolean }
   ): Promise<IUserDocument | null> {
+    const normalizedId = String(id);
+    if (!Types.ObjectId.isValid(normalizedId)) return null;
     await connectToDatabase();
-    const query = User.findById(id);
+    const query = User.findById(normalizedId);
     if (options?.includePassword) query.select("+passwordHash");
     return query;
   }

@@ -37,6 +37,7 @@ interface ProfileDoc {
 interface CourseDoc {
   _id: Types.ObjectId;
   subject: string;
+  level?: string;
   topics: {
     _id: Types.ObjectId;
     title: string;
@@ -73,18 +74,18 @@ export class AdaptationService {
     await connectToDatabase();
     const userObjectId = new Types.ObjectId(userId);
 
-    const question = await Question.findById(input.questionId) as QuestionDoc | null;
+    const question = (await Question.findById(input.questionId)) as QuestionDoc | null;
     if (!question) throw new Error("Question not found");
 
     const topicId = question.topicId?.toString() || question.lessonId.toString();
     const isMcq = input.isMcq ?? (question.options?.length > 0);
 
-    const lesson = await Lesson.findById(question.lessonId) as LessonDoc | null;
+    const lesson = (await Lesson.findById(question.lessonId)) as LessonDoc | null;
     let topicTitle = "Unknown Topic";
     const courseId = question.courseId.toString();
 
     if (lesson) {
-      const course = await Course.findById(lesson.courseId) as CourseDoc | null;
+      const course = (await Course.findById(lesson.courseId)) as CourseDoc | null;
       if (course) {
         const topic = course.topics?.find(
           (t) => t._id.toString() === topicId
@@ -93,13 +94,13 @@ export class AdaptationService {
       }
     }
 
-    let profile = await LearnerProfile.findOne({ userId: userObjectId }) as ProfileDoc | null;
+    let profile = (await LearnerProfile.findOne({ userId: userObjectId })) as ProfileDoc | null;
     if (!profile) {
-      profile = await LearnerProfile.create({
+      profile = (await LearnerProfile.create({
         userId: userObjectId,
         skills: [],
         overallMastery: 0,
-      }) as ProfileDoc;
+      })) as ProfileDoc;
     }
 
     let skill = profile.skills.find((s: SkillMasteryDoc) => s.skillId === topicId);
@@ -167,14 +168,77 @@ export class AdaptationService {
       }
     }
 
-    const profile = await LearnerProfile.findOne({
+    const profile = (await LearnerProfile.findOne({
       userId: new Types.ObjectId(userId),
-    }) as ProfileDoc | null;
+    })) as ProfileDoc | null;
 
     return {
       results,
       overallMastery: profile?.overallMastery ?? 0,
     };
+  }
+
+  /**
+   * Directly record topic skill mastery when a lesson is completed
+   */
+  async recordLessonCompletion(
+    userId: string,
+    lessonId: string,
+    score: number,
+    totalQuestions: number
+  ): Promise<void> {
+    await connectToDatabase();
+    const userObjectId = new Types.ObjectId(userId);
+
+    const lesson = (await Lesson.findById(lessonId)) as LessonDoc | null;
+    if (!lesson) return;
+
+    const topicId = lesson.topicId.toString();
+    const courseId = lesson.courseId.toString();
+    const course = (await Course.findById(lesson.courseId)) as CourseDoc | null;
+    const topic = course?.topics?.find((t) => t._id.toString() === topicId);
+    const topicTitle = topic?.title || "Topic Lesson";
+
+    let profile = (await LearnerProfile.findOne({ userId: userObjectId })) as ProfileDoc | null;
+    if (!profile) {
+      profile = (await LearnerProfile.create({
+        userId: userObjectId,
+        skills: [],
+        overallMastery: 0,
+      })) as ProfileDoc;
+    }
+
+    let skill = profile.skills.find((s: SkillMasteryDoc) => s.skillId === topicId);
+    if (!skill) {
+      skill = {
+        skillId: topicId,
+        courseId,
+        topicTitle,
+        masteryLevel: 0.25,
+        totalAttempts: 0,
+        correctAttempts: 0,
+        recentAnswers: [],
+      };
+      profile.skills.push(skill);
+    }
+
+    const accuracy = totalQuestions > 0 ? score / totalQuestions : 0.5;
+    // Update mastery via BKT based on overall performance
+    const isMcq = true;
+    let currentMastery = skill.masteryLevel;
+    for (let i = 0; i < totalQuestions; i++) {
+      const isCorrect = i < score;
+      currentMastery = new BktService().updateMastery(currentMastery, isCorrect, isMcq);
+    }
+
+    skill.masteryLevel = Math.round(currentMastery * 1000) / 1000;
+    skill.totalAttempts += totalQuestions;
+    skill.correctAttempts += score;
+    skill.lastPracticedAt = new Date();
+    if (!skill.firstPracticedAt) skill.firstPracticedAt = new Date();
+
+    await this.recalculateOverallMastery(profile);
+    await profile.save();
   }
 
   async getNextSteps(userId: string, limit: number = 5): Promise<NextStep[]> {
@@ -184,13 +248,18 @@ export class AdaptationService {
     const enrolledCourseIds = await LessonProgress.distinct("courseId", {
       userId: userObjectId,
     });
-    if (enrolledCourseIds.length === 0) return [];
 
-    const courses = await Course.find({
-      _id: { $in: enrolledCourseIds },
-    }).lean() as CourseDoc[];
+    let courses: CourseDoc[] = [];
+    if (enrolledCourseIds.length > 0) {
+      courses = (await Course.find({
+        _id: { $in: enrolledCourseIds },
+      }).lean()) as CourseDoc[];
+    } else {
+      // Fallback for new students: suggest topics from available catalog courses
+      courses = (await Course.find({}).limit(5).lean()) as CourseDoc[];
+    }
 
-    const profile = await LearnerProfile.findOne({ userId: userObjectId }).lean() as ProfileDoc | null;
+    const profile = (await LearnerProfile.findOne({ userId: userObjectId }).lean()) as ProfileDoc | null;
     const skillMap = new Map<string, SkillMasteryDoc>();
     if (profile) {
       for (const skill of profile.skills) {
@@ -221,21 +290,28 @@ export class AdaptationService {
                 .map((t: { _id: Types.ObjectId }) => t._id.toString());
 
         const prereqsMet = effectivePrereqs.every(
-          (pid: string) => (skillMap.get(pid)?.masteryLevel ?? 0) > 0.5
+          (pid: string) => (skillMap.get(pid)?.masteryLevel ?? 0) > 0.4
         );
 
-        if (!prereqsMet) continue;
+        if (!prereqsMet && effectivePrereqs.length > 0) continue;
 
         let priority = 0;
+        let isSpacedRepetition = false;
 
         if (mastery < notStartedThreshold) {
           priority += 50;
         }
         priority += (1 - mastery) * 30;
         priority += Math.max(0, 10 - topic.order);
+
         if (skill?.lastPracticedAt) {
-          const daysSince = (Date.now() - skill.lastPracticedAt.getTime()) / (1000 * 60 * 60 * 24);
-          if (daysSince > 3) priority += 5;
+          const daysSince =
+            (Date.now() - new Date(skill.lastPracticedAt).getTime()) /
+            (1000 * 60 * 60 * 24);
+          if (daysSince > 3) {
+            priority += 15;
+            isSpacedRepetition = true;
+          }
         } else {
           priority += 3;
         }
@@ -244,15 +320,18 @@ export class AdaptationService {
         let reason: string;
         const difficulty = topic.difficulty || "beginner";
 
-        if (mastery < notStartedThreshold) {
+        if (isSpacedRepetition && mastery < masteredThreshold) {
+          type = "review";
+          reason = `Spaced repetition revision — revise ${topic.title} to reinforce long-term retention`;
+        } else if (mastery < notStartedThreshold) {
           type = "lesson";
-          reason = `Start learning this topic — it's ready and you haven't begun`;
+          reason = `Start learning ${topic.title} — foundational module ready for you`;
         } else if (mastery < 0.5) {
           type = "lesson";
-          reason = `Low mastery (${Math.round(mastery * 100)}%) — review the lesson first`;
+          reason = `Low mastery (${Math.round(mastery * 100)}%) — re-read the lesson content and practice`;
         } else if (mastery < 0.7) {
           type = "quiz";
-          reason = `Building proficiency (${Math.round(mastery * 100)}%) — practice with the mastery quiz`;
+          reason = `Building proficiency (${Math.round(mastery * 100)}%) — practice with the topic quiz`;
         } else if (mastery < masteredThreshold) {
           type = "review";
           reason = `Almost mastered (${Math.round(mastery * 100)}%) — a few more correct answers will lock it in`;
@@ -289,11 +368,11 @@ export class AdaptationService {
     await connectToDatabase();
     const userObjectId = new Types.ObjectId(userId);
 
-    const profile = await LearnerProfile.findOne({ userId: userObjectId }).lean() as ProfileDoc | null;
+    const profile = (await LearnerProfile.findOne({ userId: userObjectId }).lean()) as ProfileDoc | null;
     if (!profile || profile.skills.length === 0) return [];
 
     const courseIds = [...new Set(profile.skills.map((s: SkillMasteryDoc) => s.courseId))];
-    const courses = await Course.find({ _id: { $in: courseIds } }).lean() as CourseDoc[];
+    const courses = (await Course.find({ _id: { $in: courseIds } }).lean()) as CourseDoc[];
 
     const courseMap = new Map<string, CourseDoc>();
     for (const course of courses) {
@@ -316,9 +395,9 @@ export class AdaptationService {
       if (skill.masteryLevel < 0.3) {
         suggestedAction = "Re-read the lesson content before attempting more questions";
       } else if (skill.masteryLevel < 0.6) {
-        suggestedAction = "Practice the mastery quiz again, focusing on areas you got wrong";
+        suggestedAction = "Practice the topic quiz again, focusing on weak questions";
       } else {
-        suggestedAction = "Almost there — a few more correct answers will boost your mastery";
+        suggestedAction = "Almost there — a few more correct answers will boost your mastery to 80%+";
       }
 
       return {
@@ -340,9 +419,14 @@ export class AdaptationService {
       userId: profile.userId,
     });
 
-    const courses = await Course.find({
-      _id: { $in: enrolledCourseIds },
-    }).lean() as CourseDoc[];
+    let courses: CourseDoc[] = [];
+    if (enrolledCourseIds.length > 0) {
+      courses = (await Course.find({
+        _id: { $in: enrolledCourseIds },
+      }).lean()) as CourseDoc[];
+    } else {
+      courses = (await Course.find({}).limit(5).lean()) as CourseDoc[];
+    }
 
     let totalSkills = 0;
     let totalMastery = 0;

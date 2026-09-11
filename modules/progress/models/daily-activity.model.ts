@@ -6,6 +6,7 @@ export interface IDailyActivity {
   lessonsCompleted: number;
   examsTaken: number;
   timeSpentMinutes: number;
+  timeSpentSeconds?: number;
   xpEarned: number;
   questionsAttempted: number;
   questionsCorrect: number;
@@ -24,6 +25,7 @@ const dailyActivitySchema = new Schema<IDailyActivityDocument>(
     lessonsCompleted: { type: Number, default: 0 },
     examsTaken: { type: Number, default: 0 },
     timeSpentMinutes: { type: Number, default: 0 },
+    timeSpentSeconds: { type: Number, default: 0 },
     xpEarned: { type: Number, default: 0 },
     questionsAttempted: { type: Number, default: 0 },
     questionsCorrect: { type: Number, default: 0 },

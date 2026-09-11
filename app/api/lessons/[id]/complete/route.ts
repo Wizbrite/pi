@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/db/mongodb";
 import Lesson from "@/modules/course/models/lesson.model";
+import Question from "@/modules/course/models/question.model";
 import LessonProgress from "@/modules/course/models/lesson-progress.model";
 import ExamAttempt from "@/modules/progress/models/exam-attempt.model";
 import { getUserId } from "@/lib/auth/get-user";
 import { logDailyActivity } from "@/lib/progress/log-activity";
 import DailyActivity from "@/modules/progress/models/daily-activity.model";
 import { milestoneService } from "@/modules/parent/services/milestone.service";
+import { adaptationService } from "@/modules/adaptive/services/adaptation.service";
 import mongoose from "mongoose";
 
 // Expected request body
@@ -81,11 +83,20 @@ export async function POST(
       );
     }
 
-    // Calculate derived values
+    // Calculate derived values and query allocated per-question XP points from DB
+    const lessonQuestions = await Question.find({ lessonId: lesson._id }).select("xpPoints").lean();
     const accuracy = Math.round((score / totalQuestions) * 100);
-    const xpEarned = Math.round(score * 30 + (accuracy >= 80 ? 20 : 0)); // 30 XP per correct + 20 bonus for 80%+
-    const masteryLevel = Math.min(100, accuracy); // Simplified mastery = accuracy for now
 
+    let xpEarned = 0;
+    if (lessonQuestions.length > 0) {
+      const questionXpSum = lessonQuestions.reduce((sum, q) => sum + (q.xpPoints || 15), 0);
+      const ratio = totalQuestions > 0 ? score / totalQuestions : 0;
+      xpEarned = Math.round(questionXpSum * ratio + (accuracy >= 80 ? 20 : 0));
+    } else {
+      xpEarned = Math.round(score * 30 + (accuracy >= 80 ? 20 : 0));
+    }
+
+    const masteryLevel = Math.min(100, accuracy);
     const userObjectId = new mongoose.Types.ObjectId(userId);
 
     // Get existing progress (if any) for best scores
@@ -103,14 +114,13 @@ export async function POST(
         score,
         totalQuestions,
         accuracy,
-        timeSpentSeconds,
         xpEarned,
         masteryLevel,
         bestScore: Math.max(existingProgress?.bestScore || 0, score),
         bestAccuracy: Math.max(existingProgress?.bestAccuracy || 0, accuracy),
         lastAttemptedAt: new Date(),
       },
-      $inc: { attempts: 1 },
+      $inc: { attempts: 1, timeSpentSeconds: timeSpentSeconds },
     };
 
     // Only set firstCompletedAt if this is the first completion
@@ -124,15 +134,20 @@ export async function POST(
       { upsert: true, new: true }
     );
 
-    // Log daily activity (non-blocking — don't wait for it)
+    // Log daily activity with exact seconds (non-blocking — don't wait for it)
     logDailyActivity(userId, {
       lessonsCompleted: 1,
-      timeSpentMinutes: Math.round(timeSpentSeconds / 60),
+      timeSpentSeconds,
       xpEarned,
       questionsAttempted: totalQuestions,
       questionsCorrect: score,
     }).catch((err) => {
       console.error("Failed to log daily activity:", err);
+    });
+
+    // Record BKT adaptive skill mastery (non-blocking)
+    adaptationService.recordLessonCompletion(userId, lessonId, score, totalQuestions).catch((err) => {
+      console.error("Failed to record adaptive lesson completion:", err);
     });
 
     // Auto-unlock milestones (non-blocking)

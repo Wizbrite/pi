@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, use, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft, Zap, Flame, Clock, BookOpen, FileText,
@@ -18,12 +19,12 @@ function StatCard({ icon: Icon, label, value, sub, color }: { icon: React.Elemen
   return (
     <div className="rounded-2xl border border-border bg-card p-4 shadow-xs">
       <div className="flex items-start justify-between">
-        <div>
+        <div className="min-w-0">
           <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">{label}</p>
-          <p className="mt-1 text-2xl font-black text-foreground">{value}</p>
+          <p className="mt-1 text-xl font-black text-foreground sm:text-2xl">{value}</p>
           {sub && <p className="mt-0.5 text-[11px] text-muted-foreground">{sub}</p>}
         </div>
-        <div className={`rounded-xl p-2.5 ${color}`}>
+        <div className={`rounded-xl p-2.5 ${color} shrink-0`}>
           <Icon className="h-5 w-5 text-white" />
         </div>
       </div>
@@ -31,12 +32,16 @@ function StatCard({ icon: Icon, label, value, sub, color }: { icon: React.Elemen
   );
 }
 
+type Tab = "overview" | "subjects" | "exams" | "milestones";
+
 export default function StudentProgressView({ params }: { params: Promise<{ studentId: string }> }) {
   const { studentId } = use(params);
-  const [activeTab, setActiveTab] = useState<"overview" | "subjects" | "exams" | "milestones">("overview");
+  const searchParams = useSearchParams();
+  const initialTab = (searchParams.get("tab") as Tab) || "overview";
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [expandedSubject, setExpandedSubject] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  
+
   const [studentData, setStudentData] = useState<any>(null);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,7 +59,7 @@ export default function StudentProgressView({ params }: { params: Promise<{ stud
         const mData = await msRes.json();
 
         if (!progRes.ok) throw new Error(pData.message || "Failed to load progress");
-        
+
         setStudentData({
           id: studentId,
           name: pData.progress?.name || "Student",
@@ -72,8 +77,7 @@ export default function StudentProgressView({ params }: { params: Promise<{ stud
         });
 
         if (mData.milestones) {
-          // Filter milestones for this specific student
-          const studentMs = mData.milestones.filter((m: any) => 
+          const studentMs = mData.milestones.filter((m: any) =>
             (m.studentId._id === studentId) || (m.studentId === studentId)
           );
           setMilestones(studentMs);
@@ -88,8 +92,8 @@ export default function StudentProgressView({ params }: { params: Promise<{ stud
     loadData();
   }, [studentId]);
 
-  const maxActivity = studentData && studentData.weeklyActivity.length > 0 
-    ? Math.max(...studentData.weeklyActivity.map((d: any) => d.lessonsCompleted), 1) 
+  const maxActivity = studentData && studentData.weeklyActivity.length > 0
+    ? Math.max(...studentData.weeklyActivity.map((d: any) => d.lessonsCompleted), 1)
     : 1;
 
   const handleCopyLink = () => {
@@ -113,42 +117,58 @@ export default function StudentProgressView({ params }: { params: Promise<{ stud
     );
   }
 
+  const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
+    { key: "overview", label: "Overview", icon: BarChart3 },
+    { key: "subjects", label: "Subjects", icon: BookOpen },
+    { key: "exams", label: "Exams", icon: FileText },
+    { key: "milestones", label: "Milestones", icon: Target },
+  ];
+
   return (
-    <div className="space-y-6 pb-12">
+    <div className="space-y-5 pb-12">
       {/* Back + Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <Link href="/parent/children" className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-3.5 w-3.5" /> Back to Children
           </Link>
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 text-sm font-bold text-white">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 text-sm font-bold text-white shrink-0">
               {studentData.name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)}
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-foreground">{studentData.name}</h1>
-              <p className="text-sm text-muted-foreground">{studentData.email && `${studentData.email} · `}{studentData.gceLevel} Level</p>
+            <div className="min-w-0">
+              <h1 className="text-lg font-bold text-foreground sm:text-xl">{studentData.name}</h1>
+              <p className="text-xs text-muted-foreground">{studentData.email && `${studentData.email} · `}{studentData.gceLevel} Level</p>
             </div>
           </div>
         </div>
         <button
           onClick={handleCopyLink}
-          className="flex items-center gap-2 self-start rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground shadow-xs hover:bg-muted"
+          className="flex items-center gap-2 self-start rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground shadow-xs hover:bg-muted sm:px-4 sm:py-2.5"
         >
-          {copied ? <><CheckCircle className="h-4 w-4 text-green-500" /> Link Copied!</> : <><Copy className="h-4 w-4" /> Share Progress Link</>}
+          {copied ? <><CheckCircle className="h-4 w-4 text-green-500" /> Copied!</> : <><Copy className="h-4 w-4" /> Share Link</>}
         </button>
       </div>
 
-      {/* Tab Nav */}
-      <div className="flex items-center gap-1 overflow-x-auto bg-muted p-1 rounded-xl w-fit max-w-full">
-        {(["overview", "subjects", "exams", "milestones"] as const).map((tab) => (
-          <button key={tab} onClick={() => setActiveTab(tab)} className={`whitespace-nowrap px-4 py-2 rounded-lg text-xs font-semibold transition-all capitalize ${activeTab === tab ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
-            {tab}
-          </button>
-        ))}
+      {/* Tab Nav — horizontally scrollable on mobile */}
+      <div className="overflow-x-auto -mx-1 px-1 pb-1">
+        <div className="flex items-center gap-1 bg-muted p-1 rounded-xl w-max min-w-full">
+          {tabs.map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              onClick={() => setActiveTab(key)}
+              className={`flex items-center gap-1.5 whitespace-nowrap px-3 py-2 rounded-lg text-xs font-semibold transition-all sm:px-4 ${
+                activeTab === key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* ── OVERVIEW TAB ─────────────────────────────── */}
+      {/* ── OVERVIEW TAB ────────────────────────────────────────────── */}
       {activeTab === "overview" && (
         <div className="space-y-5">
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -173,23 +193,23 @@ export default function StudentProgressView({ params }: { params: Promise<{ stud
           </div>
 
           {/* Weekly Activity */}
-          <div className="rounded-2xl border border-border bg-card p-5 shadow-xs">
+          <div className="rounded-2xl border border-border bg-card p-4 shadow-xs sm:p-5">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-base font-bold text-foreground">Weekly Activity</h2>
+              <h2 className="text-sm font-bold text-foreground sm:text-base">Weekly Activity</h2>
               <span className="flex items-center gap-1 text-[10px] text-muted-foreground"><Calendar className="h-3 w-3" /> Last 7 days</span>
             </div>
             {studentData.weeklyActivity && studentData.weeklyActivity.length > 0 ? (
-              <div className="flex items-end justify-between gap-2 h-24">
+              <div className="flex items-end justify-between gap-1 h-24 sm:gap-2">
                 {studentData.weeklyActivity.map((day: any, i: number) => {
                   const h = (day.lessonsCompleted / maxActivity) * 100;
                   const isToday = i === studentData.weeklyActivity.length - 1;
                   return (
                     <div key={day.date} className="flex flex-1 flex-col items-center gap-1">
-                      <span className="text-[10px] font-bold text-foreground">{day.lessonsCompleted > 0 ? day.lessonsCompleted : ""}</span>
+                      <span className="text-[9px] font-bold text-foreground sm:text-[10px]">{day.lessonsCompleted > 0 ? day.lessonsCompleted : ""}</span>
                       <div className="w-full bg-muted rounded-full h-20 flex items-end overflow-hidden">
                         <div className={`w-full rounded-full transition-all duration-500 ${isToday ? "bg-primary" : day.lessonsCompleted > 0 ? "bg-primary/50" : "bg-muted"}`} style={{ height: `${Math.max(h, 4)}%` }} />
                       </div>
-                      <span className={`text-[10px] font-medium ${isToday ? "text-primary font-bold" : "text-muted-foreground"}`}>{day.date}</span>
+                      <span className={`text-[9px] font-medium sm:text-[10px] ${isToday ? "text-primary font-bold" : "text-muted-foreground"}`}>{day.date.slice(5)}</span>
                     </div>
                   );
                 })}
@@ -201,8 +221,8 @@ export default function StudentProgressView({ params }: { params: Promise<{ stud
 
           {/* Weak Areas */}
           {studentData.weakAreas && studentData.weakAreas.length > 0 && (
-            <div className="rounded-2xl border border-orange-200/50 bg-orange-50/50 p-5 shadow-xs dark:border-orange-500/20 dark:bg-orange-500/5">
-              <h2 className="mb-3 text-base font-bold text-foreground">Areas Needing Attention</h2>
+            <div className="rounded-2xl border border-orange-200/50 bg-orange-50/50 p-4 shadow-xs dark:border-orange-500/20 dark:bg-orange-500/5 sm:p-5">
+              <h2 className="mb-3 text-sm font-bold text-foreground sm:text-base">Areas Needing Attention</h2>
               <div className="space-y-2">
                 {studentData.weakAreas.map((area: any) => (
                   <div key={area.topicId} className="flex items-center gap-3 rounded-xl border border-border bg-card p-3">
@@ -210,10 +230,10 @@ export default function StudentProgressView({ params }: { params: Promise<{ stud
                       <AlertTriangle className="h-4 w-4 text-orange-500" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-bold text-foreground">{area.topicTitle}</p>
+                      <p className="text-xs font-bold text-foreground truncate">{area.topicTitle}</p>
                       <p className="text-[10px] text-muted-foreground">{area.courseTitle}</p>
                     </div>
-                    <p className={`text-sm font-black ${area.accuracy < 60 ? "text-red-500" : "text-amber-600"}`}>{area.accuracy}%</p>
+                    <p className={`text-sm font-black shrink-0 ${area.accuracy < 60 ? "text-red-500" : "text-amber-600"}`}>{area.accuracy}%</p>
                   </div>
                 ))}
               </div>
@@ -222,15 +242,15 @@ export default function StudentProgressView({ params }: { params: Promise<{ stud
         </div>
       )}
 
-      {/* ── SUBJECTS TAB ─────────────────────────────── */}
+      {/* ── SUBJECTS TAB ─────────────────────────────────────────────── */}
       {activeTab === "subjects" && (
         <div className="space-y-3">
           {studentData.subjects && studentData.subjects.length > 0 ? studentData.subjects.map((subj: any) => (
             <div key={subj.courseId} className="rounded-2xl border border-border bg-card shadow-xs overflow-hidden">
-              <button onClick={() => setExpandedSubject(expandedSubject === subj.courseId ? null : subj.courseId)} className="w-full text-left p-5 hover:bg-muted/20 transition">
+              <button onClick={() => setExpandedSubject(expandedSubject === subj.courseId ? null : subj.courseId)} className="w-full text-left p-4 hover:bg-muted/20 transition sm:p-5">
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
                       <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-bold text-violet-700 dark:bg-violet-500/20 dark:text-violet-400">{subj.level}</span>
                       <span className="rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground">{subj.subject}</span>
                     </div>
@@ -259,14 +279,14 @@ export default function StudentProgressView({ params }: { params: Promise<{ stud
         </div>
       )}
 
-      {/* ── EXAMS TAB ─────────────────────────────────── */}
+      {/* ── EXAMS TAB ────────────────────────────────────────────────── */}
       {activeTab === "exams" && (
         <div className="space-y-3">
           {studentData.examHistory && studentData.examHistory.length > 0 ? studentData.examHistory.map((exam: any) => (
             <div key={exam.attemptId} className="rounded-2xl border border-border bg-card p-4 shadow-xs">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <h4 className="text-xs font-bold text-foreground truncate">{exam.paperTitle}</h4>
+                  <h4 className="text-xs font-bold text-foreground truncate sm:text-sm">{exam.paperTitle}</h4>
                   <p className="text-[10px] text-muted-foreground mt-1">{formatDate(exam.completedAt)}</p>
                   <span className={`mt-2 inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${exam.percentage >= 50 ? "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400" : "bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400"}`}>
                     {exam.percentage >= 50 ? "Passed" : "Failed"}
@@ -282,7 +302,7 @@ export default function StudentProgressView({ params }: { params: Promise<{ stud
         </div>
       )}
 
-      {/* ── MILESTONES TAB ───────────────────────────── */}
+      {/* ── MILESTONES TAB ───────────────────────────────────────────── */}
       {activeTab === "milestones" && (
         <div className="space-y-4">
           {milestones.length === 0 ? (

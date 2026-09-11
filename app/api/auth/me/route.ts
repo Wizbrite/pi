@@ -18,26 +18,32 @@ export async function GET() {
 
     const payload = await authService.verifyToken(tokenCookie.value);
     if (!payload) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         { message: "Invalid or expired token" },
         { status: 401 }
       );
+      response.cookies.set("token", "", { maxAge: 0, path: "/" });
+      return response;
     }
 
     const userId = extractUserId(payload);
 
     if (!userId || typeof userId !== "string") {
       console.log("[/api/auth/me] Invalid userId extracted from payload:", userId, "Raw payload:", payload);
-      return NextResponse.json(
+      const response = NextResponse.json(
         { message: "Invalid token payload" },
         { status: 401 }
       );
+      response.cookies.set("token", "", { maxAge: 0, path: "/" });
+      return response;
     }
 
     const user = await userRepository.findById(userId);
     if (!user) {
       console.log("[/api/auth/me] User not found in DB for ID:", userId);
-      return NextResponse.json({ message: "User not found" }, { status: 404 });
+      const response = NextResponse.json({ message: "User not found" }, { status: 401 });
+      response.cookies.set("token", "", { maxAge: 0, path: "/" });
+      return response;
     }
 
     const userResponse = {

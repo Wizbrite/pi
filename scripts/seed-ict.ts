@@ -113,6 +113,7 @@ async function main() {
               options: qData.options,
               correctAnswer: qData.correctAnswer,
               explanation: qData.explanation,
+              xpPoints: (qData as any).xpPoints || (qData.options?.length > 0 ? 15 : 25),
             },
           },
           { upsert: true, new: true }

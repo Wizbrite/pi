@@ -18,12 +18,21 @@ interface UseAiTutorReturn {
   reset: () => void;
 }
 
+const RATE_LIMIT_MESSAGE =
+  "Pi is temporarily busy — the AI service is under high demand. " +
+  "Please wait a moment and try again.";
+
 /**
  * useAiTutor
  *
  * A lightweight React hook that wraps the /api/ai/chat endpoint.
  * Supports both streaming (SSE, default) and non-streaming responses.
  * Maintains a conversation history for follow-up questions.
+ *
+ * Rate-limit resilience:
+ * - The server-side provider already retries with exponential back-off and model fallbacks.
+ * - If the server still returns 503 (all retries exhausted), this hook shows a clear,
+ *   friendly message so the user knows to wait before trying again.
  */
 export function useAiTutor({ systemPrompt, stream = true }: UseAiTutorOptions): UseAiTutorReturn {
   const [response, setResponse] = useState("");
@@ -60,7 +69,12 @@ export function useAiTutor({ systemPrompt, stream = true }: UseAiTutorOptions): 
 
         if (!res.ok) {
           const json = await res.json().catch(() => ({}));
-          throw new Error(json.message || `Request failed (${res.status})`);
+          // Show rate-limit or provider error in a user-friendly way
+          const isRateLimit = res.status === 503 || res.status === 429;
+          const msg = isRateLimit
+            ? RATE_LIMIT_MESSAGE
+            : json.message || `Request failed (${res.status})`;
+          throw new Error(msg);
         }
 
         if (stream) {

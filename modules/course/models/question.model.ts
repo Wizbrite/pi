@@ -13,6 +13,7 @@ export interface IQuestion {
   explanation: string;
   difficulty?: QuestionDifficulty;
   type?: QuestionType;
+  xpPoints?: number;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -41,6 +42,11 @@ const questionSchema = new Schema<IQuestionDocument>(
       default: function (this: IQuestionDocument) {
         return this.options && this.options.length > 0 ? "mcq" : "open-ended";
       },
+    },
+    xpPoints: {
+      type: Number,
+      default: 10,
+      min: [1, "XP points must be at least 1"],
     },
   },
   { timestamps: true }

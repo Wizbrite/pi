@@ -7,6 +7,7 @@ import { getUserId } from "@/lib/auth/get-user";
 import { logDailyActivity } from "@/lib/progress/log-activity";
 import DailyActivity from "@/modules/progress/models/daily-activity.model";
 import { milestoneService } from "@/modules/parent/services/milestone.service";
+import { adaptationService } from "@/modules/adaptive/services/adaptation.service";
 import mongoose from "mongoose";
 
 // Validation schema for exam submission
@@ -35,7 +36,7 @@ const submitExamSchema = z.object({
 
 export async function POST(
   request: Request,
-  { params }: { params: Promise<{ "subject-id": string }> }
+  { params }: { params: Promise<{ subjectId: string }> }
 ) {
   try {
     const userId = await getUserId();
@@ -47,7 +48,7 @@ export async function POST(
     }
 
     const resolvedParams = await params;
-    const subjectId = resolvedParams["subject-id"];
+    const subjectId = resolvedParams.subjectId;
 
     // Parse and validate request body
     let body;
@@ -83,8 +84,11 @@ export async function POST(
     const correctCount = questions.filter((q) => q.isCorrect).length;
     const incorrectCount = questions.length - correctCount;
 
-    // XP calculation: 40 XP per correct answer + 20 bonus for passing (50%+)
-    const xpEarned = correctCount * 40 + (percentage >= 50 ? 20 : 0);
+    // XP calculation: sum per-question allocated xpPoints for correct answers + bonus
+    const correctXpSum = questions
+      .filter((q) => q.isCorrect)
+      .reduce((sum, q) => sum + ((q as any).xpPoints || 25), 0);
+    const xpEarned = correctXpSum + (percentage >= 50 ? 20 : 0);
 
     // Create exam attempt document
     const attempt = await ExamAttempt.create({
@@ -106,13 +110,26 @@ export async function POST(
     // Log daily activity (non-blocking)
     logDailyActivity(userId, {
       examsTaken: 1,
-      timeSpentMinutes: Math.round(timeSpentSeconds / 60),
+      timeSpentSeconds,
       xpEarned,
       questionsAttempted: questions.length,
       questionsCorrect: correctCount,
     }).catch((err) => {
       console.error("Failed to log daily activity:", err);
     });
+
+    // Record BKT adaptive skill mastery for exam questions (non-blocking)
+    if (questions && questions.length > 0) {
+      adaptationService.batchRecordAnswer(userId, {
+        answers: questions.map((q) => ({
+          questionId: String(q.questionId),
+          isCorrect: q.isCorrect,
+          isMcq: (q.options && q.options.length > 0) ?? true,
+        })),
+      }).catch((err) => {
+        console.error("Failed to record adaptive exam answers:", err);
+      });
+    }
 
     // Auto-unlock milestones (non-blocking)
     const userObjectId = new mongoose.Types.ObjectId(userId);
