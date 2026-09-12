@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { GraduationCap } from "lucide-react";
+// import { GraduationCap } from "lucide-react";
+import Image from "next/image";
+// import pi from "@/public/pi.png"
 
 interface LogoProps {
   className?: string;
@@ -25,10 +27,11 @@ export function Logo({ className = "", size = "md", showText = true }: LogoProps
   return (
     <Link href="/" className={`flex items-center gap-2.5 group ${className}`}>
       <div
-        className={`relative flex items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 via-violet-500 to-violet-600 ${sizeMap[size]} shadow-md shadow-violet-500/20 transition-all duration-300 group-hover:shadow-violet-500/35 group-hover:scale-105`}
+        className={`relative flex items-center justify-center rounded-xl  ${sizeMap[size]}  transition-all duration-300 group-hover:scale-105`}
       >
-        <GraduationCap className="h-[55%] w-[55%] text-white" strokeWidth={2.2} />
-        <div className="absolute inset-0 rounded-xl bg-white/15 opacity-0 transition-opacity group-hover:opacity-100" />
+        <Image src="/pi.png" alt="logo" width={70} height={50}/>
+        {/* <GraduationCap className="h-[55%] w-[55%] text-white" strokeWidth={2.2} /> */}
+        <div className="absolute inset-0 rounded-xl " />
       </div>
       {showText && (
         <span

@@ -77,12 +77,12 @@ export function RecommendedNextSteps() {
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-violet-500" />
             <h3 className="text-base font-bold text-foreground">
-              Adaptive Recommendations & Revisions
+              Recommended Revisions
             </h3>
           </div>
-          <p className="text-xs text-muted-foreground mt-0.5">
+          {/* <p className="text-xs text-muted-foreground mt-0.5">
             Personalized next lessons and revisions calculated by Bayesian Knowledge Tracing based on your performance
-          </p>
+          </p> */}
         </div>
         <Link
           href="/student/courses"

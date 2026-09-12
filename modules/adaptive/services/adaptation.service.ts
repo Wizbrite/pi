@@ -322,7 +322,7 @@ export class AdaptationService {
 
         if (isSpacedRepetition && mastery < masteredThreshold) {
           type = "review";
-          reason = `Spaced repetition revision — revise ${topic.title} to reinforce long-term retention`;
+          reason = `Repetition revision — revise ${topic.title} to reinforce long-term retention`;
         } else if (mastery < notStartedThreshold) {
           type = "lesson";
           reason = `Start learning ${topic.title} — foundational module ready for you`;

@@ -12,7 +12,7 @@ import {
   GraduationCap,
   FileText,
   UserCheck,
-  ShieldCheck,
+  // ShieldCheck,
   ChevronLeft,
   ChevronRight,
   Target,
