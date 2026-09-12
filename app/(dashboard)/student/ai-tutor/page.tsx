@@ -40,6 +40,7 @@ export default function AITutorPage() {
   // When AI finishes streaming a response, push it to our permanent messages array
   useEffect(() => {
     if (!aiLoading && aiResponse) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setMessages((prev) => [
         ...prev,
         {

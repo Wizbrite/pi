@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   BookOpen,
@@ -11,60 +10,14 @@ import {
   Target,
   Plus,
   Calendar,
-  CheckCircle2,
-  Zap,
+  Sparkles,
 } from "lucide-react";
 import { useAuthStore } from "@/stores/auth-store";
 import { AiTutorBanner, AiTutorFab } from "@/components/student/ai-tutor-banner";
 import { RecommendedNextSteps } from "@/components/student/recommended-next-steps";
-import { ParentRequestNotification } from "@/components/student/parent-request-notification";
-import type { ProgressData } from "@/lib/types/progress";
 
 export default function StudentDashboard() {
   const { user, setUser } = useAuthStore();
-  const [pendingRequests, setPendingRequests] = useState<any[]>([]);
-  const [progressData, setProgressData] = useState<ProgressData | null>(null);
-  const [isLoadingProgress, setIsLoadingProgress] = useState(true);
-
-  useEffect(() => {
-    async function loadDashboardData() {
-      try {
-        const [connRes, progRes] = await Promise.all([
-          fetch("/api/parent/connections"),
-          fetch("/api/student/progress"),
-        ]);
-
-        if (connRes.ok) {
-          const data = await connRes.json();
-          if (data.pending) {
-            setPendingRequests(
-              data.pending.map((p: any) => ({
-                id: p._id,
-                parentName: p.parentId?.fullName || p.parentId?.name || "A parent",
-                parentEmail: p.parentId?.email || "",
-                message: p.message || "I would like to monitor your progress.",
-                sentAt: p.createdAt,
-              }))
-            );
-          }
-        }
-
-        if (progRes.ok) {
-          const progJson = await progRes.json();
-          if (progJson.success && progJson.data) {
-            setProgressData(progJson.data);
-          }
-        }
-      } catch (e) {
-        console.error("Failed to load dashboard data", e);
-      } finally {
-        setIsLoadingProgress(false);
-      }
-    }
-
-    loadDashboardData();
-  }, []);
-
   const handleLevelChange = (level: "Ordinary" | "Advanced") => {
     if (user) {
       setUser({ ...user, gceLevel: level });
@@ -75,64 +28,23 @@ export default function StudentDashboard() {
         email: "student@example.com",
         role: "student",
         gceLevel: level,
-        createdAt: new Date().toISOString(),
+        createdAt: new Date().toISOString()
       });
     }
   };
-
-  // Real stats from database via progress API
-  const subjectsCount = progressData?.overall?.subjectsEnrolled ?? 0;
-  const mockExamsCount = progressData?.overall?.totalExamsTaken ?? 0;
-  const averageScore =
-    progressData?.overall?.overallAccuracy != null && progressData.overall.overallAccuracy > 0
-      ? `${progressData.overall.overallAccuracy}%`
-      : "—";
-  const studyStreak =
-    progressData?.overall?.currentStreak != null
-      ? `${progressData.overall.currentStreak} ${
-          progressData.overall.currentStreak === 1 ? "day" : "days"
-        }`
-      : "0 days";
+  // Mock data state - easily connected to backend
+  const subjectsCount = 0;
+  const mockExamsCount = 0;
+  const averageScore = "—";
+  const studyStreak = "0 days";
 
   // Calculated Days to GCE Exam (target June 1st)
   const daysUntilGce = 280;
 
   const handleAskAi = (question: string) => {
+    // Navigates or opens AI tutor chat session
     console.log("Asking AI Tutor:", question);
   };
-
-  const handleAcceptRequest = async (id: string) => {
-    try {
-      const res = await fetch(`/api/parent/connections/${id}/respond`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accept: true }),
-      });
-      if (res.ok) {
-        setPendingRequests((prev) => prev.filter((r) => r.id !== id));
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const handleRejectRequest = async (id: string) => {
-    try {
-      const res = await fetch(`/api/parent/connections/${id}/respond`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accept: false }),
-      });
-      if (res.ok) {
-        setPendingRequests((prev) => prev.filter((r) => r.id !== id));
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  // Extract recent activities (exams or completed lessons)
-  const recentExams = progressData?.examHistory?.slice(0, 3) || [];
 
   return (
     <div className="space-y-8 pb-12">
@@ -143,7 +55,7 @@ export default function StudentDashboard() {
             Welcome back, {user?.name?.split(" ")[0] || "Student"}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Here&apos;s your learning overview from your database records
+            Here&apos;s your learning overview
           </p>
         </div>
 
@@ -173,104 +85,108 @@ export default function StudentDashboard() {
           </div>
 
           {/* GCE Countdown Banner Pill */}
-          <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-xs font-semibold text-primary shadow-xs backdrop-blur-xs">
-            <Calendar className="h-4 w-4 text-primary" />
-            <span>
-              <strong className="font-extrabold text-primary">{daysUntilGce} Days</strong> until
-              GCE Exams
-            </span>
+          <div className="inline-flex items-center gap-2 rounded-full border border-violet-200/80 bg-violet-50/80 px-4 py-2 text-xs font-semibold text-violet-700 shadow-xs backdrop-blur-xs">
+            <Calendar className="h-4 w-4 text-violet-600" />
+            <span><strong className="font-extrabold text-violet-800">{daysUntilGce} Days</strong> until GCE Exams</span>
           </div>
         </div>
       </div>
 
-      {/* Parent Connection Requests (if any pending) */}
-      {pendingRequests.length > 0 && (
-        <ParentRequestNotification
-          requests={pendingRequests}
-          onAccept={handleAcceptRequest}
-          onReject={handleRejectRequest}
-        />
-      )}
-
       {/* AI Tutor Prominent Banner */}
       <AiTutorBanner onAsk={handleAskAi} />
 
-      {/* Stats Grid with Live DB Data */}
+      {/* Stats Grid with Actionable Empty States */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {/* Subjects Enrolled */}
-        <div className="group flex flex-col justify-between rounded-2xl border border-border bg-card p-5 shadow-xs transition-all duration-300 hover:border-primary/50 hover:shadow-md">
+        <div className="group flex flex-col justify-between rounded-2xl border border-border bg-card p-5 shadow-xs transition-all duration-300 hover:border-violet-300 hover:shadow-md">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs font-medium text-muted-foreground">Courses Enrolled</p>
-              <p className="mt-1 text-2xl font-bold text-foreground">{subjectsCount}</p>
+              <p className="text-xs font-medium text-muted-foreground">
+                Courses Enrolled
+              </p>
+              <p className="mt-1 text-2xl font-bold text-foreground">
+                {subjectsCount > 0 ? subjectsCount : "0"} {}
+              </p>
             </div>
-            <div className="rounded-xl bg-teal-500 p-2.5 shadow-sm">
+            <div className="rounded-xl bg-gradient-to-br from-violet-500 to-teal-600 p-2.5 shadow-sm">
               <BookOpen className="h-5 w-5 text-white" />
             </div>
           </div>
           {subjectsCount === 0 ? (
             <Link
               href="/student/courses"
-              className="mt-4 inline-flex items-center justify-center gap-1.5 rounded-xl border border-primary/20 bg-primary/10 px-3 py-2 text-xs font-bold text-primary transition-all hover:bg-primary/20 hover:text-primary"
+              className="mt-4 inline-flex items-center justify-center gap-1.5 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-bold text-violet-700 transition-all hover:bg-violet-100 hover:text-violet-800"
             >
               <Plus className="h-3.5 w-3.5" />
               Enroll in Courses
             </Link>
           ) : (
-            <p className="mt-3 text-xs text-muted-foreground">Active enrolled courses</p>
+            <p className="mt-3 text-xs text-muted-foreground">Active courses</p>
           )}
         </div>
 
         {/* Mock Exams Taken */}
-        <div className="group flex flex-col justify-between rounded-2xl border border-border bg-card p-5 shadow-xs transition-all duration-300 hover:border-primary/50 hover:shadow-md">
+        <div className="group flex flex-col justify-between rounded-2xl border border-border bg-card p-5 shadow-xs transition-all duration-300 hover:border-violet-300 hover:shadow-md">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs font-medium text-muted-foreground">Mock Exams Taken</p>
-              <p className="mt-1 text-2xl font-bold text-foreground">{mockExamsCount}</p>
+              <p className="text-xs font-medium text-muted-foreground">
+                Mock Exams Taken
+              </p>
+              <p className="mt-1 text-2xl font-bold text-foreground">
+                {mockExamsCount}
+              </p>
             </div>
-            <div className="rounded-xl bg-orange-500 p-2.5 shadow-sm">
+            <div className="rounded-xl bg-gradient-to-br from-violet-500 to-orange-600 p-2.5 shadow-sm">
               <FileText className="h-5 w-5 text-white" />
             </div>
           </div>
           {mockExamsCount === 0 ? (
             <Link
               href="/student/exams"
-              className="mt-4 inline-flex items-center justify-center gap-1.5 rounded-xl border border-primary/20 bg-primary/10 px-3 py-2 text-xs font-bold text-primary transition-all hover:bg-primary/20 hover:text-primary"
+              className="mt-4 inline-flex items-center justify-center gap-1.5 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-bold text-violet-700 transition-all hover:bg-violet-100 hover:text-violet-800"
             >
               <Plus className="h-3.5 w-3.5" />
               Take Mock
             </Link>
           ) : (
-            <p className="mt-3 text-xs text-muted-foreground">Completed mock exams</p>
+            <p className="mt-3 text-xs text-muted-foreground">Completed exams</p>
           )}
         </div>
 
         {/* Average Score */}
-        <div className="group flex flex-col justify-between rounded-2xl border border-border bg-card p-5 shadow-xs transition-all duration-300 hover:border-primary/50 hover:shadow-md">
+        <div className="group flex flex-col justify-between rounded-2xl border border-border bg-card p-5 shadow-xs transition-all duration-300 hover:border-violet-300 hover:shadow-md">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs font-medium text-muted-foreground">Average Score</p>
-              <p className="mt-1 text-2xl font-bold text-foreground">{averageScore}</p>
+              <p className="text-xs font-medium text-muted-foreground">
+                Average Score
+              </p>
+              <p className="mt-1 text-2xl font-bold text-foreground">
+                {averageScore}
+              </p>
             </div>
-            <div className="rounded-xl bg-purple-500 p-2.5 shadow-sm">
+            <div className="rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 p-2.5 shadow-sm">
               <TrendingUp className="h-5 w-5 text-white" />
             </div>
           </div>
-          <p className="mt-3 text-xs text-muted-foreground">Overall quiz & exam accuracy</p>
+          <p className="mt-3 text-xs text-muted-foreground">No score data yet</p>
         </div>
 
         {/* Study Streak */}
-        <div className="group flex flex-col justify-between rounded-2xl border border-border bg-card p-5 shadow-xs transition-all duration-300 hover:border-primary/50 hover:shadow-md">
+        <div className="group flex flex-col justify-between rounded-2xl border border-border bg-card p-5 shadow-xs transition-all duration-300 hover:border-violet-300 hover:shadow-md">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs font-medium text-muted-foreground">Study Streak</p>
-              <p className="mt-1 text-2xl font-bold text-foreground">{studyStreak}</p>
+              <p className="text-xs font-medium text-muted-foreground">
+                Study Streak
+              </p>
+              <p className="mt-1 text-2xl font-bold text-foreground">
+                {studyStreak}
+              </p>
             </div>
-            <div className="rounded-xl bg-rose-500 p-2.5 shadow-sm">
+            <div className="rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 p-2.5 shadow-sm">
               <Target className="h-5 w-5 text-white" />
             </div>
           </div>
-          <p className="mt-3 text-xs text-muted-foreground">Continuous daily study streak</p>
+          <p className="mt-3 text-xs text-muted-foreground">Start studying today</p>
         </div>
       </div>
 
@@ -278,45 +194,51 @@ export default function StudentDashboard() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Link
           href="/student/courses"
-          className="rounded-2xl border border-border bg-card p-6 shadow-xs transition-all hover:border-primary/50 hover:shadow-md"
+          className="rounded-2xl border border-border bg-card p-6 shadow-xs transition-all hover:border-violet-300 hover:shadow-md"
         >
           <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-primary/10 p-3">
-              <BookOpen className="h-5 w-5 text-primary" />
+            <div className="rounded-xl bg-violet-50 p-3">
+              <BookOpen className="h-5 w-5 text-violet-600" />
             </div>
             <div>
               <h3 className="font-semibold text-foreground">Browse Courses</h3>
-              <p className="text-xs text-muted-foreground">Explore GCE courses and start studying</p>
+              <p className="text-xs text-muted-foreground">
+                Explore GCE courses and start studying
+              </p>
             </div>
           </div>
         </Link>
 
         <Link
           href="/student/exams"
-          className="rounded-2xl border border-border bg-card p-6 shadow-xs transition-all hover:border-primary/50 hover:shadow-md"
+          className="rounded-2xl border border-border bg-card p-6 shadow-xs transition-all hover:border-violet-300 hover:shadow-md"
         >
           <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-primary/10 p-3">
-              <FileText className="h-5 w-5 text-primary" />
+            <div className="rounded-xl bg-violet-50 p-3">
+              <FileText className="h-5 w-5 text-violet-600" />
             </div>
             <div>
               <h3 className="font-semibold text-foreground">Start Mock Exam</h3>
-              <p className="text-xs text-muted-foreground">Practice with timed GCE-style questions</p>
+              <p className="text-xs text-muted-foreground">
+                Practice with timed GCE-style questions
+              </p>
             </div>
           </div>
         </Link>
 
         <Link
           href="/student/progress"
-          className="rounded-2xl border border-border bg-card p-6 shadow-xs transition-all hover:border-primary/50 hover:shadow-md"
+          className="rounded-2xl border border-border bg-card p-6 shadow-xs transition-all hover:border-violet-300 hover:shadow-md"
         >
           <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-primary/10 p-3">
-              <BarChart3 className="h-5 w-5 text-primary" />
+            <div className="rounded-xl bg-violet-50 p-3">
+              <BarChart3 className="h-5 w-5 text-violet-600" />
             </div>
             <div>
               <h3 className="font-semibold text-foreground">View Progress</h3>
-              <p className="text-xs text-muted-foreground">Track your improvement over time</p>
+              <p className="text-xs text-muted-foreground">
+                Track your improvement over time
+              </p>
             </div>
           </div>
         </Link>
@@ -326,39 +248,15 @@ export default function StudentDashboard() {
       <div className="space-y-6 rounded-2xl border border-border bg-card p-6 shadow-xs">
         <div>
           <h2 className="text-lg font-semibold text-foreground">Recent Activity</h2>
-          {recentExams.length === 0 ? (
-            <div className="mt-4 flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-muted/50 py-6 text-center">
-              <Clock className="h-8 w-8 text-slate-300" />
-              <p className="mt-2 text-sm font-medium text-muted-foreground">No recent exams taken</p>
-              <p className="text-xs text-slate-400">
-                Start studying or take a practice quiz below to log your activities.
-              </p>
-            </div>
-          ) : (
-            <div className="mt-4 divide-y divide-border rounded-xl border border-border bg-card">
-              {recentExams.map((exam) => (
-                <div key={exam.attemptId} className="flex items-center justify-between p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="rounded-lg bg-primary/10 p-2 text-primary">
-                      <FileText className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-foreground">{exam.paperTitle}</p>
-                      <p className="text-[10px] text-muted-foreground">
-                        Completed: {new Date(exam.completedAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-xs font-black text-foreground">{exam.percentage}%</span>
-                    <span className="block text-[10px] text-muted-foreground">
-                      {exam.score}/{exam.totalMarks} marks
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="mt-4 flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-muted/50 py-6 text-center">
+            <Clock className="h-8 w-8 text-slate-300" />
+            <p className="mt-2 text-sm font-medium text-muted-foreground">
+              No activity yet
+            </p>
+            <p className="text-xs text-slate-400">
+              Start studying or take a practice quiz below to track your progress here.
+            </p>
+          </div>
         </div>
 
         {/* Guided Recommended Next Steps */}
@@ -368,9 +266,8 @@ export default function StudentDashboard() {
       </div>
 
       {/* Floating Action Button (FAB) for AI Tutor */}
-      <Link href="/student/ai-tutor">
-        <AiTutorFab onClick={() => handleAskAi("Quick Help")} />
-      </Link>
+      <Link href="/student/ai-tutor"><AiTutorFab onClick={() => handleAskAi("Quick Help")} /></Link>
     </div>
   );
 }
+

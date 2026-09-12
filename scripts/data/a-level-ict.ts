@@ -30,6 +30,8 @@ export const ictCourseData = {
       description:
         "Fundamentals of computer networks, architectures, hardware components, topologies, protocols, OSI model, peripheral control, and security implementation.",
       order: 1,
+      difficulty:"intermediate",
+      prerequisites:"Number system",
 
       lessons: [
         {
