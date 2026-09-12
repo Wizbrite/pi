@@ -168,12 +168,7 @@ export default function ParentDashboard() {
             >
               <Plus className="h-4 w-4" /> Add Child
             </button>
-            <button
-              onClick={() => setShowMilestoneModal(true)}
-              className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-bold text-foreground shadow-sm transition-all hover:bg-muted"
-            >
-              <Target className="h-4 w-4" /> Set Milestone
-            </button>
+           
           </div>
         </div>
 

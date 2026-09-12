@@ -243,10 +243,10 @@ export default function TeacherStudentDetailView({
         {activeTab === "weakness" && (
           <div className="rounded-3xl border border-border bg-card p-5 shadow-xs sm:p-6">
             <h3 className="text-base font-bold text-foreground flex items-center gap-2">
-              <ShieldAlert className="h-4 w-4 text-amber-500" /> BKT Identified Weak Topics
+              <ShieldAlert className="h-4 w-4 text-amber-500" />Identified student Weak Topics
             </h3>
             <p className="text-xs text-muted-foreground mt-0.5 mb-4">
-              Topics where the student has low Bayesian knowledge probability
+              Low mastery topics
             </p>
 
             {weakAreas.length === 0 ? (
