@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, use, useEffect } from "react";
+import { useState, use, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
   ArrowLeft, Zap, Flame, Clock, BookOpen, FileText,
@@ -9,6 +9,72 @@ import {
 } from "lucide-react";
 import { SendExerciseModal } from "@/components/teacher/send-exercise-modal";
 import type { AssignmentType } from "@/modules/teacher/models/teacher-assignment.model";
+
+// ── Interfaces ──────────────────────────────────────────────────────────
+
+interface StudentInfo {
+  id: string;
+  _id?: string;
+  name: string;
+  email: string;
+  gceLevel: string;
+  createdAt: string;
+}
+
+interface SubjectProgress {
+  courseId: string;
+  title: string;
+  completedLessons: number;
+  totalLessons: number;
+  overallMastery: number;
+}
+
+interface ExamHistoryItem {
+  attemptId: string;
+  paperTitle: string;
+  completedAt: string;
+  percentage: number;
+  score: number;
+  totalMarks: number;
+}
+
+interface OverallProgress {
+  totalXp?: number;
+  currentStreak?: number;
+  longestStreak?: number;
+  overallAccuracy?: number;
+  totalTimeSpentMinutes?: number;
+}
+
+interface FullProgressData {
+  overall?: OverallProgress;
+  subjects?: SubjectProgress[];
+  examHistory?: ExamHistoryItem[];
+}
+
+interface WeakAreaItem {
+  topicTitle: string;
+  courseTitle: string;
+  mastery: number;
+}
+
+interface StudentDetailResponse {
+  success: boolean;
+  student: StudentInfo;
+  progress: FullProgressData;
+  weakAreas: WeakAreaItem[];
+}
+
+interface TeacherAssignmentItem {
+  _id: string;
+  type: AssignmentType;
+  title: string;
+  instructions: string;
+  status: string;
+  studentSubmission?: {
+    answerText?: string;
+  };
+}
 
 function StatCard({
   icon: Icon,
@@ -46,45 +112,61 @@ export default function TeacherStudentDetailView({
 }) {
   const { studentId } = use(params);
 
-  const [studentData, setStudentData] = useState<any>(null);
-  const [weakAreas, setWeakAreas] = useState<any[]>([]);
-  const [assignments, setAssignments] = useState<any[]>([]);
+  const [studentData, setStudentData] = useState<StudentDetailResponse | null>(null);
+  const [weakAreas, setWeakAreas] = useState<WeakAreaItem[]>([]);
+  const [assignments, setAssignments] = useState<TeacherAssignmentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
 
   const [activeTab, setActiveTab] = useState<"overview" | "weakness" | "assignments">("overview");
   const [showExerciseModal, setShowExerciseModal] = useState(false);
+  const [refreshIndex, setRefreshIndex] = useState(0);
 
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      setErrorMsg("");
-
-      const [sRes, aRes] = await Promise.all([
-        fetch(`/api/teacher/students/${studentId}`),
-        fetch(`/api/teacher/assignments?studentId=${studentId}`),
-      ]);
-
-      const sJson = await sRes.json();
-      const aJson = await aRes.json();
-
-      if (!sRes.ok) throw new Error(sJson.message || "Failed to load student progress.");
-
-      setStudentData(sJson);
-      setWeakAreas(sJson.weakAreas || []);
-      if (aRes.ok) {
-        setAssignments(aJson.assignments || []);
-      }
-    } catch (e: any) {
-      setErrorMsg(e.message || "Failed to load student.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const refetch = useCallback(() => {
+    setRefreshIndex((prev) => prev + 1);
+  }, []);
 
   useEffect(() => {
-    loadData();
-  }, [studentId]);
+    if (!studentId) return;
+    let isCancelled = false;
+
+    const fetchData = async () => {
+      try {
+        const [sRes, aRes] = await Promise.all([
+          fetch(`/api/teacher/students/${studentId}`),
+          fetch(`/api/teacher/assignments?studentId=${studentId}`),
+        ]);
+
+        const sJson = await sRes.json().catch(() => ({}));
+        const aJson = await aRes.json().catch(() => ({}));
+
+        if (isCancelled) return;
+
+        if (!sRes.ok) throw new Error(sJson.message || "Failed to load student progress.");
+
+        setStudentData(sJson);
+        setWeakAreas(sJson.weakAreas || []);
+        if (aRes.ok) {
+          setAssignments(aJson.assignments || []);
+        }
+        setErrorMsg("");
+      } catch (e: unknown) {
+        if (isCancelled) return;
+        const msg = e instanceof Error ? e.message : "Failed to load student.";
+        setErrorMsg(msg);
+      } finally {
+        if (!isCancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchData();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [studentId, refreshIndex]);
 
   const handleSendExercise = async (data: {
     studentId: string;
@@ -102,7 +184,7 @@ export default function TeacherStudentDetailView({
     });
     const resData = await res.json();
     if (!res.ok) throw new Error(resData.message || "Failed to send exercise");
-    await loadData();
+    refetch();
   };
 
   if (loading) {
@@ -129,6 +211,7 @@ export default function TeacherStudentDetailView({
 
   const { student, progress } = studentData;
   const overall = progress?.overall || {};
+  const studentDbId = student._id || student.id;
 
   return (
     <>
@@ -141,7 +224,7 @@ export default function TeacherStudentDetailView({
             </Link>
             <div className="flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 text-sm font-bold text-white shrink-0">
-                {student.name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)}
+                {(student.name || "Student").trim().split(/\s+/).map((n: string) => n[0]).filter(Boolean).join("").toUpperCase().slice(0, 2)}
               </div>
               <div>
                 <h1 className="text-xl font-bold text-foreground sm:text-2xl">{student.name}</h1>
@@ -166,12 +249,13 @@ export default function TeacherStudentDetailView({
             { id: "assignments", label: "Assigned Tasks", icon: FileText },
           ].map((t) => {
             const Icon = t.icon;
+            const tabId = t.id as "overview" | "weakness" | "assignments";
             return (
               <button
                 key={t.id}
-                onClick={() => setActiveTab(t.id as any)}
+                onClick={() => setActiveTab(tabId)}
                 className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
-                  activeTab === t.id ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  activeTab === tabId ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 <Icon className="h-3.5 w-3.5" />
@@ -195,7 +279,7 @@ export default function TeacherStudentDetailView({
             <div className="rounded-3xl border border-border bg-card p-5 shadow-xs sm:p-6">
               <h3 className="text-base font-bold text-foreground mb-4">Subject Mastery & Progress</h3>
               <div className="grid gap-3 sm:grid-cols-2">
-                {(progress?.subjects || []).map((sub: any) => (
+                {(progress?.subjects || []).map((sub: SubjectProgress) => (
                   <div key={sub.courseId} className="rounded-2xl border border-border bg-muted/30 p-4">
                     <div className="flex items-start justify-between">
                       <div>
@@ -216,10 +300,10 @@ export default function TeacherStudentDetailView({
             <div className="rounded-3xl border border-border bg-card p-5 shadow-xs sm:p-6">
               <h3 className="text-base font-bold text-foreground mb-4">Mock Exam History</h3>
               {(!progress?.examHistory || progress.examHistory.length === 0) ? (
-                <p className="text-xs text-muted-foreground italic">No mock exams taken yet.</p>
+                <p className="text-xs text-muted-foreground italic">No Exams taken yet.</p>
               ) : (
                 <div className="space-y-2">
-                  {progress.examHistory.map((exam: any) => (
+                  {(progress.examHistory || []).map((exam: ExamHistoryItem) => (
                     <div key={exam.attemptId} className="flex items-center justify-between rounded-xl border border-border bg-background p-3">
                       <div>
                         <p className="text-xs font-bold text-foreground">{exam.paperTitle}</p>
@@ -253,7 +337,7 @@ export default function TeacherStudentDetailView({
               <p className="text-xs text-muted-foreground italic">No weak topics recorded.</p>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2">
-                {weakAreas.map((w: any, i: number) => (
+                {weakAreas.map((w: WeakAreaItem, i: number) => (
                   <div key={i} className="flex items-center justify-between rounded-2xl border border-border bg-muted/30 p-4">
                     <div>
                       <p className="text-xs font-bold text-foreground">{w.topicTitle}</p>
@@ -261,7 +345,7 @@ export default function TeacherStudentDetailView({
                     </div>
                     <div className="text-right">
                       <span className="rounded-lg bg-rose-100 px-2 py-1 text-xs font-bold text-rose-700 dark:bg-rose-950/40 dark:text-rose-400">
-                        {Math.round(w.mastery * 100)}%
+                        {w.mastery > 1 ? Math.round(w.mastery) : Math.round(w.mastery * 100)}%
                       </span>
                     </div>
                   </div>
@@ -288,7 +372,7 @@ export default function TeacherStudentDetailView({
               <p className="text-xs text-muted-foreground italic">No exercises or corrections sent to this student yet.</p>
             ) : (
               <div className="space-y-3">
-                {assignments.map((a: any) => (
+                {assignments.map((a: TeacherAssignmentItem) => (
                   <div key={a._id} className="rounded-2xl border border-border bg-background p-4 space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -317,8 +401,8 @@ export default function TeacherStudentDetailView({
       <SendExerciseModal
         isOpen={showExerciseModal}
         onClose={() => setShowExerciseModal(false)}
-        students={[{ id: student._id, name: student.name }]}
-        defaultStudentId={student._id}
+        students={[{ id: studentDbId, name: student.name }]}
+        defaultStudentId={studentDbId}
         onSend={handleSendExercise}
       />
     </>

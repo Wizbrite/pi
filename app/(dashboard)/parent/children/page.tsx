@@ -51,7 +51,7 @@ export default function ChildrenPage() {
     async function loadData() {
       try {
         const res = await fetch("/api/parent/connections");
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
 
         if (!res.ok) throw new Error(data.message || "Failed to load");
 
@@ -62,21 +62,22 @@ export default function ChildrenPage() {
           connections
             .filter((c: any) => c.status === "accepted" && c.studentId)
             .map(async (conn: any) => {
-              const sId = conn.studentId._id || conn.studentId;
+              const sObj = typeof conn.studentId === "object" && conn.studentId ? conn.studentId : {};
+              const sId = sObj._id || sObj.id || conn.studentId;
               let progressData: any = {};
               try {
                 const pRes = await fetch(`/api/parent-view/${sId}`);
-                const pData = await pRes.json();
+                const pData = await pRes.json().catch(() => ({}));
                 if (pData.progress) progressData = pData.progress;
               } catch (e) {
                 console.warn("Failed to load progress for student", sId);
               }
 
               return {
-                id: sId,
-                name: conn.studentId.fullName || conn.studentId.name || "Student",
-                email: conn.studentId.email || "",
-                gceLevel: conn.studentId.gceLevel || "Advanced",
+                id: String(sId),
+                name: sObj.fullName || sObj.name || "Student",
+                email: sObj.email || "",
+                gceLevel: sObj.gceLevel || "Advanced",
                 overallMastery: progressData.overall?.overallAccuracy || 0,
                 stats: {
                   totalXp: progressData.overall?.totalXp || 0,
@@ -86,16 +87,16 @@ export default function ChildrenPage() {
                   totalLessons: progressData.overall?.totalLessonsCompleted || 10,
                   examsTaken: progressData.overall?.totalExamsTaken || 0,
                 },
-                lastActiveAt: new Date().toISOString(), // Mocking last active since not explicitly in progressData
+                lastActiveAt: new Date().toISOString(),
                 connectedAt: conn.createdAt || new Date().toISOString(),
-                activeMilestones: 0, // Mock for now until we aggregate milestones
+                activeMilestones: 0,
               };
             })
         );
         
         setChildren(loadedChildren);
       } catch (err: any) {
-        setErrorMsg(err.message);
+        setErrorMsg(err.message || "Failed to load children data.");
       } finally {
         setLoading(false);
       }

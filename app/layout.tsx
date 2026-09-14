@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     "A Level",
     "AI tutor",
     "adaptive learning",
-    "mock exams",
+    "Exams",
   ],
 };
 

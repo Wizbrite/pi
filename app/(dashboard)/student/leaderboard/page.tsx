@@ -98,7 +98,7 @@ export default function LeaderboardPage() {
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
           See where you stand among your peers! Climb the ranks by completing
-          lessons and scoring high on mock exams.
+          lessons and scoring high on Exams.
         </p>
       </div>
 
@@ -163,7 +163,7 @@ export default function LeaderboardPage() {
           <Trophy className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
           <h3 className="text-base font-bold text-foreground">No Students on the Leaderboard Yet</h3>
           <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
-            Complete lessons and take mock exams to earn XP points and claim the #1 spot!
+            Complete lessons and take Exams to earn XP points and claim the #1 spot!
           </p>
         </div>
       ) : (

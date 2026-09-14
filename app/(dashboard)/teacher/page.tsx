@@ -79,7 +79,8 @@ export default function TeacherDashboard() {
         await Promise.all(
           accepted.map(async (c: StudentConnection) => {
             if (!c.studentId) return;
-            const sId = c.studentId._id || c.studentId.id;
+            const sId = c.studentId._id || c.studentId.id || "";
+            if (!sId) return;
             try {
               const res = await fetch(`/api/teacher/students/${sId}`);
               if (res.ok) {
@@ -358,7 +359,8 @@ export default function TeacherDashboard() {
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {filteredStudents.map((conn) => {
                 if (!conn.studentId) return null;
-                const sId = conn.studentId._id || conn.studentId.id;
+                const sId = conn.studentId._id || conn.studentId.id || "";
+                if (!sId) return null;
                 const sName = conn.studentId.fullName || conn.studentId.name || "Student";
                 const prog = studentsProgress[sId];
                 const initials = sName.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);

@@ -78,9 +78,9 @@ export default function MockExamsPage() {
               GCE Examination Bank
             </Badge>
           </div>
-          <h1 className="text-2xl font-black text-foreground mt-1 tracking-tight">Mock Examinations</h1>
+          <h1 className="text-2xl font-black text-foreground mt-1 tracking-tight">Exams</h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Select a subject to view past exam papers, timed mock tests, and marking schemes.
+            Select a subject to view past exam papers, timed tests, and marking schemes.
           </p>
         </div>
       </div>

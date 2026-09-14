@@ -3636,7 +3636,7 @@ export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 import mongoose, { Document, Schema } from "mongoose";
 
 // =============================================================================
-//  ExamSubject — a subject available for mock exams
+//  ExamSubject — a subject available for Exams
 // =============================================================================
 export interface IExamSubject {
   slug: string;            // URL-friendly ID, e.g. "ict-a"
@@ -6348,7 +6348,7 @@ export default function LeaderboardPage() {
           Leaderboard
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          See where you stand among your peers! Climb the ranks by completing lessons and scoring high on mock exams.
+          See where you stand among your peers! Climb the ranks by completing lessons and scoring high on Exams.
         </p>
       </div>
 
@@ -10914,7 +10914,7 @@ export default function SubjectExamPapersPage({
         </p>
         <Link href="/student/exams">
           <Button size="sm" className="text-xs mt-2">
-            Return to Mock Exams
+            Return to Exams
           </Button>
         </Link>
       </div>
@@ -10942,7 +10942,7 @@ export default function SubjectExamPapersPage({
           href="/student/exams"
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition mb-3"
         >
-          <ArrowLeft className="w-3.5 h-3.5" /> Back to Mock Exams
+          <ArrowLeft className="w-3.5 h-3.5" /> Back to Exams
         </Link>
         
         <div className="bg-card border border-border rounded-2xl p-6 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -12383,7 +12383,7 @@ export const metadata: Metadata = {
     "A Level",
     "AI tutor",
     "adaptive learning",
-    "mock exams",
+    "Exams",
   ],
 };
 
@@ -12448,9 +12448,9 @@ const features = [
   },
   {
     icon: GraduationCap,
-    title: "Mock Exams",
+    title: "Exams",
     description:
-      "Simulate real GCE exams with timed mock tests and get AI-powered performance reports.",
+      "Simulate real GCE exams with timed tests and get AI-powered performance reports.",
     iconBg: "bg-violet-50 text-violet-600",
   },
   {
@@ -13047,9 +13047,9 @@ export default function MockExamsPage() {
               GCE Examination Bank
             </Badge>
           </div>
-          <h1 className="text-2xl font-black text-foreground mt-1 tracking-tight">Mock Examinations</h1>
+          <h1 className="text-2xl font-black text-foreground mt-1 tracking-tight">Exams</h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Select a subject to view past exam papers, timed mock tests, and marking schemes.
+            Select a subject to view past exam papers, timed tests, and marking schemes.
           </p>
         </div>
       </div>
@@ -16529,12 +16529,12 @@ export default function StudentDashboard() {
           )}
         </div>
 
-        {/* Mock Exams Taken */}
+        {/* Exams Taken */}
         <div className="group flex flex-col justify-between rounded-2xl border border-border bg-card p-5 shadow-xs transition-all duration-300 hover:border-primary/50 hover:shadow-md">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-xs font-medium text-muted-foreground">
-                Mock Exams Taken
+                Exams Taken
               </p>
               <p className="mt-1 text-2xl font-bold text-foreground">
                 {mockExamsCount}
@@ -16714,7 +16714,7 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
   student: [
     { label: "Dashboard", href: "/student", icon: LayoutDashboard },
     { label: "My Courses", href: "/student/courses", icon: BookOpen },
-    { label: "Mock Exams", href: "/student/exams", icon: FileText },
+    { label: "Exams", href: "/student/exams", icon: FileText },
     { label: "Progress", href: "/student/progress", icon: BarChart3 },
     { label: "Practice Hub", href: "/student/practice-hub", icon: Target },
     { label: "Leaderboard", href: "/student/leaderboard", icon: Trophy },

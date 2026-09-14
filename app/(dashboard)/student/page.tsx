@@ -222,11 +222,11 @@ export default function StudentDashboard() {
           )}
         </div>
 
-        {/* Mock Exams Taken */}
+        {/* Exams Taken */}
         <div className="group flex flex-col justify-between rounded-2xl border border-border bg-card p-5 shadow-xs transition-all duration-300 hover:border-primary/50 hover:shadow-md">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs font-medium text-muted-foreground">Mock Exams Taken</p>
+              <p className="text-xs font-medium text-muted-foreground">Exams Taken</p>
               <p className="mt-1 text-2xl font-bold text-foreground">{mockExamsCount}</p>
             </div>
             <div className="rounded-xl bg-orange-500 p-2.5 shadow-sm">
@@ -242,7 +242,7 @@ export default function StudentDashboard() {
               Take Mock
             </Link>
           ) : (
-            <p className="mt-3 text-xs text-muted-foreground">Completed mock exams</p>
+            <p className="mt-3 text-xs text-muted-foreground">Completed Exams</p>
           )}
         </div>
 

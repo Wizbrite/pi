@@ -1,7 +1,7 @@
 import mongoose, { Document, Schema } from "mongoose";
 
 // =============================================================================
-//  ExamSubject — a subject available for mock exams
+//  ExamSubject — a subject available for Exams
 // =============================================================================
 export interface IExamSubject {
   slug: string;            // URL-friendly ID, e.g. "ict-a"

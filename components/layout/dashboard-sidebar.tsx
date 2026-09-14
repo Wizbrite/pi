@@ -37,7 +37,7 @@ const roleNavItems: Record<UserRole, NavItem[]> = {
   student: [
     { label: "Dashboard", href: "/student", icon: LayoutDashboard },
     { label: "My Courses", href: "/student/courses", icon: BookOpen },
-    { label: "Mock Exams", href: "/student/exams", icon: FileText },
+    { label: "Exams", href: "/student/exams", icon: FileText },
     { label: "AI Reports", href: "/student/reports", icon: Brain },
     { label: "Teachers & Tasks", href: "/student/teachers", icon: UserCheck },
     { label: "Progress", href: "/student/progress", icon: BarChart3 },

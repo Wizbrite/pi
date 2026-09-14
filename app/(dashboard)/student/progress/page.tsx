@@ -482,7 +482,7 @@ function StudyTimingSection({ data }: { data: ProgressData }) {
           icon={FileText}
           label="Exams Time"
           value={formatMinutes(examTimeMinutes)}
-          sublabel={`${data.overall.totalExamsTaken} mock exams completed`}
+          sublabel={`${data.overall.totalExamsTaken} Exams completed`}
           iconBg="bg-orange-500/10"
           iconColor="text-orange-500"
         />

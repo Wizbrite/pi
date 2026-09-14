@@ -39,9 +39,9 @@ const features = [
   },
   {
     icon: GraduationCap,
-    title: "Mock Exams",
+    title: "Exams",
     description:
-      "Simulate real GCE exams with timed mock tests and get AI-powered performance reports.",
+      "Simulate real GCE exams with timed tests and get AI-powered performance reports.",
     iconBg: "bg-violet-50 text-violet-600",
   },
   {
@@ -106,23 +106,17 @@ export default function LandingPage() {
 
         <div className="relative mx-auto max-w-7xl px-4 pb-20 pt-20 sm:px-6 sm:pt-28 lg:px-8 lg:pt-36">
           <div className="mx-auto max-w-3xl text-center">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50/80 px-4 py-1.5 text-sm font-medium text-violet-700 shadow-xs">
-              <Sparkles className="h-4 w-4 text-violet-600" />
-              <span>AI-Powered Learning for Cameroon GCE</span>
-            </div>
-
             <h1 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
               Ace your{" "}
               <span className="bg-gradient-to-r from-violet-600 via-violet-700 to-violet-600 bg-clip-text text-transparent">
                 GCE exams
               </span>{" "}
-              with AI assistance
+              with Pi AI assistance
             </h1>
 
             <p className="mt-6 text-lg leading-relaxed text-muted-foreground sm:text-xl">
               Practice with real past questions, get instant AI tutoring, and
-              track your progress — built specifically for Cameroon O Level and
-              A Level students.
+              track your progress
             </p>
 
             <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">

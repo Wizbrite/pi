@@ -105,7 +105,7 @@ export default function SubjectExamPapersPage({
         </p>
         <Link href="/student/exams">
           <Button size="sm" className="text-xs mt-2">
-            Return to Mock Exams
+            Return to Exams
           </Button>
         </Link>
       </div>
@@ -133,7 +133,7 @@ export default function SubjectExamPapersPage({
           href="/student/exams"
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition mb-3"
         >
-          <ArrowLeft className="w-3.5 h-3.5" /> Back to Mock Exams
+          <ArrowLeft className="w-3.5 h-3.5" /> Back to Exams
         </Link>
         
         <div className="bg-card border border-border rounded-2xl p-6 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
