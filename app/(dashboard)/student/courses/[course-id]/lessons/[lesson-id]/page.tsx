@@ -48,7 +48,7 @@ export default function LessonDetailPage({ params }: LessonPageProps) {
         courseTitle: course?.title ?? "Course",
         partContent: activePartContent,
       })
-    : "You are Pi, an AI Tutor for GCE A-Level students.";
+    : "You are Pi, an AI Tutor for GCE A-Level students. **CRITICAL REQUIREMENT:** Format ALL responses with well-structured Markdown (MD). Use headings, bullet points, and bold text for key terms to make the explanation easy to read.";
 
   const { response: aiResponse, isLoading: aiLoading, error: aiError, ask, reset: resetAi } = useAiTutor({
     systemPrompt,

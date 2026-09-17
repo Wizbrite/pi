@@ -48,9 +48,9 @@ class MistralProvider implements AiProvider {
 
   // Model fallback order — all are available on Mistral's free tier
   private readonly modelFallbacks = [
-    "mistral-small-latest",
     "open-mistral-nemo",
     "open-mistral-7b",
+    "mistral-small-latest",
   ];
 
   constructor(private apiKey: string) {}
@@ -64,7 +64,7 @@ class MistralProvider implements AiProvider {
     } = options;
 
     // Build the ordered list of models to try
-    const requestedModel = options.model || "mistral-small-latest";
+    const requestedModel = options.model || "open-mistral-nemo";
     const modelCandidates = Array.from(
       new Set([requestedModel, ...this.modelFallbacks])
     );

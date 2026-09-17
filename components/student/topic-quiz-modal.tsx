@@ -97,7 +97,7 @@ export function TopicQuizModal({
         studentAnswer: userAnswer,
         explanation: currentQ.explanation ?? "",
       })
-    : `You are Pi, an AI Tutor for GCE A-Level ${courseTitle} students.`;
+    : `You are Pi, an AI Tutor for GCE A-Level ${courseTitle} students. **CRITICAL REQUIREMENT:** Format ALL responses with well-structured Markdown (MD). Use headings, bullet points, and bold text for key terms to make the explanation easy to read.`;
 
   const { response: aiResponse, isLoading: aiLoading, error: aiError, ask, reset: resetAi } = useAiTutor({
     systemPrompt: quizSystemPrompt,
