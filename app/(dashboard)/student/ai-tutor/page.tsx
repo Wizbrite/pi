@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { Send, Bot, User, Sparkles, RefreshCw, Loader2 } from "lucide-react";
 import { useAiTutor } from "@/hooks/use-ai-tutor";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface Message {
   id: string;
@@ -137,7 +138,7 @@ export default function AITutorPage() {
               }`}
             >
               <div className="prose prose-sm dark:prose-invert max-w-none">
-                <ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {msg.text}
                 </ReactMarkdown>
               </div>
@@ -166,7 +167,7 @@ export default function AITutorPage() {
              )}
              {aiResponse && (
                 <div className="prose prose-sm dark:prose-invert max-w-none">
-                  <ReactMarkdown>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {aiResponse}
                   </ReactMarkdown>
                 </div>

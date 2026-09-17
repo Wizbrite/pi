@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePracticeStore, SavedMistake } from "@/stores/practice-store";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 export default function PracticeHubPage() {
   const { mistakes, removeMistake } = usePracticeStore();
@@ -174,7 +176,7 @@ export default function PracticeHubPage() {
               <CheckCircle2 className="w-12 h-12 text-violet-500 mx-auto" />
               <h3 className="text-lg font-bold text-[#0a0d1d] dark:text-white">Mistake Bank Clear!</h3>
               <p className="text-sm text-slate-600 dark:text-slate-400 max-w-md mx-auto">
-                You currently have no saved mistakes. Keep practicing lessons to automatically log questions you'd like to revisit!
+                You currently have no saved mistakes. Keep practicing lessons to automatically log questions you would like to revisit!
               </p>
             </div>
           )}
@@ -380,9 +382,11 @@ function MistakeQuizModal({
                       </form>
 
                       {aiResponse && (
-                        <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed pt-1">
-                          {aiResponse}
-                        </p>
+                        <div className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed pt-1 prose prose-sm dark:prose-invert max-w-none">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {aiResponse}
+                          </ReactMarkdown>
+                        </div>
                       )}
                     </div>
                   )}

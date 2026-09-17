@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAiProvider, AiMessage } from "@/lib/ai/provider";
+import { GLOBAL_AI_FORMATTING_INSTRUCTION } from "@/lib/ai/config";
 
 /**
  * POST /api/ai/chat
@@ -35,6 +36,13 @@ export async function POST(request: NextRequest) {
         { success: false, message: "messages array is required" },
         { status: 400 }
       );
+    }
+
+    const systemMsgIndex = messages.findIndex((m) => m.role === "system");
+    if (systemMsgIndex >= 0) {
+      messages[systemMsgIndex].content += `\n\n${GLOBAL_AI_FORMATTING_INSTRUCTION}`;
+    } else {
+      messages.unshift({ role: "system", content: GLOBAL_AI_FORMATTING_INSTRUCTION });
     }
 
     const provider = getAiProvider();

@@ -4,6 +4,7 @@ import { User } from "@/modules/auth/models/user.model";
 import { ProgressService } from "@/modules/progress/services/progress.service";
 import { AdaptationService } from "@/modules/adaptive/services/adaptation.service";
 import { getAiProvider } from "@/lib/ai/provider";
+import { GLOBAL_AI_FORMATTING_INSTRUCTION } from "@/lib/ai/config";
 import { getUserId } from "@/lib/auth/get-user";
 import LearnerProfile from "@/modules/adaptive/models/learner-profile.model";
 import { Types } from "mongoose";
@@ -111,8 +112,9 @@ export async function GET() {
     // ── Build the AI prompt ───────────────────────────────────────────────
     const systemPrompt = `You are Pi's personal AI study coach for GCE students in Cameroon. 
 You analyze student learning data and produce precise, encouraging, and highly actionable personal study reports. 
-Address the student directly as "you". Respond ONLY with valid JSON matching the schema exactly.
-The student's name is "${studentName}".`;
+The student's name is "${studentName}".
+
+${GLOBAL_AI_FORMATTING_INSTRUCTION}`;
 
     const dataContext = {
       studentName,

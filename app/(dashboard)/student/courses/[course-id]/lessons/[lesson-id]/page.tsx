@@ -3,6 +3,7 @@
 import React, { use, useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -205,7 +206,7 @@ export default function LessonDetailPage({ params }: LessonPageProps) {
                 <div className="space-y-2">
                   <h3 className="text-lg font-bold text-foreground">{part.title}</h3>
                   <div className="prose prose-sm md:prose-base dark:prose-invert max-w-none text-muted-foreground leading-relaxed">
-                    <ReactMarkdown>{part.content}</ReactMarkdown>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{part.content}</ReactMarkdown>
                   </div>
                 </div>
 
@@ -291,7 +292,7 @@ export default function LessonDetailPage({ params }: LessonPageProps) {
               )}
               {aiResponse && (
                 <div className="prose prose-sm dark:prose-invert max-w-none">
-                  <ReactMarkdown>{aiResponse}</ReactMarkdown>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{aiResponse}</ReactMarkdown>
                 </div>
               )}
               {aiError && <p className="text-xs text-red-500 mt-1">{aiError}</p>}
@@ -375,7 +376,7 @@ export default function LessonDetailPage({ params }: LessonPageProps) {
                   )}
                   {aiResponse && (
                     <div className="prose prose-sm dark:prose-invert max-w-none">
-                      <ReactMarkdown>{aiResponse}</ReactMarkdown>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{aiResponse}</ReactMarkdown>
                     </div>
                   )}
                   {aiError && <p className="text-xs text-red-500">{aiError}</p>}

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAiProvider, type AiMessage } from "@/lib/ai/provider";
+import { GLOBAL_AI_FORMATTING_INSTRUCTION } from "@/lib/ai/config";
 import { getUserId } from "@/lib/auth/get-user";
 
 type Evaluation = {
@@ -43,7 +44,9 @@ Respond strictly in JSON format with exactly two fields:
 {
   "isCorrect": boolean,
   "explanation": "A short, encouraging explanation of why they are right or wrong."
-}`;
+}
+
+${GLOBAL_AI_FORMATTING_INSTRUCTION}`;
 
     const messages: AiMessage[] = [
       { role: "system", content: systemPrompt },
