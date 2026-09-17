@@ -10,7 +10,7 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-br from-violet-50/80 via-violet-50/40 to-slate-50 px-4 py-12">
+    <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-br from-violet-50/80 via-violet-50/40 to-slate-50 dark:from-[#0a0d1d] dark:via-[#0a0d1d] dark:to-[#0a0d1d] px-4 py-12">
       {/* Ambient background glow */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute left-1/4 top-0 h-[500px] w-[500px] -translate-y-1/2 rounded-full bg-violet-400/10 blur-[120px]" />

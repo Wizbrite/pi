@@ -7,7 +7,7 @@ import ReactMarkdown from "react-markdown";
 
 interface Message {
   id: string;
-  sender: "ai" | "user";
+  sender: "Pi" | "user";
   text: string;
   timestamp: string;
 }
@@ -16,7 +16,7 @@ export default function AITutorPage() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
-      sender: "ai",
+      sender: "Pi",
       text: "Hello! I am Pi, your AI GCE Study Assistant. Ask me anything about your subjects, past questions, or difficult concepts!",
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     },
@@ -25,7 +25,13 @@ export default function AITutorPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { response: aiResponse, isLoading: aiLoading, error: aiError, ask, reset: resetAi } = useAiTutor({
-    systemPrompt: "You are Pi, an expert AI GCE Study Assistant. Your goal is to tutor students preparing for their O-Level and A-Level examinations. Be encouraging, concise, and accurate.",
+    systemPrompt: `You are Pi, an expert AI GCE Study Assistant.
+     Your goal is to tutor students preparing for their O-Level 
+     and A-Level examinations. Be encouraging, concise, and accurate.
+     If the student asks any question out of topic 
+     (for example: what is the latest fashion trend,what is blaaa, 
+     i love pussy or any pervert unrelated stuff etc) do not respond to him. tell him he is off topic 
+     and that you are only there to answer questions or worries concerning the Cameroon GCE`,
     stream: true,
   });
 
@@ -45,7 +51,7 @@ export default function AITutorPage() {
         ...prev,
         {
           id: Date.now().toString(),
-          sender: "ai",
+          sender: "Pi",
           text: aiResponse,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         }

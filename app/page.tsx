@@ -29,7 +29,7 @@ import { Footer } from "@/components/layout/footer";
 // ─── Typewriter Hook ────────────────────────────────────────────
 const phrases = [
   "Pi AI assistance",
-  "10,000+ past questions",
+  "100+ past questions",
   "24/7 AI tutoring",
   "smart exam analytics",
 ];
@@ -248,7 +248,7 @@ export default function LandingPage() {
 
           {/* Typewriter sub-line */}
           <div className="mt-4 flex items-baseline justify-center gap-2 text-xl sm:text-2xl font-semibold text-slate-300">
-            <span>Powered by</span>
+            {/* <span>Powered by</span> */}
             <span className="text-violet-400 font-black min-w-[14ch] text-left">
               {typedText}
               <span className={`inline-block w-0.5 h-[1.2em] bg-violet-400 ml-0.5 align-middle transition-opacity duration-100 ${blink ? "opacity-100" : "opacity-0"}`} />
