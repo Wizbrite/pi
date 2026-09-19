@@ -30,7 +30,7 @@ const questionSchema = new Schema<IQuestionDocument>(
     questionText: { type: String, required: true, trim: true },
     options: { type: [String], default: [] },
     correctAnswer: { type: String, required: true, trim: true },
-    explanation: { type: String, required: true, trim: true },
+    explanation: { type: String, default: "", trim: true },
     difficulty: {
       type: String,
       enum: ["easy", "medium", "hard"],

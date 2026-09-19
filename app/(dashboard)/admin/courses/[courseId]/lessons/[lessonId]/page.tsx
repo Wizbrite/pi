@@ -119,11 +119,11 @@ export default function EditLessonPage({ params }: { params: Promise<{ courseId:
   const handleOpenEditQuestion = (q: any) => {
     setEditingQuestionId(q._id);
     setQFormData({
-      text: q.text || "",
+      text: q.questionText || q.text || "",
       type: q.type || "mcq",
       options: q.options && q.options.length > 0 ? q.options : ["", "", "", ""],
       correctAnswerIndex: q.correctAnswerIndex ?? 0,
-      correctAnswerText: q.correctAnswerText || "",
+      correctAnswerText: q.correctAnswer || q.correctAnswerText || "",
       explanation: q.explanation || "",
       difficulty: q.difficulty || "beginner",
       xpPoints: q.xpPoints ?? 10,
@@ -333,7 +333,7 @@ export default function EditLessonPage({ params }: { params: Promise<{ courseId:
                         <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-purple-500/10 text-purple-600">
                           Q#{idx + 1} • {q.type === "mcq" ? "MCQ" : "Open-ended"} • {q.difficulty} • {q.xpPoints ?? 10} XP
                         </span>
-                        <p className="text-sm font-semibold text-foreground">{q.text}</p>
+                        <p className="text-sm font-semibold text-foreground">{q.questionText || q.text}</p>
                       </div>
 
                       <div className="flex items-center gap-1 shrink-0">

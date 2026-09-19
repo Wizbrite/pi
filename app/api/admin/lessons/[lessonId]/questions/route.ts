@@ -24,14 +24,39 @@ export async function POST(request: Request, { params }: { params: Promise<{ les
     const lesson = await Lesson.findById(lessonId);
     if (!lesson) return NextResponse.json({ success: false, message: "Lesson not found" }, { status: 404 });
     const body = await request.json();
+
+    const questionText = body.questionText || body.text || "";
+
+    let correctAnswer = body.correctAnswer || "";
+    if (!correctAnswer) {
+      if (body.type === "mcq" && Array.isArray(body.options) && body.options.length > 0) {
+        const idx = typeof body.correctAnswerIndex === "number" ? body.correctAnswerIndex : 0;
+        correctAnswer = body.options[idx] || body.options[0] || "";
+      } else if (body.correctAnswerText) {
+        correctAnswer = body.correctAnswerText;
+      }
+    }
+
+    let difficulty: "easy" | "medium" | "hard" = "medium";
+    if (body.difficulty === "beginner" || body.difficulty === "easy") difficulty = "easy";
+    else if (body.difficulty === "intermediate" || body.difficulty === "medium") difficulty = "medium";
+    else if (body.difficulty === "advanced" || body.difficulty === "hard") difficulty = "hard";
+
     const question = await Question.create({
-      ...body,
+      questionText,
+      correctAnswer: correctAnswer || "N/A",
+      explanation: body.explanation || "",
+      difficulty,
+      type: body.type || (body.options?.length > 0 ? "mcq" : "open-ended"),
+      options: Array.isArray(body.options) ? body.options : [],
+      xpPoints: typeof body.xpPoints === "number" ? body.xpPoints : 10,
       lessonId,
       courseId: lesson.courseId,
-      topicId: lesson.topicId
+      topicId: lesson.topicId || undefined,
     });
     return NextResponse.json({ success: true, data: question });
   } catch (error: any) {
+    console.error("[POST /api/admin/lessons/[lessonId]/questions] Error:", error);
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }
