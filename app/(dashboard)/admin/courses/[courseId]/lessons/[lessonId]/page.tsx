@@ -331,7 +331,7 @@ export default function EditLessonPage({ params }: { params: Promise<{ courseId:
                     <div className="flex items-start justify-between gap-2">
                       <div className="space-y-1">
                         <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-purple-500/10 text-purple-600">
-                          Q#{idx + 1} • {q.type === "mcq" ? "MCQ" : "Open-ended"} • {q.difficulty}
+                          Q#{idx + 1} • {q.type === "mcq" ? "MCQ" : "Open-ended"} • {q.difficulty} • {q.xpPoints ?? 10} XP
                         </span>
                         <p className="text-sm font-semibold text-foreground">{q.text}</p>
                       </div>
@@ -406,7 +406,7 @@ export default function EditLessonPage({ params }: { params: Promise<{ courseId:
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-1">
                   <label className="text-xs font-semibold">Question Type</label>
                   <select
@@ -430,6 +430,18 @@ export default function EditLessonPage({ params }: { params: Promise<{ courseId:
                     <option value="intermediate">Intermediate</option>
                     <option value="advanced">Advanced</option>
                   </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold">XP Points</label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={qFormData.xpPoints}
+                    onChange={(e) => setQFormData((prev) => ({ ...prev, xpPoints: Number(e.target.value) }))}
+                    className="w-full px-2.5 py-1.5 bg-background border border-input rounded-md text-xs font-bold text-purple-600"
+                  />
                 </div>
               </div>
 

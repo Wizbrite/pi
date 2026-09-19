@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/db/mongodb";
 import Question from "@/modules/course/models/question.model";
+import { getUserRole } from "@/lib/auth/get-user";
 
 export async function PUT(request: Request, { params }: { params: Promise<{ questionId: string }> }) {
   try {
-    if (request.headers.get("x-user-role") !== "admin") return NextResponse.json({ success: false, message: "Forbidden" }, { status: 403 });
+    const roleHeader = request.headers.get("x-user-role") || await getUserRole();
+    if (roleHeader !== "admin") return NextResponse.json({ success: false, message: "Forbidden" }, { status: 403 });
     await connectToDatabase();
     const { questionId } = await params;
     const body = await request.json();
@@ -17,7 +19,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ ques
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ questionId: string }> }) {
   try {
-    if (request.headers.get("x-user-role") !== "admin") return NextResponse.json({ success: false, message: "Forbidden" }, { status: 403 });
+    const roleHeader = request.headers.get("x-user-role") || await getUserRole();
+    if (roleHeader !== "admin") return NextResponse.json({ success: false, message: "Forbidden" }, { status: 403 });
     await connectToDatabase();
     const { questionId } = await params;
     await Question.findByIdAndDelete(questionId);

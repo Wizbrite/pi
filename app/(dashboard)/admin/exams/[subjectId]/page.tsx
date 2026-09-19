@@ -31,7 +31,7 @@ export default function AdminExamSubjectPapersPage({ params }: { params: Promise
     year: new Date().getFullYear(),
     paperNumber: 1,
     title: "Paper 1 (MCQ)",
-    type: "mcq" as "mcq" | "essay" | "practical",
+    type: "mcq" as "mcq" | "structural" | "practical",
     durationMinutes: 90,
     totalMarks: 50,
   });
@@ -249,8 +249,8 @@ export default function AdminExamSubjectPapersPage({ params }: { params: Promise
                     className="w-full px-2 py-1.5 bg-background border border-input rounded-md text-xs"
                   >
                     <option value="mcq">MCQ</option>
-                    <option value="essay">Essay / Structured</option>
-                    <option value="practical">Practical</option>
+                    <option value="Structured">Essay / Structured</option>
+                    {/* <option value="practical">Practical</option> */}
                   </select>
                 </div>
 

@@ -89,6 +89,7 @@ export interface IExamQuestion {
   correctAnswerIndex: number; // -1 for structured questions
   correctAnswerText: string;  // Model answer text (for structured) or the option text (for MCQ)
   marks: number;
+  xpPoints?: number;
   topic: string;
   markingSchemeNotes: string;
   aiExplanation: string;
@@ -109,6 +110,7 @@ const examQuestionSchema = new Schema<IExamQuestionDocument>(
     correctAnswerIndex: { type: Number, required: true },
     correctAnswerText: { type: String, required: true, trim: true },
     marks: { type: Number, required: true },
+    xpPoints: { type: Number, default: 10 },
     topic: { type: String, required: true, trim: true },
     markingSchemeNotes: { type: String, default: "" },
     aiExplanation: { type: String, default: "" },

@@ -32,6 +32,7 @@ export default function AdminExamPaperQuestionsPage({ params }: { params: Promis
     correctAnswerIndex: 0,
     correctAnswerText: "",
     marks: 1,
+    xpPoints: 10,
     topic: "",
     markingSchemeNotes: "",
     aiExplanation: "",
@@ -90,6 +91,7 @@ export default function AdminExamPaperQuestionsPage({ params }: { params: Promis
           correctAnswerIndex: 0,
           correctAnswerText: "",
           marks: 1,
+          xpPoints: 10,
           topic: "",
           markingSchemeNotes: "",
           aiExplanation: "",
@@ -162,6 +164,9 @@ export default function AdminExamPaperQuestionsPage({ params }: { params: Promis
                       <span className="text-xs font-bold text-amber-600 bg-amber-500/10 px-2 py-0.5 rounded">
                         {q.marks} Mark{q.marks > 1 ? "s" : ""}
                       </span>
+                      <span className="text-xs font-bold text-purple-600 bg-purple-500/10 px-2 py-0.5 rounded">
+                        {q.xpPoints ?? 10} XP
+                      </span>
                     </div>
                     <p className="text-base font-bold text-foreground pt-1">{q.text}</p>
                   </div>
@@ -226,7 +231,7 @@ export default function AdminExamPaperQuestionsPage({ params }: { params: Promis
             </div>
 
             <form onSubmit={handleAddQuestion} className="space-y-4">
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-4 gap-3">
                 <div className="space-y-1">
                   <label className="text-xs font-semibold">Question No.</label>
                   <input
@@ -251,10 +256,22 @@ export default function AdminExamPaperQuestionsPage({ params }: { params: Promis
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold">Syllabus Topic Tag</label>
+                  <label className="text-xs font-semibold">XP Points</label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    value={formData.xpPoints}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, xpPoints: Number(e.target.value) }))}
+                    className="w-full px-3 py-1.5 bg-background border border-input rounded-md text-sm font-bold text-purple-600"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold">Topic Tag</label>
                   <input
                     type="text"
-                    placeholder="e.g. Data Protection"
+                    placeholder="e.g. Protection"
                     value={formData.topic}
                     onChange={(e) => setFormData((prev) => ({ ...prev, topic: e.target.value }))}
                     className="w-full px-3 py-1.5 bg-background border border-input rounded-md text-sm"

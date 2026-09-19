@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/db/mongodb";
 import { ExamPaper } from "@/modules/course/models/exam.model";
+import { getUserRole } from "@/lib/auth/get-user";
 
 export async function GET(request: Request, { params }: { params: Promise<{ subjectId: string }> }) {
   try {
@@ -15,7 +16,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ subj
 
 export async function POST(request: Request, { params }: { params: Promise<{ subjectId: string }> }) {
   try {
-    if (request.headers.get("x-user-role") !== "admin") return NextResponse.json({ success: false, message: "Forbidden" }, { status: 403 });
+    const roleHeader = request.headers.get("x-user-role") || await getUserRole();
+    if (roleHeader !== "admin") return NextResponse.json({ success: false, message: "Forbidden" }, { status: 403 });
     await connectToDatabase();
     const { subjectId } = await params;
     const body = await request.json();

@@ -28,7 +28,7 @@ export default function AdminExamsPage() {
     title: "",
     code: "",
     level: "A-Level" as "O-Level" | "A-Level",
-    category: "Science & Tech",
+    category: "Science",
     description: "",
     slug: "",
   });
