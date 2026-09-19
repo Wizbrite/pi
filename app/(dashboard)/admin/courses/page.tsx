@@ -1,228 +1,214 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { 
+  BookOpen, 
+  Plus, 
+  Trash2, 
+  Edit3, 
+  Layers, 
+  ArrowLeft, 
+  Loader2, 
+  Search,
+  ChevronRight
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, ArrowLeft, Loader2 } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 
-interface TopicInput {
-  title: string;
-  description: string;
-}
-
-export default function CreateCoursePage() {
+export default function AdminCoursesPage() {
   const router = useRouter();
-  
-  const [formData, setFormData] = useState({
-    title: "",
-    subject: "",
-    level: "O-Level" as "O-Level" | "A-Level",
-    description: "",
-  });
+  const [courses, setCourses] = useState<any[]>([]);
+  const [levelFilter, setLevelFilter] = useState<"ALL" | "O-Level" | "A-Level">("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const [topics, setTopics] = useState<TopicInput[]>([
-    { title: "", description: "" }
-  ]);
-
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Handle Main Course Fields
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  };
-
-  // Dynamic Topic Handlers
-  const handleTopicChange = (index: number, field: keyof TopicInput, value: string) => {
-    setTopics((prev) => {
-      const updated = [...prev];
-      updated[index][field] = value;
-      return updated;
-    });
-  };
-
-  const addTopic = () => {
-    setTopics((prev) => [...prev, { title: "", description: "" }]);
-  };
-
-  const removeTopic = (index: number) => {
-    setTopics((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  // Form Submission
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setError(null);
-
-    // Filter out completely empty topic rows
-    const cleanedTopics = topics.filter((t) => t.title.trim() !== "");
-
+  const fetchCourses = useCallback(async () => {
+    setIsLoading(true);
     try {
-      const res = await fetch("/api/courses", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...formData,
-          topics: cleanedTopics,
-        }),
-      });
-
+      const res = await fetch("/api/courses");
       const json = await res.json();
-      if (!res.ok || !json.success) {
-        throw new Error(json.message || "Failed to create course");
+      if (json.success) {
+        setCourses(json.data);
       }
-
-      router.push("/admin/courses");
-      router.refresh();
-    } catch (err: any) {
-      setError(err.message || "Something went wrong. Please try again.");
+    } catch (err) {
+      console.error("Failed to fetch courses:", err);
     } finally {
-      setIsSubmitting(false);
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCourses();
+  }, [fetchCourses]);
+
+  const handleDeleteCourse = async (courseId: string, title: string) => {
+    if (!confirm(`Are you sure you want to delete "${title}"? All associated lessons and questions will be deleted.`)) {
+      return;
+    }
+    setDeletingId(courseId);
+    try {
+      const res = await fetch(`/api/courses/${courseId}`, { method: "DELETE" });
+      const json = await res.json();
+      if (json.success) {
+        setCourses((prev) => prev.filter((c) => c._id !== courseId));
+      }
+    } catch (err) {
+      console.error("Failed to delete course:", err);
+    } finally {
+      setDeletingId(null);
     }
   };
 
+  const filteredCourses = courses.filter((c) => {
+    const matchesLevel = levelFilter === "ALL" || c.level === levelFilter;
+    const matchesSearch =
+      (c.title || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (c.subject || "").toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesLevel && matchesSearch;
+  });
+
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6">
-      <Button variant="ghost" onClick={() => router.back()} className="gap-2 text-muted-foreground">
-        <ArrowLeft className="h-4 w-4" /> Back to Courses
-      </Button>
+    <div className="p-6 max-w-7xl mx-auto space-y-6">
+      <div className="flex items-center justify-between">
+        <Button variant="ghost" onClick={() => router.push("/admin")} className="gap-2 text-muted-foreground">
+          <ArrowLeft className="w-4 h-4" /> Back to Dashboard
+        </Button>
+        <Link href="/admin/courses/new">
+          <Button className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2">
+            <Plus className="w-4 h-4" /> Create New Course
+          </Button>
+        </Link>
+      </div>
 
-      <Card className="bg-card text-card-foreground border-border shadow-xs">
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold">Create New Course</CardTitle>
-          <CardDescription>
-            Add a new subject course and define its main syllabus topics.
-          </CardDescription>
-        </CardHeader>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+            <BookOpen className="w-6 h-6 text-emerald-600" /> Course & Syllabus Management
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Manage GCE O-Level and A-Level courses, syllabus topics, and lessons.
+          </p>
+        </div>
+      </div>
 
-        <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-6">
-            {error && (
-              <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-md">
-                {error}
-              </div>
-            )}
-
-            {/* Title & Level Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="md:col-span-2 space-y-2">
-                <label className="text-sm font-medium">Course Title</label>
-                <input
-                  type="text"
-                  name="title"
-                  required
-                  placeholder="e.g. Pure Mathematics & Mechanics"
-                  value={formData.title}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 bg-background border border-input rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">GCE Level</label>
-                <select
-                  name="level"
-                  value={formData.level}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 bg-background border border-input rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <option value="O-Level">O-Level</option>
-                  <option value="A-Level">A-Level</option>
-                </select>
-              </div>
+      {/* Filters */}
+      <Card className="bg-card border-border shadow-xs">
+        <CardContent className="p-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <Button
+                variant={levelFilter === "ALL" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setLevelFilter("ALL")}
+              >
+                All Levels ({courses.length})
+              </Button>
+              <Button
+                variant={levelFilter === "O-Level" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setLevelFilter("O-Level")}
+              >
+                O-Level ({courses.filter((c) => c.level === "O-Level").length})
+              </Button>
+              <Button
+                variant={levelFilter === "A-Level" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setLevelFilter("A-Level")}
+              >
+                A-Level ({courses.filter((c) => c.level === "A-Level").length})
+              </Button>
             </div>
 
-            {/* Subject */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Subject Category</label>
+            <div className="relative w-full md:w-64">
+              <Search className="w-4 h-4 absolute left-3 top-3 text-muted-foreground" />
               <input
                 type="text"
-                name="subject"
-                required
-                placeholder="e.g. Mathematics, Physics, Chemistry"
-                value={formData.subject}
-                onChange={handleChange}
-                className="w-full px-3 py-2 bg-background border border-input rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="Search course or subject..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-3 py-1.5 bg-background border border-input rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
-
-            {/* Description */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Description</label>
-              <textarea
-                name="description"
-                rows={3}
-                placeholder="Provide a brief summary of what this course covers..."
-                value={formData.description}
-                onChange={handleChange}
-                className="w-full px-3 py-2 bg-background border border-input rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-
-            <hr className="border-border" />
-
-            {/* Dynamic Topics Section */}
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h3 className="text-md font-semibold text-foreground">Syllabus Topics</h3>
-                  <p className="text-xs text-muted-foreground">Define modules/topics for this course.</p>
-                </div>
-                <Button type="button" variant="outline" onClick={addTopic} size="sm" className="gap-1">
-                  <Plus className="h-4 w-4" /> Add Topic
-                </Button>
-              </div>
-
-              {topics.map((topic, index) => (
-                <div key={index} className="p-4 border border-border rounded-lg bg-muted/40 space-y-3 relative">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs font-semibold text-muted-foreground uppercase">
-                      Topic #{index + 1}
-                    </span>
-                    {topics.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeTopic(index)}
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50 h-8 w-8"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-
-                  <input
-                    type="text"
-                    placeholder="Topic Title (e.g. Quadratic Equations)"
-                    value={topic.title}
-                    onChange={(e) => handleTopicChange(index, "title", e.target.value)}
-                    className="w-full px-3 py-1.5 bg-background border border-input rounded-md text-sm"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Brief Topic Description (Optional)"
-                    value={topic.description}
-                    onChange={(e) => handleTopicChange(index, "description", e.target.value)}
-                    className="w-full px-3 py-1.5 bg-background border border-input rounded-md text-sm"
-                  />
-                </div>
-              ))}
-            </div>
-          </CardContent>
-
-          <CardFooter className="flex justify-end gap-3 border-t border-border pt-4">
-            <Button type="button" variant="outline" onClick={() => router.back()}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting} className="bg-primary text-primary-foreground">
-              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save & Publish Course"}
-            </Button>
-          </CardFooter>
-        </form>
+          </div>
+        </CardContent>
       </Card>
+
+      {/* Course Grid */}
+      {isLoading ? (
+        <div className="py-16 flex flex-col items-center justify-center space-y-3">
+          <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+          <p className="text-sm text-muted-foreground">Loading courses...</p>
+        </div>
+      ) : filteredCourses.length === 0 ? (
+        <div className="py-16 text-center border border-dashed border-border rounded-2xl bg-muted/20 space-y-3">
+          <BookOpen className="w-10 h-10 mx-auto text-muted-foreground opacity-50" />
+          <p className="text-base font-semibold text-foreground">No courses found</p>
+          <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+            Get started by adding your first admin course to the platform.
+          </p>
+          <Link href="/admin/courses/new" className="inline-block mt-2">
+            <Button size="sm" className="gap-2">
+              <Plus className="w-4 h-4" /> Create Course Now
+            </Button>
+          </Link>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredCourses.map((course) => (
+            <Card key={course._id} className="bg-card border-border hover:border-emerald-500/50 transition-all shadow-xs flex flex-col justify-between">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 bg-emerald-500/10 px-2.5 py-0.5 rounded-full">
+                    GCE {course.level}
+                  </span>
+                  <span className="text-xs text-muted-foreground font-medium">
+                    {course.subject}
+                  </span>
+                </div>
+                <CardTitle className="text-xl font-bold">{course.title}</CardTitle>
+                <CardDescription className="line-clamp-2 text-xs text-muted-foreground mt-1">
+                  {course.description || "No description provided."}
+                </CardDescription>
+              </CardHeader>
+
+              <CardContent className="space-y-4 pt-0">
+                <div className="flex items-center justify-between text-xs text-muted-foreground border-t border-border pt-3">
+                  <span className="flex items-center gap-1 font-medium">
+                    <Layers className="w-3.5 h-3.5 text-emerald-600" />
+                    {course.topics?.length || 0} Syllabus Topics
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between gap-2 pt-1">
+                  <Link href={`/admin/courses/${course._id}`} className="w-full">
+                    <Button variant="outline" className="w-full justify-between text-xs font-semibold hover:bg-emerald-50 dark:hover:bg-emerald-950/40">
+                      <span>Manage Syllabus & Lessons</span>
+                      <ChevronRight className="w-4 h-4 text-emerald-600" />
+                    </Button>
+                  </Link>
+
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    disabled={deletingId === course._id}
+                    onClick={() => handleDeleteCourse(course._id, course.title)}
+                    className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 shrink-0"
+                  >
+                    {deletingId === course._id ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-4 h-4" />
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -19,3 +19,20 @@ export async function getUserId(): Promise<string | null> {
   const userId = extractUserId(payload);
   return userId || null;
 }
+
+export async function getUserRole(): Promise<string | null> {
+  const cookieStore = await cookies();
+  const tokenCookie = cookieStore.get("token");
+
+  if (!tokenCookie?.value) {
+    return null;
+  }
+
+  const payload = await authService.verifyToken(tokenCookie.value);
+  if (!payload) {
+    return null;
+  }
+
+  return (payload.role as string) || null;
+}
+

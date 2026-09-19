@@ -3,7 +3,7 @@ import connectToDatabase from "@/lib/db/mongodb";
 import Course from "@/modules/course/models/course.model";
 import LessonProgress from "@/modules/course/models/lesson-progress.model";
 import Lesson from "@/modules/course/models/lesson.model";
-import { getUserId } from "@/lib/auth/get-user";
+import { getUserId, getUserRole } from "@/lib/auth/get-user";
 
 export async function GET(request: Request) {
   try {
@@ -98,5 +98,33 @@ export async function GET(request: Request) {
       { success: false, message: "Failed to fetch courses" },
       { status: 500 }
     );
+  }
+}
+
+
+export async function POST(request: Request) {
+  try {
+    const roleHeader = request.headers.get("x-user-role") || await getUserRole();
+    if (roleHeader !== "admin") {
+      return NextResponse.json({ success: false, message: "Forbidden" }, { status: 403 });
+    }
+    await connectToDatabase();
+    const body = await request.json();
+    const { title, level, subject, description, topics } = body;
+    if (!title || !level || !subject) {
+      return NextResponse.json({ success: false, message: "Title, level, and subject required" }, { status: 400 });
+    }
+    const formattedTopics = Array.isArray(topics)
+      ? topics.map((t: any, i: number) => ({
+          title: t.title,
+          description: t.description || "",
+          order: t.order ?? (i + 1),
+          difficulty: t.difficulty,
+        }))
+      : [];
+    const newCourse = await Course.create({ title, level, subject, description, topics: formattedTopics });
+    return NextResponse.json({ success: true, data: newCourse });
+  } catch (error: any) {
+    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }

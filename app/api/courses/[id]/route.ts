@@ -1,8 +1,9 @@
+import Question from "@/modules/course/models/question.model";
 import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/db/mongodb";
 import Course from "@/modules/course/models/course.model";
 import Lesson from "@/modules/course/models/lesson.model";
-import { getUserId } from "@/lib/auth/get-user";
+import { getUserId, getUserRole } from "@/lib/auth/get-user";
 import LessonProgress from "@/modules/course/models/lesson-progress.model";
 import mongoose from "mongoose";
 
@@ -66,47 +67,34 @@ export async function GET(
 }
 
 //api endpoint for allowing admin to create a new course
-export async function POST(request: Request) {
+
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const roleHeader = request.headers.get("x-user-role") || await getUserRole();
+    if (roleHeader !== "admin") return NextResponse.json({ success: false, message: "Forbidden" }, { status: 403 });
     await connectToDatabase();
+    const { id } = await params;
     const body = await request.json();
-
-    const { title, level, subject, description, topics } = body;
-
-    // Validate required fields based on schema
-    if (!title || !level || !subject) {
-      return NextResponse.json(
-        { success: false, message: "Title, level, and subject are required." },
-        { status: 400 }
-      );
-    }
-
-    // Format and assign order indices to topics if provided
-    const formattedTopics = Array.isArray(topics)
-      ? topics.map((topic: { title: string; description?: string }, index: number) => ({
-          title: topic.title,
-          description: topic.description || "",
-          order: index + 1,
-        }))
-      : [];
-
-    const newCourse = await Course.create({
-      title,
-      level,
-      subject,
-      description,
-      topics: formattedTopics,
-    });
-
-    return NextResponse.json(
-      { success: true, data: newCourse, message: "Course created successfully!" },
-      { status: 201 }
-    );
+    const course = await Course.findByIdAndUpdate(id, body, { new: true });
+    return NextResponse.json({ success: true, data: course });
   } catch (error: any) {
-    console.error("[POST /api/courses] Error:", error);
-    return NextResponse.json(
-      { success: false, message: error.message || "Failed to create course" },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const roleHeader = request.headers.get("x-user-role") || await getUserRole();
+    if (roleHeader !== "admin") return NextResponse.json({ success: false, message: "Forbidden" }, { status: 403 });
+    await connectToDatabase();
+    const { id } = await params;
+    await Promise.all([
+      Lesson.deleteMany({ courseId: id }),
+      Question.deleteMany({ courseId: id }),
+      Course.findByIdAndDelete(id)
+    ]);
+    return NextResponse.json({ success: true, message: "Deleted" });
+  } catch (error: any) {
+    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }
