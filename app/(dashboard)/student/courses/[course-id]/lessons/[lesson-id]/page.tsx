@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ArrowLeft, ArrowRight, BotMessageSquare, Send, Sparkles, X,
-  Loader2, AlertTriangle, RefreshCcw, StopCircle,
+  Loader2, AlertTriangle, RefreshCcw, StopCircle, Video,
 } from "lucide-react";
 import { TopicQuizModal } from "@/components/student/topic-quiz-modal";
 import { useAiTutor } from "@/hooks/use-ai-tutor";
@@ -20,6 +20,16 @@ import { usePracticeStore } from "@/stores/practice-store";
 interface LessonPageProps {
   params: Promise<{ "course-id": string; "lesson-id": string }>;
 }
+
+const getVimeoSrc = (part: any) => {
+  if (part.vimeoEmbedUrl) return part.vimeoEmbedUrl;
+  if (!part.videoUrl) return null;
+  if (part.videoUrl.includes("player.vimeo.com")) return part.videoUrl;
+  const match = part.videoUrl.match(/(?:vimeo\.com\/)(\d+)/);
+  if (match && match[1]) return `https://player.vimeo.com/video/${match[1]}`;
+  if (/^\d+$/.test(part.videoUrl.trim())) return `https://player.vimeo.com/video/${part.videoUrl.trim()}`;
+  return part.videoUrl;
+};
 
 export default function LessonDetailPage({ params }: LessonPageProps) {
   const resolvedParams = use(params);
@@ -190,25 +200,41 @@ export default function LessonDetailPage({ params }: LessonPageProps) {
                 <TabsTrigger
                   key={part.partNumber}
                   value={`part-${part.partNumber}`}
-                  className="text-xs md:text-sm whitespace-nowrap"
+                  className="text-xs md:text-sm whitespace-nowrap gap-1.5"
                 >
+                  {(part.vimeoEmbedUrl || part.videoUrl) && <Video className="w-3.5 h-3.5 text-primary shrink-0" />}
                   Part {part.partNumber}
                 </TabsTrigger>
               ))}
             </TabsList>
 
-            {lesson.parts.map((part: any) => (
-              <TabsContent
-                key={part.partNumber}
-                value={`part-${part.partNumber}`}
-                className="mt-6 space-y-6 focus:outline-none"
-              >
-                <div className="space-y-2">
-                  <h3 className="text-lg font-bold text-foreground">{part.title}</h3>
-                  <div className="prose prose-sm md:prose-base dark:prose-invert max-w-none text-muted-foreground leading-relaxed">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{part.content}</ReactMarkdown>
+            {lesson.parts.map((part: any) => {
+              const vimeoSrc = getVimeoSrc(part);
+              return (
+                <TabsContent
+                  key={part.partNumber}
+                  value={`part-${part.partNumber}`}
+                  className="mt-6 space-y-6 focus:outline-none"
+                >
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-bold text-foreground">{part.title}</h3>
+                    
+                    {vimeoSrc && (
+                      <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-black border border-border shadow-sm">
+                        <iframe
+                          src={vimeoSrc}
+                          className="absolute top-0 left-0 h-full w-full border-0"
+                          allow="autoplay; fullscreen; picture-in-picture"
+                          allowFullScreen
+                          title={part.title || `Part ${part.partNumber} Video`}
+                        />
+                      </div>
+                    )}
+
+                    <div className="prose prose-sm md:prose-base dark:prose-invert max-w-none text-muted-foreground leading-relaxed">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{part.content}</ReactMarkdown>
+                    </div>
                   </div>
-                </div>
 
                 {/* Per-part AI Concept Check — only shows prompt hint, no response here */}
                 {part.aiPromptHint && (
@@ -238,7 +264,8 @@ export default function LessonDetailPage({ params }: LessonPageProps) {
                   </div>
                 )}
               </TabsContent>
-            ))}
+            );
+          })}
           </Tabs>
         ) : (
           <div className="p-4 bg-muted/60 rounded-xl border border-border/80">

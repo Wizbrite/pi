@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Plus, Trash2, Loader2, FileText } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Loader2, FileText, Video, Upload, CheckCircle2, Film } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 
@@ -11,6 +11,9 @@ interface LessonPartInput {
   title: string;
   content: string;
   aiPromptHint?: string;
+  videoUrl?: string;
+  vimeoVideoId?: string;
+  vimeoEmbedUrl?: string;
 }
 
 export default function CreateLessonPage({ params }: { params: Promise<{ courseId: string }> }) {
@@ -25,11 +28,12 @@ export default function CreateLessonPage({ params }: { params: Promise<{ courseI
   });
 
   const [parts, setParts] = useState<LessonPartInput[]>([
-    { partNumber: 1, title: "Introduction", content: "", aiPromptHint: "" },
+    { partNumber: 1, title: "Introduction", content: "", aiPromptHint: "", videoUrl: "", vimeoVideoId: "", vimeoEmbedUrl: "" },
   ]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadingPartIdx, setUploadingPartIdx] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -65,10 +69,64 @@ export default function CreateLessonPage({ params }: { params: Promise<{ courseI
     });
   };
 
+  const handleVimeoUrlChange = async (index: number, value: string) => {
+    handlePartChange(index, "videoUrl", value);
+    if (!value.trim()) {
+      handlePartChange(index, "vimeoVideoId", "");
+      handlePartChange(index, "vimeoEmbedUrl", "");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/admin/vimeo/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vimeoUrl: value }),
+      });
+      const json = await res.json();
+      if (json.success && json.data) {
+        handlePartChange(index, "vimeoVideoId", json.data.vimeoVideoId);
+        handlePartChange(index, "vimeoEmbedUrl", json.data.vimeoEmbedUrl);
+        handlePartChange(index, "videoUrl", json.data.videoUrl || value);
+      }
+    } catch (err) {
+      console.error("Vimeo URL parse error:", err);
+    }
+  };
+
+  const handleVideoFileUpload = async (index: number, file: File) => {
+    if (!file) return;
+    setUploadingPartIdx(index);
+    try {
+      const uploadData = new FormData();
+      uploadData.append("file", file);
+      uploadData.append("title", `${formData.title || "Lesson"} - Part ${index + 1}`);
+
+      const res = await fetch("/api/admin/vimeo/upload", {
+        method: "POST",
+        body: uploadData,
+      });
+
+      const json = await res.json();
+      if (json.success && json.data) {
+        handlePartChange(index, "vimeoVideoId", json.data.vimeoVideoId);
+        handlePartChange(index, "vimeoEmbedUrl", json.data.vimeoEmbedUrl);
+        handlePartChange(index, "videoUrl", json.data.videoUrl);
+      } else {
+        alert(json.message || "Failed to upload video to Vimeo.");
+      }
+    } catch (err) {
+      console.error("Video upload error:", err);
+      alert("An error occurred while uploading video file.");
+    } finally {
+      setUploadingPartIdx(null);
+    }
+  };
+
   const addPart = () => {
     setParts((prev) => [
       ...prev,
-      { partNumber: prev.length + 1, title: "", content: "", aiPromptHint: "" },
+      { partNumber: prev.length + 1, title: "", content: "", aiPromptHint: "", videoUrl: "", vimeoVideoId: "", vimeoEmbedUrl: "" },
     ]);
   };
 
@@ -102,6 +160,9 @@ export default function CreateLessonPage({ params }: { params: Promise<{ courseI
             title: p.title || `Part ${idx + 1}`,
             content: p.content,
             aiPromptHint: p.aiPromptHint || "",
+            videoUrl: p.videoUrl || "",
+            vimeoVideoId: p.vimeoVideoId || "",
+            vimeoEmbedUrl: p.vimeoEmbedUrl || "",
           })),
         }),
       });
@@ -141,7 +202,7 @@ export default function CreateLessonPage({ params }: { params: Promise<{ courseI
             <FileText className="w-6 h-6 text-emerald-600" /> Create New Lesson
           </CardTitle>
           <CardDescription>
-            Add a structured lesson and define its learning content parts for {course?.title}.
+            Add a structured lesson and define its learning content parts and Vimeo videos for {course?.title}.
           </CardDescription>
         </CardHeader>
 
@@ -205,8 +266,8 @@ export default function CreateLessonPage({ params }: { params: Promise<{ courseI
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <div>
-                  <h3 className="text-base font-semibold text-foreground">Lesson Parts & Explanations</h3>
-                  <p className="text-xs text-muted-foreground">Add text/markdown content for each part of this lesson.</p>
+                  <h3 className="text-base font-semibold text-foreground">Lesson Parts, Explanations & Videos</h3>
+                  <p className="text-xs text-muted-foreground">Add text/markdown content and Vimeo videos for each part.</p>
                 </div>
                 <Button type="button" variant="outline" onClick={addPart} size="sm" className="gap-1">
                   <Plus className="h-4 w-4" /> Add Lesson Part
@@ -239,6 +300,69 @@ export default function CreateLessonPage({ params }: { params: Promise<{ courseI
                     onChange={(e) => handlePartChange(index, "title", e.target.value)}
                     className="w-full px-3 py-2 bg-background border border-input rounded-md text-sm font-semibold"
                   />
+
+                  {/* Video Section */}
+                  <div className="p-3 bg-card border border-border rounded-lg space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                        <Video className="w-4 h-4 text-blue-600" /> Lesson Part Video (Vimeo)
+                      </label>
+                      {part.vimeoEmbedUrl && (
+                        <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1 bg-emerald-500/10 px-2 py-0.5 rounded">
+                          <CheckCircle2 className="w-3 h-3" /> Vimeo Configured
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-center">
+                      <div className="space-y-1">
+                        <input
+                          type="text"
+                          placeholder="Paste Vimeo URL or Video ID (e.g. 1057488392)"
+                          value={part.videoUrl || ""}
+                          onChange={(e) => handleVimeoUrlChange(index, e.target.value)}
+                          className="w-full px-3 py-1.5 bg-background border border-input rounded-md text-xs font-mono"
+                        />
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-input bg-background hover:bg-accent text-xs font-semibold text-foreground">
+                          {uploadingPartIdx === index ? (
+                            <>
+                              <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" /> Uploading to Vimeo...
+                            </>
+                          ) : (
+                            <>
+                              <Upload className="w-3.5 h-3.5 text-blue-600" /> Upload Video File to Vimeo
+                            </>
+                          )}
+                          <input
+                            type="file"
+                            accept="video/*"
+                            disabled={uploadingPartIdx === index}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleVideoFileUpload(index, file);
+                            }}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Live Preview */}
+                    {part.vimeoEmbedUrl && (
+                      <div className="relative w-full pt-[56.25%] rounded-lg overflow-hidden bg-black border border-border mt-2">
+                        <iframe
+                          src={part.vimeoEmbedUrl}
+                          className="absolute top-0 left-0 w-full h-full"
+                          allow="autoplay; fullscreen; picture-in-picture"
+                          allowFullScreen
+                          title={`Preview Part ${index + 1}`}
+                        />
+                      </div>
+                    )}
+                  </div>
 
                   <textarea
                     rows={4}

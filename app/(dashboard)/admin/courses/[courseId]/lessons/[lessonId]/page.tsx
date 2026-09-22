@@ -12,7 +12,9 @@ import {
   CheckCircle2, 
   FileText,
   Save,
-  X
+  X,
+  Video,
+  Upload
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
@@ -25,6 +27,7 @@ export default function EditLessonPage({ params }: { params: Promise<{ courseId:
   const [questions, setQuestions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSavingLesson, setIsSavingLesson] = useState(false);
+  const [uploadingPartIdx, setUploadingPartIdx] = useState<number | null>(null);
 
   // Lesson Edit Form State
   const [title, setTitle] = useState("");
@@ -77,6 +80,68 @@ export default function EditLessonPage({ params }: { params: Promise<{ courseId:
     fetchData();
   }, [fetchData]);
 
+  const handlePartFieldChange = (idx: number, field: string, val: any) => {
+    setParts((prev) => {
+      const copy = [...prev];
+      copy[idx] = { ...copy[idx], [field]: val };
+      return copy;
+    });
+  };
+
+  const handleVimeoUrlChange = async (idx: number, value: string) => {
+    handlePartFieldChange(idx, "videoUrl", value);
+    if (!value.trim()) {
+      handlePartFieldChange(idx, "vimeoVideoId", "");
+      handlePartFieldChange(idx, "vimeoEmbedUrl", "");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/admin/vimeo/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vimeoUrl: value }),
+      });
+      const json = await res.json();
+      if (json.success && json.data) {
+        handlePartFieldChange(idx, "vimeoVideoId", json.data.vimeoVideoId);
+        handlePartFieldChange(idx, "vimeoEmbedUrl", json.data.vimeoEmbedUrl);
+        handlePartFieldChange(idx, "videoUrl", json.data.videoUrl || value);
+      }
+    } catch (err) {
+      console.error("Vimeo URL parse error:", err);
+    }
+  };
+
+  const handleVideoFileUpload = async (idx: number, file: File) => {
+    if (!file) return;
+    setUploadingPartIdx(idx);
+    try {
+      const uploadData = new FormData();
+      uploadData.append("file", file);
+      uploadData.append("title", `${title || "Lesson"} - Part ${idx + 1}`);
+
+      const res = await fetch("/api/admin/vimeo/upload", {
+        method: "POST",
+        body: uploadData,
+      });
+
+      const json = await res.json();
+      if (json.success && json.data) {
+        handlePartFieldChange(idx, "vimeoVideoId", json.data.vimeoVideoId);
+        handlePartFieldChange(idx, "vimeoEmbedUrl", json.data.vimeoEmbedUrl);
+        handlePartFieldChange(idx, "videoUrl", json.data.videoUrl);
+      } else {
+        alert(json.message || "Failed to upload video to Vimeo.");
+      }
+    } catch (err) {
+      console.error("Video upload error:", err);
+      alert("An error occurred while uploading video file.");
+    } finally {
+      setUploadingPartIdx(null);
+    }
+  };
+
   const handleSaveLesson = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSavingLesson(true);
@@ -87,12 +152,16 @@ export default function EditLessonPage({ params }: { params: Promise<{ courseId:
         body: JSON.stringify({
           title,
           order: Number(order),
-          parts,
+          parts: parts.map((p, i) => ({
+            ...p,
+            partNumber: i + 1,
+          })),
         }),
       });
       const json = await res.json();
       if (json.success) {
         alert("Lesson saved successfully!");
+        fetchData();
       }
     } catch (err) {
       console.error("Failed to save lesson:", err);
@@ -207,7 +276,7 @@ export default function EditLessonPage({ params }: { params: Promise<{ courseId:
         <Card className="bg-card border-border shadow-xs">
           <CardHeader>
             <CardTitle className="text-xl font-bold flex items-center gap-2">
-              <FileText className="w-5 h-5 text-emerald-600" /> Edit Lesson Details
+              <FileText className="w-5 h-5 text-emerald-600" /> Edit Lesson Details & Videos
             </CardTitle>
           </CardHeader>
           <form onSubmit={handleSaveLesson}>
@@ -245,7 +314,7 @@ export default function EditLessonPage({ params }: { params: Promise<{ courseId:
                     onClick={() =>
                       setParts((prev) => [
                         ...prev,
-                        { partNumber: prev.length + 1, title: "", content: "" },
+                        { partNumber: prev.length + 1, title: "", content: "", videoUrl: "", vimeoVideoId: "", vimeoEmbedUrl: "" },
                       ])
                     }
                   >
@@ -254,7 +323,7 @@ export default function EditLessonPage({ params }: { params: Promise<{ courseId:
                 </div>
 
                 {parts.map((p: any, idx: number) => (
-                  <div key={idx} className="p-3 border border-border rounded-lg bg-muted/30 space-y-2">
+                  <div key={idx} className="p-3 border border-border rounded-lg bg-muted/30 space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-emerald-600">Part #{idx + 1}</span>
                       <Button
@@ -267,27 +336,87 @@ export default function EditLessonPage({ params }: { params: Promise<{ courseId:
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     </div>
+
                     <input
                       type="text"
                       placeholder="Part Title"
                       value={p.title}
-                      onChange={(e) => {
-                        const copy = [...parts];
-                        copy[idx].title = e.target.value;
-                        setParts(copy);
-                      }}
-                      className="w-full px-2.5 py-1 text-xs bg-background border border-input rounded"
+                      onChange={(e) => handlePartFieldChange(idx, "title", e.target.value)}
+                      className="w-full px-2.5 py-1 text-xs bg-background border border-input rounded font-semibold"
                     />
+
+                    {/* Vimeo Video Upload / URL Section */}
+                    <div className="p-3 bg-card border border-border rounded-lg space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                          <Video className="w-3.5 h-3.5 text-blue-600" /> Vimeo Video
+                        </label>
+                        {p.vimeoEmbedUrl && (
+                          <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1 bg-emerald-500/10 px-2 py-0.5 rounded">
+                            <CheckCircle2 className="w-3 h-3" /> Vimeo Configured
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 items-center">
+                        <input
+                          type="text"
+                          placeholder="Paste Vimeo URL or ID (e.g. 1057488392)"
+                          value={p.videoUrl || ""}
+                          onChange={(e) => handleVimeoUrlChange(idx, e.target.value)}
+                          className="w-full px-2.5 py-1 bg-background border border-input rounded text-xs font-mono"
+                        />
+
+                        <label className="cursor-pointer inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded border border-input bg-background hover:bg-accent text-xs font-semibold text-foreground">
+                          {uploadingPartIdx === idx ? (
+                            <>
+                              <Loader2 className="w-3 h-3 animate-spin text-blue-600" /> Uploading...
+                            </>
+                          ) : (
+                            <>
+                              <Upload className="w-3 h-3 text-blue-600" /> Upload Video File
+                            </>
+                          )}
+                          <input
+                            type="file"
+                            accept="video/*"
+                            disabled={uploadingPartIdx === idx}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleVideoFileUpload(idx, file);
+                            }}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+
+                      {p.vimeoEmbedUrl && (
+                        <div className="relative w-full pt-[56.25%] rounded overflow-hidden bg-black border border-border mt-1">
+                          <iframe
+                            src={p.vimeoEmbedUrl}
+                            className="absolute top-0 left-0 w-full h-full"
+                            allow="autoplay; fullscreen; picture-in-picture"
+                            allowFullScreen
+                            title={`Preview Part ${idx + 1}`}
+                          />
+                        </div>
+                      )}
+                    </div>
+
                     <textarea
                       rows={3}
                       placeholder="Content (Markdown)"
                       value={p.content}
-                      onChange={(e) => {
-                        const copy = [...parts];
-                        copy[idx].content = e.target.value;
-                        setParts(copy);
-                      }}
+                      onChange={(e) => handlePartFieldChange(idx, "content", e.target.value)}
                       className="w-full px-2.5 py-1 text-xs bg-background border border-input rounded"
+                    />
+
+                    <input
+                      type="text"
+                      placeholder="AI Prompt Hint (Optional)"
+                      value={p.aiPromptHint || ""}
+                      onChange={(e) => handlePartFieldChange(idx, "aiPromptHint", e.target.value)}
+                      className="w-full px-2.5 py-1 text-xs bg-background border border-input rounded text-muted-foreground"
                     />
                   </div>
                 ))}
