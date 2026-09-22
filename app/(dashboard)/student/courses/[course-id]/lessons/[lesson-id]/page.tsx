@@ -13,6 +13,7 @@ import {
   Loader2, AlertTriangle, RefreshCcw, StopCircle, Video,
 } from "lucide-react";
 import { TopicQuizModal } from "@/components/student/topic-quiz-modal";
+import NotionVideoPlayer from "@/components/student/notion-video-player";
 import { useAiTutor } from "@/hooks/use-ai-tutor";
 import { buildLessonSystemPrompt } from "@/lib/ai/prompts";
 import { usePracticeStore } from "@/stores/practice-store";
@@ -46,6 +47,7 @@ export default function LessonDetailPage({ params }: LessonPageProps) {
   const [activeTab, setActiveTab] = useState<string>("part-1");
   const [aiQuery, setAiQuery] = useState("");
   const [activePartContent, setActivePartContent] = useState<string>("");
+  const [notionProgress, setNotionProgress] = useState<Record<string, any>>({});
 
   // Keep a stable ref for the input value to avoid re-render focus loss
   const aiQueryRef = useRef(aiQuery);
@@ -106,9 +108,24 @@ export default function LessonDetailPage({ params }: LessonPageProps) {
     }
   }, [courseId, lessonId]);
 
+  // Fetch per-notion progress for this lesson
+  const fetchNotionProgress = useCallback(async (lId: string) => {
+    try {
+      const res = await fetch(`/api/student/notion-progress?lessonId=${lId}`);
+      const json = await res.json();
+      if (json.success) setNotionProgress(json.data ?? {});
+    } catch {
+      // silent — progress is non-critical
+    }
+  }, []);
+
   useEffect(() => {
     fetchLessonData();
   }, [fetchLessonData]);
+
+  useEffect(() => {
+    if (lessonId) fetchNotionProgress(lessonId);
+  }, [lessonId, fetchNotionProgress]);
 
   // When the user switches tabs, update active part content for AI context
   const handleTabChange = (value: string) => {
@@ -220,15 +237,31 @@ export default function LessonDetailPage({ params }: LessonPageProps) {
                     <h3 className="text-lg font-bold text-foreground">{part.title}</h3>
                     
                     {vimeoSrc && (
-                      <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-black border border-border shadow-sm">
-                        <iframe
-                          src={vimeoSrc}
-                          className="absolute top-0 left-0 h-full w-full border-0"
-                          allow="autoplay; fullscreen; picture-in-picture"
-                          allowFullScreen
-                          title={part.title || `Part ${part.partNumber} Video`}
-                        />
-                      </div>
+                      <>
+                        {part.notions && part.notions.length > 0 ? (
+                          <NotionVideoPlayer
+                            key={`nvp-${part.partNumber}`}
+                            vimeoEmbedUrl={vimeoSrc}
+                            notions={part.notions}
+                            lessonId={lesson._id.toString()}
+                            courseId={courseId}
+                            partNumber={part.partNumber}
+                            lessonTitle={lesson.title}
+                            partTitle={part.title}
+                            initialProgress={notionProgress}
+                          />
+                        ) : (
+                          <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-black border border-border shadow-sm">
+                            <iframe
+                              src={vimeoSrc}
+                              className="absolute top-0 left-0 h-full w-full border-0"
+                              allow="autoplay; fullscreen; picture-in-picture"
+                              allowFullScreen
+                              title={part.title || `Part ${part.partNumber} Video`}
+                            />
+                          </div>
+                        )}
+                      </>
                     )}
 
                     <div className="prose prose-sm md:prose-base dark:prose-invert max-w-none text-muted-foreground leading-relaxed">

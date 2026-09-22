@@ -14,10 +14,27 @@ import {
   Save,
   X,
   Video,
-  Upload
+  Upload,
+  Clock,
+  Tag,
+  Target,
+  BookOpenCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+
+// Helpers
+const secToMmss = (s: number) => {
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return `${m.toString().padStart(2, "0")}:${sec.toString().padStart(2, "0")}`;
+};
+const mmssToSec = (mmss: string): number => {
+  const parts = mmss.split(":");
+  if (parts.length === 2) return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+  return parseInt(mmss) || 0;
+};
+const genId = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
 
 export default function EditLessonPage({ params }: { params: Promise<{ courseId: string; lessonId: string }> }) {
   const { courseId, lessonId } = use(params);
@@ -33,6 +50,20 @@ export default function EditLessonPage({ params }: { params: Promise<{ courseId:
   const [title, setTitle] = useState("");
   const [order, setOrder] = useState(1);
   const [parts, setParts] = useState<any[]>([]);
+
+  // Notion Management State
+  const [activeNotionPartIdx, setActiveNotionPartIdx] = useState<number | null>(null);
+  const [isSavingNotions, setIsSavingNotions] = useState(false);
+  const [editingNotionIdx, setEditingNotionIdx] = useState<number | null>(null);
+  const [notionForm, setNotionForm] = useState({
+    id: "",
+    label: "",
+    startTime: "00:00",
+    endTime: "00:00",
+    description: "",
+    passingScore: 80,
+    questionsCount: 20,
+  });
 
   // Question Add/Edit Modal State
   const [showQuestionModal, setShowQuestionModal] = useState(false);
@@ -254,6 +285,83 @@ export default function EditLessonPage({ params }: { params: Promise<{ courseId:
     }
   };
 
+  // ── Notion helpers ────────────────────────────────────────────────────────
+  const openAddNotion = (partIdx: number) => {
+    setEditingNotionIdx(null);
+    setNotionForm({ id: genId(), label: "", startTime: "00:00", endTime: "00:00", description: "", passingScore: 80, questionsCount: 20 });
+    setActiveNotionPartIdx(partIdx);
+  };
+
+  const openEditNotion = (partIdx: number, nIdx: number) => {
+    const n = parts[partIdx].notions?.[nIdx];
+    if (!n) return;
+    setEditingNotionIdx(nIdx);
+    setNotionForm({
+      id: n.id,
+      label: n.label,
+      startTime: secToMmss(n.startTime),
+      endTime: secToMmss(n.endTime),
+      description: n.description || "",
+      passingScore: n.passingScore ?? 80,
+      questionsCount: n.questionsCount ?? 20,
+    });
+    setActiveNotionPartIdx(partIdx);
+  };
+
+  const handleSaveNotion = () => {
+    if (!notionForm.label.trim()) return;
+    const newNotion = {
+      id: notionForm.id || genId(),
+      label: notionForm.label.trim(),
+      startTime: mmssToSec(notionForm.startTime),
+      endTime: mmssToSec(notionForm.endTime),
+      description: notionForm.description,
+      passingScore: Number(notionForm.passingScore) || 80,
+      questionsCount: Number(notionForm.questionsCount) || 20,
+    };
+    setParts((prev) =>
+      prev.map((p, i) => {
+        if (i !== activeNotionPartIdx) return p;
+        const existing: any[] = p.notions || [];
+        const updated =
+          editingNotionIdx !== null
+            ? existing.map((n: any, ni: number) => (ni === editingNotionIdx ? newNotion : n))
+            : [...existing, newNotion];
+        return { ...p, notions: updated.sort((a: any, b: any) => a.startTime - b.startTime) };
+      })
+    );
+    setEditingNotionIdx(null);
+    setNotionForm({ id: genId(), label: "", startTime: "00:00", endTime: "00:00", description: "", passingScore: 80, questionsCount: 20 });
+  };
+
+  const handleDeleteNotion = (partIdx: number, nIdx: number) => {
+    if (!confirm("Delete this notion?")) return;
+    setParts((prev) =>
+      prev.map((p, i) =>
+        i === partIdx ? { ...p, notions: (p.notions || []).filter((_: any, ni: number) => ni !== nIdx) } : p
+      )
+    );
+  };
+
+  const handleSaveNotionsToDB = async (partIdx: number) => {
+    setIsSavingNotions(true);
+    try {
+      const part = parts[partIdx];
+      const res = await fetch(`/api/admin/lessons/${lessonId}/notions`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ partNumber: part.partNumber, notions: part.notions || [] }),
+      });
+      const json = await res.json();
+      if (!json.success) alert(json.message || "Failed to save notions.");
+    } catch (err) {
+      console.error("Failed to save notions:", err);
+      alert("Error saving notions.");
+    } finally {
+      setIsSavingNotions(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="py-24 flex flex-col items-center justify-center space-y-3">
@@ -402,6 +510,173 @@ export default function EditLessonPage({ params }: { params: Promise<{ courseId:
                         </div>
                       )}
                     </div>
+
+                    {/* ── Notion Management (only shows when video is set) ── */}
+                    {p.vimeoEmbedUrl && (
+                      <div className="p-3 bg-blue-500/5 border border-blue-500/20 rounded-lg space-y-3">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-bold text-blue-700 dark:text-blue-400 flex items-center gap-1.5">
+                            <BookOpenCheck className="w-3.5 h-3.5" /> Video Notions ({(p.notions || []).length})
+                          </label>
+                          <div className="flex gap-1.5">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="text-[10px] h-6 px-2 gap-1 border-blue-500/40 text-blue-700 dark:text-blue-400 hover:bg-blue-500/10"
+                              onClick={() => openAddNotion(idx)}
+                            >
+                              <Plus className="w-3 h-3" /> Add Notion
+                            </Button>
+                            {(p.notions || []).length > 0 && (
+                              <Button
+                                type="button"
+                                size="sm"
+                                disabled={isSavingNotions}
+                                className="text-[10px] h-6 px-2 gap-1 bg-blue-600 text-white hover:bg-blue-700"
+                                onClick={() => handleSaveNotionsToDB(idx)}
+                              >
+                                {isSavingNotions ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />} Save
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Existing notions list */}
+                        {(p.notions || []).length > 0 && (
+                          <div className="space-y-1.5">
+                            {(p.notions as any[]).map((n: any, nIdx: number) => (
+                              <div key={n.id} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-card border border-border text-xs">
+                                <Clock className="w-3 h-3 text-blue-500 shrink-0" />
+                                <span className="font-semibold text-foreground flex-1 truncate">{n.label}</span>
+                                <span className="text-muted-foreground">{secToMmss(n.startTime)}–{secToMmss(n.endTime)}</span>
+                                <span className="text-muted-foreground">Pass: {n.passingScore}%</span>
+                                <span className="text-muted-foreground">{n.questionsCount}Qs</span>
+                                <button type="button" onClick={() => openEditNotion(idx, nIdx)} className="p-0.5 text-muted-foreground hover:text-blue-600 rounded">
+                                  <Edit3 className="w-3 h-3" />
+                                </button>
+                                <button type="button" onClick={() => handleDeleteNotion(idx, nIdx)} className="p-0.5 text-muted-foreground hover:text-red-500 rounded">
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Inline add/edit notion form */}
+                        {activeNotionPartIdx === idx && (
+                          <div className="p-3 rounded-lg bg-card border border-blue-500/30 space-y-2">
+                            <p className="text-[10px] font-bold uppercase text-blue-600 tracking-wide">
+                              {editingNotionIdx !== null ? "Edit Notion" : "New Notion"}
+                            </p>
+
+                            <div className="grid grid-cols-2 gap-2">
+                              <div className="col-span-2">
+                                <label className="text-[10px] font-semibold text-muted-foreground flex items-center gap-1">
+                                  <Tag className="w-3 h-3" /> Label
+                                </label>
+                                <input
+                                  type="text"
+                                  placeholder="e.g. Introduction, Core Concepts"
+                                  value={notionForm.label}
+                                  onChange={(e) => setNotionForm((f) => ({ ...f, label: e.target.value }))}
+                                  className="w-full mt-0.5 px-2 py-1 text-xs bg-background border border-input rounded"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="text-[10px] font-semibold text-muted-foreground flex items-center gap-1">
+                                  <Clock className="w-3 h-3" /> Start (MM:SS)
+                                </label>
+                                <input
+                                  type="text"
+                                  placeholder="00:00"
+                                  value={notionForm.startTime}
+                                  onChange={(e) => setNotionForm((f) => ({ ...f, startTime: e.target.value }))}
+                                  className="w-full mt-0.5 px-2 py-1 text-xs bg-background border border-input rounded font-mono"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="text-[10px] font-semibold text-muted-foreground flex items-center gap-1">
+                                  <Clock className="w-3 h-3" /> End (MM:SS)
+                                </label>
+                                <input
+                                  type="text"
+                                  placeholder="01:30"
+                                  value={notionForm.endTime}
+                                  onChange={(e) => setNotionForm((f) => ({ ...f, endTime: e.target.value }))}
+                                  className="w-full mt-0.5 px-2 py-1 text-xs bg-background border border-input rounded font-mono"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="text-[10px] font-semibold text-muted-foreground flex items-center gap-1">
+                                  <Target className="w-3 h-3" /> Passing Score (%)
+                                </label>
+                                <input
+                                  type="number"
+                                  min={50} max={100}
+                                  value={notionForm.passingScore}
+                                  onChange={(e) => setNotionForm((f) => ({ ...f, passingScore: Number(e.target.value) }))}
+                                  className="w-full mt-0.5 px-2 py-1 text-xs bg-background border border-input rounded"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="text-[10px] font-semibold text-muted-foreground"># AI Questions</label>
+                                <input
+                                  type="number"
+                                  min={5} max={50}
+                                  value={notionForm.questionsCount}
+                                  onChange={(e) => setNotionForm((f) => ({ ...f, questionsCount: Number(e.target.value) }))}
+                                  className="w-full mt-0.5 px-2 py-1 text-xs bg-background border border-input rounded"
+                                />
+                              </div>
+
+                              <div className="col-span-2">
+                                <label className="text-[10px] font-semibold text-muted-foreground">Description (for AI context)</label>
+                                <textarea
+                                  rows={2}
+                                  placeholder="Briefly describe what this segment covers (helps AI generate better questions)"
+                                  value={notionForm.description}
+                                  onChange={(e) => setNotionForm((f) => ({ ...f, description: e.target.value }))}
+                                  className="w-full mt-0.5 px-2 py-1 text-xs bg-background border border-input rounded"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="flex gap-2 justify-end pt-1">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="text-xs h-7"
+                                onClick={() => { setActiveNotionPartIdx(null); setEditingNotionIdx(null); }}
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                disabled={!notionForm.label.trim()}
+                                className="text-xs h-7 bg-blue-600 text-white hover:bg-blue-700 gap-1"
+                                onClick={handleSaveNotion}
+                              >
+                                <CheckCircle2 className="w-3 h-3" />
+                                {editingNotionIdx !== null ? "Update" : "Add"} Notion
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+
+                        {(p.notions || []).length === 0 && activeNotionPartIdx !== idx && (
+                          <p className="text-[10px] text-muted-foreground text-center py-1">
+                            No notions yet. Add segments to gate student progress with AI quizzes.
+                          </p>
+                        )}
+                      </div>
+                    )}
 
                     <textarea
                       rows={3}

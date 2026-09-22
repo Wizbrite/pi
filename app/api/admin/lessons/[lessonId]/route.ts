@@ -22,12 +22,31 @@ export async function PUT(request: Request, { params }: { params: Promise<{ less
     await connectToDatabase();
     const { lessonId } = await params;
     const body = await request.json();
+
+    // Preserve existing notions per part — the lesson save form doesn't send notions (they are
+    // saved separately via PATCH /api/admin/lessons/[lessonId]/notions). Merge to avoid wiping them.
+    if (body.parts && Array.isArray(body.parts)) {
+      const existing = await Lesson.findById(lessonId).lean() as any;
+      if (existing?.parts) {
+        body.parts = body.parts.map((incomingPart: any) => {
+          const existingPart = existing.parts.find(
+            (ep: any) => ep.partNumber === incomingPart.partNumber
+          );
+          return {
+            ...incomingPart,
+            notions: incomingPart.notions ?? existingPart?.notions ?? [],
+          };
+        });
+      }
+    }
+
     const lesson = await Lesson.findByIdAndUpdate(lessonId, body, { new: true });
     return NextResponse.json({ success: true, data: lesson });
   } catch (error: any) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }
+
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ lessonId: string }> }) {
   try {

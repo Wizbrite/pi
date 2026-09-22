@@ -16,6 +16,7 @@
     "@radix-ui/react-tabs": "^1.1.21",
     "@tailwindcss/typography": "^0.5.20",
     "@types/nodemailer": "^8.0.1",
+    "@vimeo/player": "^2.30.4",
     "axios": "^1.19.0",
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
