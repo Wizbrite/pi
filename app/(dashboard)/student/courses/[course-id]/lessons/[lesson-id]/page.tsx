@@ -15,6 +15,8 @@ import {
 import { TopicQuizModal } from "@/components/student/topic-quiz-modal";
 import NotionVideoPlayer from "@/components/student/notion-video-player";
 import { PdfLessonViewer } from "@/components/lessons/PdfLessonViewer";
+import { SelectionAskAI } from "@/components/shared/SelectionAskAI";
+import { SelectionAiSideModal } from "@/components/shared/SelectionAiSideModal";
 import { useAiTutor } from "@/hooks/use-ai-tutor";
 import { buildLessonSystemPrompt } from "@/lib/ai/prompts";
 import { usePracticeStore } from "@/stores/practice-store";
@@ -52,6 +54,10 @@ export default function LessonDetailPage({ params }: LessonPageProps) {
   // PDF-specific: track which part the student is actively reading
   const [pdfActivePart, setPdfActivePart] = useState<{ partNumber: number; partTitle: string; startPage: number; endPage: number; partContext?: string } | null>(null);
 
+  // Selection Ask AI side modal state
+  const [isSelectionModalOpen, setIsSelectionModalOpen] = useState(false);
+  const [selectionText, setSelectionText] = useState("");
+
   // Keep a stable ref for the input value to avoid re-render focus loss
   const aiQueryRef = useRef(aiQuery);
   aiQueryRef.current = aiQuery;
@@ -69,6 +75,18 @@ export default function LessonDetailPage({ params }: LessonPageProps) {
     : "You are Pi, an AI Tutor for GCE A-Level students. **CRITICAL REQUIREMENT:** Format ALL responses with well-structured Markdown (MD). Use headings, bullet points, and bold text for key terms to make the explanation easy to read.";
 
   const { response: aiResponse, isLoading: aiLoading, error: aiError, ask, reset: resetAi } = useAiTutor({
+    systemPrompt,
+    stream: true,
+  });
+
+  // Dedicated AI Tutor instance for Selection Ask AI side modal
+  const {
+    response: selectionAiResponse,
+    isLoading: selectionAiLoading,
+    error: selectionAiError,
+    ask: askSelectionAi,
+    reset: resetSelectionAi,
+  } = useAiTutor({
     systemPrompt,
     stream: true,
   });
@@ -151,6 +169,15 @@ export default function LessonDetailPage({ params }: LessonPageProps) {
     await ask(query);
   };
 
+  // ── Handle selected text "Ask Pi AI" ──────────────────────────────
+  const handleSelectionAsk = useCallback(async (selectedText: string) => {
+    setSelectionText(selectedText);
+    setIsSelectionModalOpen(true);
+    resetSelectionAi();
+    const prompt = `Please explain this part of the lesson in more detail:\n\n“${selectedText}”`;
+    await askSelectionAi(prompt);
+  }, [askSelectionAi, resetSelectionAi]);
+
   // ── Loading & error states ─────────────────────────────────────────────────
   if (isLoading) {
     return (
@@ -216,23 +243,25 @@ export default function LessonDetailPage({ params }: LessonPageProps) {
       {/* Lesson Reader Card */}
       <Card className="bg-card border-border text-card-foreground shadow-xs p-4 md:p-6 space-y-6">
         {lesson.lessonType === "pdf" || lesson.pdfUrl ? (
-          <PdfLessonViewer
-            lessonId={lesson._id.toString()}
-            courseId={courseId}
-            lessonTitle={lesson.title}
-            pdfUrl={lesson.pdfUrl || lesson.parts?.[0]?.pdfUrl || ""}
-            parts={lesson.parts || []}
-            onPartChange={(part) => {
-              setPdfActivePart({
-                partNumber: part.partNumber,
-                partTitle: part.title,
-                startPage: part.startPage ?? 1,
-                endPage: part.endPage ?? 1,
-                partContext: part.partContext || part.content || "",
-              });
-              resetAi();
-            }}
-          />
+          <SelectionAskAI onAsk={handleSelectionAsk}>
+            <PdfLessonViewer
+              lessonId={lesson._id.toString()}
+              courseId={courseId}
+              lessonTitle={lesson.title}
+              pdfUrl={lesson.pdfUrl || lesson.parts?.[0]?.pdfUrl || ""}
+              parts={lesson.parts || []}
+              onPartChange={(part) => {
+                setPdfActivePart({
+                  partNumber: part.partNumber,
+                  partTitle: part.title,
+                  startPage: part.startPage ?? 1,
+                  endPage: part.endPage ?? 1,
+                  partContext: part.partContext || part.content || "",
+                });
+                resetAi();
+              }}
+            />
+          </SelectionAskAI>
         ) : lesson.parts && lesson.parts.length > 0 ? (
           <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
             <TabsList className="w-full justify-start overflow-x-auto overflow-y-hidden bg-muted/50 p-1">
@@ -290,9 +319,11 @@ export default function LessonDetailPage({ params }: LessonPageProps) {
                       </>
                     )}
 
-                    <div className="prose prose-sm md:prose-base dark:prose-invert max-w-none text-muted-foreground leading-relaxed">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{part.content}</ReactMarkdown>
-                    </div>
+                    <SelectionAskAI onAsk={handleSelectionAsk}>
+                      <div className="prose prose-sm md:prose-base dark:prose-invert max-w-none text-muted-foreground leading-relaxed">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{part.content}</ReactMarkdown>
+                      </div>
+                    </SelectionAskAI>
                   </div>
 
                 {/* Per-part AI Concept Check — only shows prompt hint, no response here */}
@@ -501,6 +532,23 @@ export default function LessonDetailPage({ params }: LessonPageProps) {
           }}
         />
       )}
+      {/* Selection Ask AI Floating Side Modal Pop-Up */}
+      <SelectionAiSideModal
+        isOpen={isSelectionModalOpen}
+        onClose={() => setIsSelectionModalOpen(false)}
+        selectedText={selectionText}
+        aiResponse={selectionAiResponse}
+        isLoading={selectionAiLoading}
+        error={selectionAiError}
+        onAskFollowUp={async (query) => {
+          await askSelectionAi(query);
+        }}
+        onRetry={() => {
+          if (selectionText) {
+            askSelectionAi(`Please explain this part of the lesson in more detail:\n\n“${selectionText}”`);
+          }
+        }}
+      />
     </div>
   );
 }
