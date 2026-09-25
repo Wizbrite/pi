@@ -3,8 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Send, Bot, User, Sparkles, RefreshCw, Loader2 } from "lucide-react";
 import { useAiTutor } from "@/hooks/use-ai-tutor";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { FormattedMarkdown } from "@/components/shared/FormattedMarkdown";
 
 interface Message {
   id: string;
@@ -137,11 +136,7 @@ export default function AITutorPage() {
                   : "bg-[#f4f6fc] dark:bg-[#0a0d1d] text-[#0a0d1d] dark:text-slate-200 border border-slate-200/80 dark:border-white/10 rounded-tl-none"
               }`}
             >
-              <div className="prose prose-sm dark:prose-invert max-w-none">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {msg.text}
-                </ReactMarkdown>
-              </div>
+              <FormattedMarkdown>{msg.text}</FormattedMarkdown>
               <span
                 className={`block text-[10px] mt-1.5 text-right ${
                   msg.sender === "user" ? "text-violet-200" : "text-slate-400"
@@ -166,11 +161,7 @@ export default function AITutorPage() {
                </div>
              )}
              {aiResponse && (
-                <div className="prose prose-sm dark:prose-invert max-w-none">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {aiResponse}
-                  </ReactMarkdown>
-                </div>
+               <FormattedMarkdown>{aiResponse}</FormattedMarkdown>
              )}
              {aiError && <p className="text-xs text-red-500 mt-2">{aiError}</p>}
            </div>

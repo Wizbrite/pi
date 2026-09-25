@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { FormattedMarkdown } from "@/components/shared/FormattedMarkdown";
 import {
   Sparkles, X, Send, Loader2, Quote, RefreshCw, Check
 } from "lucide-react";
@@ -176,9 +175,7 @@ export function SelectionAiSideModal({
           )}
 
           {aiResponse && (
-            <div className="prose prose-sm dark:prose-invert max-w-none text-xs md:text-sm text-foreground leading-relaxed">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{aiResponse}</ReactMarkdown>
-            </div>
+            <FormattedMarkdown className="text-xs md:text-sm">{aiResponse}</FormattedMarkdown>
           )}
 
           {isLoading && aiResponse && (

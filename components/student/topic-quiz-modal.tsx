@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { FormattedMarkdown } from "@/components/shared/FormattedMarkdown";
 import {
   X, Trophy, ArrowRight, RotateCcw, CheckCircle2, XCircle,
   BookOpen, Sparkles, Send, Loader2, StopCircle,
@@ -404,7 +403,7 @@ export function TopicQuizModal({
                     <span className="font-bold block mb-0.5">
                       {isIncorrect ? "Not quite right!" : "Correct!"}
                     </span>
-                    {aiEvaluationText ? <div className="prose prose-sm dark:prose-invert max-w-none"><ReactMarkdown remarkPlugins={[remarkGfm]}>{aiEvaluationText}</ReactMarkdown></div> : (currentQ.explanation || "No explanation provided.")}
+                    {aiEvaluationText ? <FormattedMarkdown className="text-xs">{aiEvaluationText}</FormattedMarkdown> : (currentQ.explanation || "No explanation provided.")}
                   </div>
 
                   {/* Review lesson CTA if wrong */}
@@ -464,9 +463,7 @@ export function TopicQuizModal({
                             <Loader2 className="w-3.5 h-3.5 animate-spin" /> Pi is thinking...
                           </div>
                         ) : (
-                          <div className="text-xs text-accent-foreground leading-relaxed">
-                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{aiResponse}</ReactMarkdown>
-                          </div>
+                          <FormattedMarkdown className="text-xs">{aiResponse}</FormattedMarkdown>
                         )}
                       </div>
                     )}

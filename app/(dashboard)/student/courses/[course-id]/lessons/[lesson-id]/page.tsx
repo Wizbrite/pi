@@ -17,6 +17,7 @@ import NotionVideoPlayer from "@/components/student/notion-video-player";
 import { PdfLessonViewer } from "@/components/lessons/PdfLessonViewer";
 import { SelectionAskAI } from "@/components/shared/SelectionAskAI";
 import { SelectionAiSideModal } from "@/components/shared/SelectionAiSideModal";
+import { FormattedMarkdown } from "@/components/shared/FormattedMarkdown";
 import { useAiTutor } from "@/hooks/use-ai-tutor";
 import { buildLessonSystemPrompt } from "@/lib/ai/prompts";
 import { usePracticeStore } from "@/stores/practice-store";
@@ -408,9 +409,7 @@ export default function LessonDetailPage({ params }: LessonPageProps) {
                 </div>
               )}
               {aiResponse && (
-                <div className="prose prose-sm dark:prose-invert max-w-none">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{aiResponse}</ReactMarkdown>
-                </div>
+                <FormattedMarkdown>{aiResponse}</FormattedMarkdown>
               )}
               {aiError && <p className="text-xs text-red-500 mt-1">{aiError}</p>}
             </div>
@@ -492,9 +491,7 @@ export default function LessonDetailPage({ params }: LessonPageProps) {
                     </div>
                   )}
                   {aiResponse && (
-                    <div className="prose prose-sm dark:prose-invert max-w-none">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{aiResponse}</ReactMarkdown>
-                    </div>
+                    <FormattedMarkdown>{aiResponse}</FormattedMarkdown>
                   )}
                   {aiError && <p className="text-xs text-red-500">{aiError}</p>}
                 </div>
