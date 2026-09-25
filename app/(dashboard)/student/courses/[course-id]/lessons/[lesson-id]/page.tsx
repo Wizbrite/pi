@@ -248,6 +248,9 @@ export default function LessonDetailPage({ params }: LessonPageProps) {
                             partNumber={part.partNumber}
                             lessonTitle={lesson.title}
                             partTitle={part.title}
+                            videoContext={part.videoContext || part.content || ""}
+                            totalQuestions={part.totalQuestions ?? 20}
+                            questionsPerNotion={part.questionsPerNotion ?? 10}
                             initialProgress={notionProgress}
                           />
                         ) : (

@@ -3,97 +3,118 @@ import { getAiProvider } from "@/lib/ai/provider";
 
 export interface NotionQuestion {
   questionText: string;
-  options: string[];        // exactly 4 options
-  correctAnswer: string;    // must match one of the options exactly
+  options: string[];       // exactly 4 options
+  correctAnswer: string;   // must match one of options exactly
   explanation: string;
+  notionIndex?: number;    // which notion this question was generated for (0-based)
 }
 
-export interface NotionQuizResponse {
+export interface NotionAllocation {
+  notionId: string;
+  notionLabel: string;
   questions: NotionQuestion[];
-  passingScore: number;     // threshold determined by AI (minimum 80)
+  passingScore: number;
+}
+
+export interface VideoQuizResponse {
+  allQuestions: NotionQuestion[];
+  allocations: NotionAllocation[];  // questions split per notion
+  questionsPerNotion: number;
 }
 
 /**
  * POST /api/ai/notion-quiz
- * Generates 20+ MCQ questions for a video notion segment.
+ *
+ * Generates the FULL question pool for an entire video (all notions together),
+ * then splits them across notions sequentially.
  *
  * Body: {
- *   notionLabel: string;
- *   description?: string;
- *   lessonTitle?: string;
- *   partTitle?: string;
- *   count?: number;         // default 20
- *   passingScore?: number;  // override, default 80
+ *   lessonTitle: string;
+ *   partTitle: string;
+ *   videoContext: string;      // transcript / description of the full video
+ *   notions: {
+ *     id: string;
+ *     label: string;
+ *     description?: string;
+ *     passingScore: number;
+ *   }[];
+ *   totalQuestions: number;    // total to generate for the whole video
+ *   questionsPerNotion: number;// how many each notion receives
  * }
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const {
-      notionLabel,
-      description = "",
       lessonTitle = "",
       partTitle = "",
-      count = 20,
-      passingScore = 80,
+      videoContext = "",
+      notions = [],
+      totalQuestions = 20,
+      questionsPerNotion = 10,
     } = body as {
-      notionLabel: string;
-      description?: string;
       lessonTitle?: string;
       partTitle?: string;
-      count?: number;
-      passingScore?: number;
+      videoContext?: string;
+      notions: { id: string; label: string; description?: string; passingScore: number }[];
+      totalQuestions?: number;
+      questionsPerNotion?: number;
     };
 
-    if (!notionLabel) {
+    if (!notions || notions.length === 0) {
       return NextResponse.json(
-        { success: false, message: "notionLabel is required" },
+        { success: false, message: "At least one notion is required" },
         { status: 400 }
       );
     }
 
-    const numQuestions = Math.max(count, 20); // enforce minimum of 20
-    const threshold = Math.max(passingScore, 80); // enforce minimum of 80%
+    // Ensure we generate enough questions to cover all notions
+    const needed = notions.length * questionsPerNotion;
+    const count = Math.max(totalQuestions, needed);
 
-    const contextBlock = [
-      lessonTitle && `Lesson: "${lessonTitle}"`,
-      partTitle && `Lesson Part: "${partTitle}"`,
-      `Notion/Segment: "${notionLabel}"`,
-      description && `Segment Description: ${description}`,
-    ]
-      .filter(Boolean)
+    // Build the notion breakdown for the AI prompt
+    const notionList = notions
+      .map((n, i) => `  ${i + 1}. "${n.label}"${n.description ? ` — ${n.description}` : ""}`)
       .join("\n");
 
-    const systemPrompt = `You are an expert GCE A-Level educational assessment creator. You generate rigorous, high-quality multiple-choice questions (MCQs) based on educational video segments called "notions".
+    const systemPrompt = `You are an expert GCE A-Level educational assessment creator. You create rigorous MCQ questions based on a video lesson.
 
-CRITICAL REQUIREMENTS:
-1. Return ONLY valid JSON with no extra text, markdown fences, or commentary.
-2. Generate exactly ${numQuestions} MCQs.
-3. Each question MUST have exactly 4 options (A, B, C, D style, but written as full text strings).
-4. The "correctAnswer" field MUST be the exact string that appears in the "options" array.
-5. Questions must be directly relevant to the notion/segment context provided.
-6. Vary difficulty: ~30% easy, ~50% medium, ~20% hard.
-7. Include conceptual, application, and analytical questions.
-8. Explanations must be educational and clear.
+CRITICAL RULES:
+1. Return ONLY valid JSON. No markdown fences, no commentary, no extra text.
+2. Generate exactly ${count} MCQ questions.
+3. Each question MUST have exactly 4 options (full text strings, NOT labelled A/B/C/D).
+4. "correctAnswer" MUST be the exact string that appears in "options".
+5. Distribute questions across the notions: for ${count} questions over ${notions.length} notions, generate approximately ${Math.ceil(count / notions.length)} questions per notion.
+6. Set "notionIndex" to the 0-based index of the notion the question belongs to.
+7. Mix easy (30%), medium (50%), hard (20%) questions.
+8. Questions must test understanding, application, and analysis — not just recall.
 
 Return this exact JSON structure:
 {
   "questions": [
     {
       "questionText": "...",
-      "options": ["option A text", "option B text", "option C text", "option D text"],
-      "correctAnswer": "option A text",
-      "explanation": "..."
+      "options": ["option 1", "option 2", "option 3", "option 4"],
+      "correctAnswer": "option 1",
+      "explanation": "...",
+      "notionIndex": 0
     }
-  ],
-  "passingScore": ${threshold}
+  ]
 }`;
 
-    const userPrompt = `Generate ${numQuestions} MCQ questions for the following video notion segment:
+    const userPrompt = `Generate ${count} MCQ questions for this video lesson.
 
-${contextBlock}
+Lesson: "${lessonTitle}"
+Video Part: "${partTitle}"
 
-Return the JSON structure as specified.`;
+Video notions (segments):
+${notionList}
+
+Video context / content summary:
+${videoContext || "Use the lesson title, part title, and notion labels as your context for generating relevant questions."}
+
+Distribute the questions so each notion gets approximately ${questionsPerNotion} questions.
+Return the JSON structure.`;
 
     const provider = getAiProvider();
     const res = await provider.chat(
@@ -102,8 +123,8 @@ Return the JSON structure as specified.`;
         { role: "user", content: userPrompt },
       ],
       {
-        maxTokens: 6000,
-        temperature: 0.7,
+        maxTokens: 8000,
+        temperature: 0.65,
         stream: false,
         responseFormat: "json_object",
       }
@@ -118,7 +139,7 @@ Return the JSON structure as specified.`;
     const data = await res.json();
     const rawContent: string = data?.choices?.[0]?.message?.content ?? "{}";
 
-    let parsed: NotionQuizResponse;
+    let parsed: { questions: NotionQuestion[] };
     try {
       parsed = JSON.parse(rawContent);
     } catch {
@@ -128,7 +149,6 @@ Return the JSON structure as specified.`;
       );
     }
 
-    // Validate and sanitize
     if (!Array.isArray(parsed.questions) || parsed.questions.length === 0) {
       return NextResponse.json(
         { success: false, message: "AI did not return valid questions. Please retry." },
@@ -136,22 +156,62 @@ Return the JSON structure as specified.`;
       );
     }
 
-    // Ensure correctAnswer is always one of the options
-    const sanitized = parsed.questions.map((q: NotionQuestion) => {
+    // Sanitize: ensure correctAnswer is always one of the options
+    const allQuestions: NotionQuestion[] = parsed.questions.map((q) => {
       const opts = Array.isArray(q.options) ? q.options.slice(0, 4) : [];
       let correct = q.correctAnswer;
-      if (!opts.includes(correct)) {
-        correct = opts[0] ?? "";
-      }
-      return { questionText: q.questionText, options: opts, correctAnswer: correct, explanation: q.explanation ?? "" };
+      if (!opts.includes(correct)) correct = opts[0] ?? "";
+      return {
+        questionText: q.questionText ?? "",
+        options: opts,
+        correctAnswer: correct,
+        explanation: q.explanation ?? "",
+        notionIndex: typeof q.notionIndex === "number" ? q.notionIndex : 0,
+      };
     });
+
+    // ── Split questions across notions ──────────────────────────────────────
+    // Primary: group by notionIndex the AI returned
+    // Fallback: sequential block allocation
+    const buckets: NotionQuestion[][] = notions.map(() => []);
+
+    // First pass: put AI-assigned questions in their buckets
+    for (const q of allQuestions) {
+      const idx = Math.min(q.notionIndex ?? 0, notions.length - 1);
+      buckets[idx].push(q);
+    }
+
+    // Second pass: if any bucket is short, pull from the pool of unassigned / overflow
+    const overflow: NotionQuestion[] = [];
+    buckets.forEach((bucket, i) => {
+      if (bucket.length > questionsPerNotion) {
+        // Trim and put excess in overflow
+        overflow.push(...bucket.splice(questionsPerNotion));
+      }
+    });
+
+    // Fill short buckets from overflow
+    buckets.forEach((bucket) => {
+      while (bucket.length < questionsPerNotion && overflow.length > 0) {
+        bucket.push(overflow.shift()!);
+      }
+    });
+
+    // Build allocations
+    const allocations: NotionAllocation[] = notions.map((n, i) => ({
+      notionId: n.id,
+      notionLabel: n.label,
+      passingScore: n.passingScore ?? 80,
+      questions: buckets[i] ?? [],
+    }));
 
     return NextResponse.json({
       success: true,
       data: {
-        questions: sanitized,
-        passingScore: typeof parsed.passingScore === "number" ? Math.max(parsed.passingScore, 80) : threshold,
-      },
+        allQuestions,
+        allocations,
+        questionsPerNotion,
+      } as VideoQuizResponse,
     });
   } catch (error: any) {
     console.error("[POST /api/ai/notion-quiz]", error);

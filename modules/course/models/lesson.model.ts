@@ -8,9 +8,8 @@ export interface INotion {
   label: string;         // e.g. "Introduction", "Core Concepts"
   startTime: number;     // seconds from video start
   endTime: number;       // seconds (0 = end of video for last notion)
-  description?: string;  // context text fed to AI for question generation
+  description?: string;  // context text shown in notion chip (optional)
   passingScore: number;  // minimum % to pass, default 80
-  questionsCount: number;// number of AI questions to generate, default 20
 }
 
 // ---------------------------------------------------------------------------
@@ -19,12 +18,16 @@ export interface INotion {
 export interface ILessonPart {
   partNumber: number;
   title: string;
-  content: string; // Markdown / plain text body
-  aiPromptHint?: string; // Suggested question for the AI Tutor
+  content: string;          // Markdown / plain text body
+  aiPromptHint?: string;    // Suggested question for the AI Tutor
   videoUrl?: string;
   vimeoVideoId?: string;
   vimeoEmbedUrl?: string;
-  notions?: INotion[];  // video segment markers for gated quizzes
+  notions?: INotion[];      // video segment markers for gated quizzes
+  // ── Video quiz config (part-level, shared across all notions) ──────────────
+  videoContext?: string;      // transcript / summary fed to AI for question generation
+  totalQuestions?: number;    // total questions the AI should generate for the whole video
+  questionsPerNotion?: number;// how many of those questions each notion gets (default 10)
 }
 
 // ---------------------------------------------------------------------------
@@ -55,7 +58,6 @@ const notionSchema = new Schema<INotion>(
     endTime: { type: Number, required: true, default: 0 },
     description: { type: String, default: "" },
     passingScore: { type: Number, default: 80, min: 0, max: 100 },
-    questionsCount: { type: Number, default: 20, min: 5 },
   },
   { _id: false }
 );
@@ -70,6 +72,10 @@ const lessonPartSchema = new Schema<ILessonPart>(
     vimeoVideoId: { type: String, default: "" },
     vimeoEmbedUrl: { type: String, default: "" },
     notions: { type: [notionSchema], default: [] },
+    // Part-level video quiz config
+    videoContext: { type: String, default: "" },
+    totalQuestions: { type: Number, default: 20, min: 5 },
+    questionsPerNotion: { type: Number, default: 10, min: 1 },
   },
   { _id: false } // parts are value objects, no independent _id needed
 );

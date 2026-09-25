@@ -60,9 +60,7 @@ export default function EditLessonPage({ params }: { params: Promise<{ courseId:
     label: "",
     startTime: "00:00",
     endTime: "00:00",
-    description: "",
     passingScore: 80,
-    questionsCount: 20,
   });
 
   // Question Add/Edit Modal State
@@ -288,7 +286,7 @@ export default function EditLessonPage({ params }: { params: Promise<{ courseId:
   // ── Notion helpers ────────────────────────────────────────────────────────
   const openAddNotion = (partIdx: number) => {
     setEditingNotionIdx(null);
-    setNotionForm({ id: genId(), label: "", startTime: "00:00", endTime: "00:00", description: "", passingScore: 80, questionsCount: 20 });
+    setNotionForm({ id: genId(), label: "", startTime: "00:00", endTime: "00:00", passingScore: 80 });
     setActiveNotionPartIdx(partIdx);
   };
 
@@ -301,9 +299,7 @@ export default function EditLessonPage({ params }: { params: Promise<{ courseId:
       label: n.label,
       startTime: secToMmss(n.startTime),
       endTime: secToMmss(n.endTime),
-      description: n.description || "",
       passingScore: n.passingScore ?? 80,
-      questionsCount: n.questionsCount ?? 20,
     });
     setActiveNotionPartIdx(partIdx);
   };
@@ -315,9 +311,7 @@ export default function EditLessonPage({ params }: { params: Promise<{ courseId:
       label: notionForm.label.trim(),
       startTime: mmssToSec(notionForm.startTime),
       endTime: mmssToSec(notionForm.endTime),
-      description: notionForm.description,
       passingScore: Number(notionForm.passingScore) || 80,
-      questionsCount: Number(notionForm.questionsCount) || 20,
     };
     setParts((prev) =>
       prev.map((p, i) => {
@@ -331,7 +325,7 @@ export default function EditLessonPage({ params }: { params: Promise<{ courseId:
       })
     );
     setEditingNotionIdx(null);
-    setNotionForm({ id: genId(), label: "", startTime: "00:00", endTime: "00:00", description: "", passingScore: 80, questionsCount: 20 });
+    setNotionForm({ id: genId(), label: "", startTime: "00:00", endTime: "00:00", passingScore: 80 });
   };
 
   const handleDeleteNotion = (partIdx: number, nIdx: number) => {
@@ -497,6 +491,9 @@ export default function EditLessonPage({ params }: { params: Promise<{ courseId:
                           />
                         </label>
                       </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        💡 <strong>Tip:</strong> While waiting for Vimeo API verification, upload directly on <a href="https://vimeo.com/upload" target="_blank" rel="noreferrer" className="underline text-blue-600">vimeo.com/upload</a> and paste the link or video ID above.
+                      </p>
 
                       {p.vimeoEmbedUrl && (
                         <div className="relative w-full pt-[56.25%] rounded overflow-hidden bg-black border border-border mt-1">
@@ -551,7 +548,6 @@ export default function EditLessonPage({ params }: { params: Promise<{ courseId:
                                 <span className="font-semibold text-foreground flex-1 truncate">{n.label}</span>
                                 <span className="text-muted-foreground">{secToMmss(n.startTime)}–{secToMmss(n.endTime)}</span>
                                 <span className="text-muted-foreground">Pass: {n.passingScore}%</span>
-                                <span className="text-muted-foreground">{n.questionsCount}Qs</span>
                                 <button type="button" onClick={() => openEditNotion(idx, nIdx)} className="p-0.5 text-muted-foreground hover:text-blue-600 rounded">
                                   <Edit3 className="w-3 h-3" />
                                 </button>
@@ -623,27 +619,7 @@ export default function EditLessonPage({ params }: { params: Promise<{ courseId:
                                 />
                               </div>
 
-                              <div>
-                                <label className="text-[10px] font-semibold text-muted-foreground"># AI Questions</label>
-                                <input
-                                  type="number"
-                                  min={5} max={50}
-                                  value={notionForm.questionsCount}
-                                  onChange={(e) => setNotionForm((f) => ({ ...f, questionsCount: Number(e.target.value) }))}
-                                  className="w-full mt-0.5 px-2 py-1 text-xs bg-background border border-input rounded"
-                                />
-                              </div>
-
-                              <div className="col-span-2">
-                                <label className="text-[10px] font-semibold text-muted-foreground">Description (for AI context)</label>
-                                <textarea
-                                  rows={2}
-                                  placeholder="Briefly describe what this segment covers (helps AI generate better questions)"
-                                  value={notionForm.description}
-                                  onChange={(e) => setNotionForm((f) => ({ ...f, description: e.target.value }))}
-                                  className="w-full mt-0.5 px-2 py-1 text-xs bg-background border border-input rounded"
-                                />
-                              </div>
+                              <div className="col-span-2" />
                             </div>
 
                             <div className="flex gap-2 justify-end pt-1">
@@ -675,6 +651,52 @@ export default function EditLessonPage({ params }: { params: Promise<{ courseId:
                             No notions yet. Add segments to gate student progress with AI quizzes.
                           </p>
                         )}
+                      </div>
+                    )}
+
+                    {/* ── Video AI Quiz Config (part-level) ── */}
+                    {p.vimeoEmbedUrl && (p.notions || []).length > 0 && (
+                      <div className="p-3 bg-purple-500/5 border border-purple-500/20 rounded-lg space-y-2">
+                        <label className="text-xs font-bold text-purple-700 dark:text-purple-400 flex items-center gap-1.5">
+                          <BookOpenCheck className="w-3.5 h-3.5" /> AI Question Pool (whole video)
+                        </label>
+                        <p className="text-[10px] text-muted-foreground">
+                          Pi AI generates a total pool of questions for the full video, then splits them across all notions ({p.questionsPerNotion ?? 10} per notion).
+                        </p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-[10px] font-semibold text-muted-foreground">Total Questions to Generate</label>
+                            <input
+                              type="number"
+                              min={5} max={100}
+                              value={p.totalQuestions ?? 20}
+                              onChange={(e) => handlePartFieldChange(idx, "totalQuestions", Number(e.target.value))}
+                              className="w-full mt-0.5 px-2 py-1 text-xs bg-background border border-input rounded"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-semibold text-muted-foreground">Questions per Notion</label>
+                            <input
+                              type="number"
+                              min={1} max={50}
+                              value={p.questionsPerNotion ?? 10}
+                              onChange={(e) => handlePartFieldChange(idx, "questionsPerNotion", Number(e.target.value))}
+                              className="w-full mt-0.5 px-2 py-1 text-xs bg-background border border-input rounded"
+                            />
+                          </div>
+                          <div className="col-span-2">
+                            <label className="text-[10px] font-semibold text-muted-foreground">
+                              Video Context / Transcript Summary (fed to AI for better questions)
+                            </label>
+                            <textarea
+                              rows={3}
+                              placeholder="Paste a summary, key topics, or transcript excerpt from this video. The more context, the better the AI questions."
+                              value={p.videoContext || ""}
+                              onChange={(e) => handlePartFieldChange(idx, "videoContext", e.target.value)}
+                              className="w-full mt-0.5 px-2 py-1 text-xs bg-background border border-input rounded"
+                            />
+                          </div>
+                        </div>
                       </div>
                     )}
 

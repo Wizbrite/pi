@@ -348,6 +348,9 @@ export default function CreateLessonPage({ params }: { params: Promise<{ courseI
                           />
                         </label>
                       </div>
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        💡 <strong>Tip:</strong> While waiting for Vimeo API verification, upload directly on <a href="https://vimeo.com/upload" target="_blank" rel="noreferrer" className="underline text-blue-600">vimeo.com/upload</a> and paste the link or video ID above.
+                      </p>
                     </div>
 
                     {/* Live Preview */}

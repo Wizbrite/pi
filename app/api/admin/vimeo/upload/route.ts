@@ -33,6 +33,50 @@ function extractVimeoInfo(input: string) {
   };
 }
 
+export async function GET(request: Request) {
+  try {
+    const roleHeader = request.headers.get("x-user-role") || (await getUserRole());
+    if (roleHeader !== "admin") {
+      return NextResponse.json({ success: false, message: "Forbidden" }, { status: 403 });
+    }
+
+    const clientId = process.env.VIMEO_CLIENT_ID;
+    const clientSecret = process.env.VIMEO_CLIENT_SECRET;
+    const accessToken = process.env.VIMEO_ACCESS_TOKEN || process.env.VIMEO_API_KEY;
+
+    if (!accessToken) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "VIMEO_API_KEY (access_token) is missing in .env.local",
+        },
+        { status: 500 }
+      );
+    }
+
+    // Adapt Vimeo /tutorial request snippet
+    const res = await fetch("https://api.vimeo.com/tutorial", {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: "application/vnd.vimeo.*+json; version=3.4",
+      },
+    });
+
+    const body = await res.json();
+    return NextResponse.json({
+      success: res.ok,
+      status: res.status,
+      clientId: clientId ? `${clientId.slice(0, 6)}...` : null,
+      hasSecret: !!clientSecret,
+      data: body,
+    });
+  } catch (error: any) {
+    console.error("[GET /api/admin/vimeo/upload] Error:", error);
+    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const roleHeader = request.headers.get("x-user-role") || (await getUserRole());
@@ -41,7 +85,10 @@ export async function POST(request: Request) {
     }
 
     const contentType = request.headers.get("content-type") || "";
-    const apiKey = process.env.VIMEO_API_KEY;
+    // Note: access_token is VIMEO_API_KEY or VIMEO_ACCESS_TOKEN
+    const accessToken = process.env.VIMEO_ACCESS_TOKEN || process.env.VIMEO_API_KEY;
+    const clientId = process.env.VIMEO_CLIENT_ID;
+    const clientSecret = process.env.VIMEO_CLIENT_SECRET;
 
     // Handle JSON payload (e.g. Vimeo URL/ID parsing or Vimeo API call)
     if (contentType.includes("application/json")) {
@@ -54,12 +101,22 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: true, data: info });
       }
 
+      if (!accessToken) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "VIMEO_API_KEY (access_token) is not configured in .env.local",
+          },
+          { status: 500 }
+        );
+      }
+
       // If client requests initializing an upload ticket on Vimeo via Vimeo API
-      if (apiKey && body.title && body.fileSize) {
+      if (body.title && body.fileSize) {
         const vimeoRes = await fetch("https://api.vimeo.com/me/videos", {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${apiKey}`,
+            Authorization: `Bearer ${accessToken}`,
             "Content-Type": "application/json",
             Accept: "application/vnd.vimeo.*+json; version=3.4",
           },
@@ -76,8 +133,14 @@ export async function POST(request: Request) {
         const vimeoData = await vimeoRes.json();
         if (!vimeoRes.ok) {
           let errorMsg = vimeoData.developer_message || vimeoData.error || "Vimeo API error";
-          if (errorMsg.includes("missing a user ID") || errorMsg.includes("authentication token")) {
-            errorMsg = "Vimeo API Error: Your VIMEO_API_KEY is an unauthenticated token. Please generate a Personal Access Token with 'upload' scope in your Vimeo Developer Portal, or paste a Vimeo video URL/ID directly.";
+          if (
+            errorMsg.includes("upload") ||
+            errorMsg.includes("scope") ||
+            errorMsg.includes("missing a user ID") ||
+            errorMsg.includes("authentication token") ||
+            errorMsg.includes("verify")
+          ) {
+            errorMsg = "Vimeo API upload access is pending verification or restricted for direct API uploads. Quick Workaround: Upload your video directly at https://vimeo.com/upload on your Vimeo account, copy the video link (e.g. https://vimeo.com/1057488392), and paste it into the 'Paste Vimeo URL' field!";
           }
           return NextResponse.json(
             { success: false, message: errorMsg },
@@ -101,7 +164,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // Handle FormData upload (streaming video file directly to Vimeo via API Key)
+    // Handle FormData upload (streaming video file directly to Vimeo via access_token)
     if (contentType.includes("multipart/form-data")) {
       const formData = await request.formData();
       const file = formData.get("file") as File | null;
@@ -111,18 +174,21 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: false, message: "No video file provided" }, { status: 400 });
       }
 
-      if (!apiKey) {
+      if (!accessToken) {
         return NextResponse.json(
-          { success: false, message: "VIMEO_API_KEY is not configured in environment" },
+          {
+            success: false,
+            message: "VIMEO_API_KEY (access_token) is not configured in .env.local",
+          },
           { status: 500 }
         );
       }
 
-      // Step 1: Create video ticket on Vimeo
+      // Step 1: Create video ticket on Vimeo using access_token
       const initRes = await fetch("https://api.vimeo.com/me/videos", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${apiKey}`,
+          Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json",
           Accept: "application/vnd.vimeo.*+json; version=3.4",
         },
@@ -139,8 +205,14 @@ export async function POST(request: Request) {
       const initData = await initRes.json();
       if (!initRes.ok) {
         let errorMsg = initData.developer_message || initData.error || "Failed to initialize Vimeo video";
-        if (errorMsg.includes("missing a user ID") || errorMsg.includes("authentication token")) {
-          errorMsg = "Vimeo API Error: Your VIMEO_API_KEY is an unauthenticated token. Please generate a Personal Access Token with 'upload' scope in your Vimeo Developer Portal, or paste a Vimeo video URL/ID directly.";
+        if (
+          errorMsg.includes("upload") ||
+          errorMsg.includes("scope") ||
+          errorMsg.includes("missing a user ID") ||
+          errorMsg.includes("authentication token") ||
+          errorMsg.includes("verify")
+        ) {
+          errorMsg = "Vimeo API upload access is pending verification or restricted for direct API uploads. Quick Workaround: Upload your video directly at https://vimeo.com/upload on your Vimeo account, copy the video link (e.g. https://vimeo.com/1057488392), and paste it into the 'Paste Vimeo URL' field!";
         }
         return NextResponse.json(
           { success: false, message: errorMsg },

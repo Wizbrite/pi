@@ -21,6 +21,8 @@ export interface NotionInfo {
   passingScore: number;
   questionsCount: number;
   startTime: number;
+  /** Pre-generated questions — skip AI fetch when provided */
+  preGeneratedQuestions?: NotionQuestion[];
 }
 
 interface NotionQuizModalProps {
@@ -67,7 +69,7 @@ export function NotionQuizModal({
   const [passed, setPassed] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Generate questions when modal opens
+  // Generate (or load) questions when modal opens
   const generateQuestions = useCallback(async () => {
     setPhase("loading");
     setErrorMsg(null);
@@ -76,17 +78,26 @@ export function NotionQuizModal({
     setSelectedAnswer(null);
     setShowExplanation(false);
 
+    // If pre-generated questions were passed in, use them immediately
+    if (notion.preGeneratedQuestions && notion.preGeneratedQuestions.length > 0) {
+      setQuestions(notion.preGeneratedQuestions);
+      setPassingScore(notion.passingScore ?? 80);
+      setPhase("quiz");
+      return;
+    }
+
+    // Fallback: generate live via AI (single-notion mode)
     try {
       const res = await fetch("/api/ai/notion-quiz", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          notionLabel: notion.label,
-          description: notion.description || "",
           lessonTitle,
           partTitle,
-          count: notion.questionsCount ?? 20,
-          passingScore: notion.passingScore ?? 80,
+          videoContext: notion.description || "",
+          notions: [{ id: notion.id, label: notion.label, description: notion.description, passingScore: notion.passingScore }],
+          totalQuestions: notion.questionsCount ?? 20,
+          questionsPerNotion: notion.questionsCount ?? 20,
         }),
       });
 
@@ -95,8 +106,11 @@ export function NotionQuizModal({
         throw new Error(json.message || "Failed to generate questions");
       }
 
-      setQuestions(json.data.questions);
-      setPassingScore(json.data.passingScore ?? 80);
+      // Extract from allocations
+      const alloc = json.data.allocations?.[0];
+      const qs = alloc?.questions ?? json.data.allQuestions ?? [];
+      setQuestions(qs);
+      setPassingScore(alloc?.passingScore ?? json.data.allocations?.[0]?.passingScore ?? 80);
       setPhase("quiz");
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to generate questions. Please try again.");
