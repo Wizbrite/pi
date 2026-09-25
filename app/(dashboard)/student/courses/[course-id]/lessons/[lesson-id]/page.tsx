@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { TopicQuizModal } from "@/components/student/topic-quiz-modal";
 import NotionVideoPlayer from "@/components/student/notion-video-player";
+import { PdfLessonViewer } from "@/components/lessons/PdfLessonViewer";
 import { useAiTutor } from "@/hooks/use-ai-tutor";
 import { buildLessonSystemPrompt } from "@/lib/ai/prompts";
 import { usePracticeStore } from "@/stores/practice-store";
@@ -48,6 +49,8 @@ export default function LessonDetailPage({ params }: LessonPageProps) {
   const [aiQuery, setAiQuery] = useState("");
   const [activePartContent, setActivePartContent] = useState<string>("");
   const [notionProgress, setNotionProgress] = useState<Record<string, any>>({});
+  // PDF-specific: track which part the student is actively reading
+  const [pdfActivePart, setPdfActivePart] = useState<{ partNumber: number; partTitle: string; startPage: number; endPage: number; partContext?: string } | null>(null);
 
   // Keep a stable ref for the input value to avoid re-render focus loss
   const aiQueryRef = useRef(aiQuery);
@@ -60,6 +63,8 @@ export default function LessonDetailPage({ params }: LessonPageProps) {
         topicTitle: topic?.title ?? "Topic",
         courseTitle: course?.title ?? "Course",
         partContent: activePartContent,
+        // Pass PDF context when the student is in a PDF lesson
+        pdfContext: pdfActivePart ?? undefined,
       })
     : "You are Pi, an AI Tutor for GCE A-Level students. **CRITICAL REQUIREMENT:** Format ALL responses with well-structured Markdown (MD). Use headings, bullet points, and bold text for key terms to make the explanation easy to read.";
 
@@ -210,7 +215,25 @@ export default function LessonDetailPage({ params }: LessonPageProps) {
 
       {/* Lesson Reader Card */}
       <Card className="bg-card border-border text-card-foreground shadow-xs p-4 md:p-6 space-y-6">
-        {lesson.parts && lesson.parts.length > 0 ? (
+        {lesson.lessonType === "pdf" || lesson.pdfUrl ? (
+          <PdfLessonViewer
+            lessonId={lesson._id.toString()}
+            courseId={courseId}
+            lessonTitle={lesson.title}
+            pdfUrl={lesson.pdfUrl || lesson.parts?.[0]?.pdfUrl || ""}
+            parts={lesson.parts || []}
+            onPartChange={(part) => {
+              setPdfActivePart({
+                partNumber: part.partNumber,
+                partTitle: part.title,
+                startPage: part.startPage ?? 1,
+                endPage: part.endPage ?? 1,
+                partContext: part.partContext || part.content || "",
+              });
+              resetAi();
+            }}
+          />
+        ) : lesson.parts && lesson.parts.length > 0 ? (
           <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
             <TabsList className="w-full justify-start overflow-x-auto overflow-y-hidden bg-muted/50 p-1">
               {lesson.parts.map((part: any) => (

@@ -49,6 +49,9 @@ export default function EditLessonPage({ params }: { params: Promise<{ courseId:
   // Lesson Edit Form State
   const [title, setTitle] = useState("");
   const [order, setOrder] = useState(1);
+  const [lessonType, setLessonType] = useState<"text" | "video" | "pdf">("text");
+  const [pdfUrl, setPdfUrl] = useState("");
+  const [isUploadingPdf, setIsUploadingPdf] = useState(false);
   const [parts, setParts] = useState<any[]>([]);
 
   // Notion Management State
@@ -93,6 +96,8 @@ export default function EditLessonPage({ params }: { params: Promise<{ courseId:
         setLesson(lessonJson.data);
         setTitle(lessonJson.data.title || "");
         setOrder(lessonJson.data.order || 1);
+        setLessonType(lessonJson.data.lessonType || "text");
+        setPdfUrl(lessonJson.data.pdfUrl || "");
         setParts(lessonJson.data.parts || []);
       }
       if (questionsJson.success) {
@@ -171,6 +176,61 @@ export default function EditLessonPage({ params }: { params: Promise<{ courseId:
     }
   };
 
+  const handlePdfUpload = async (file: File) => {
+    if (!file) return;
+    setIsUploadingPdf(true);
+    try {
+      const uploadData = new FormData();
+      uploadData.append("file", file);
+
+      const res = await fetch("/api/admin/upload/pdf", {
+        method: "POST",
+        body: uploadData,
+      });
+
+      const json = await res.json();
+      if (json.success && json.data) {
+        setPdfUrl(json.data.pdfUrl);
+        alert("PDF document uploaded successfully!");
+      } else {
+        alert(json.message || "Failed to upload PDF file.");
+      }
+    } catch (err) {
+      console.error("PDF upload error:", err);
+      alert("An error occurred while uploading PDF.");
+    } finally {
+      setIsUploadingPdf(false);
+    }
+  };
+
+  const handlePartPdfUpload = async (index: number, file: File) => {
+    if (!file) return;
+    setUploadingPartIdx(index);
+    try {
+      const uploadData = new FormData();
+      uploadData.append("file", file);
+
+      const res = await fetch("/api/admin/upload/pdf", {
+        method: "POST",
+        body: uploadData,
+      });
+
+      const json = await res.json();
+      if (json.success && json.data) {
+        handlePartFieldChange(index, "pdfUrl", json.data.pdfUrl);
+        if (!pdfUrl) setPdfUrl(json.data.pdfUrl);
+        alert(`PDF loaded for Part ${index + 1}!`);
+      } else {
+        alert(json.message || "Failed to upload PDF for this part.");
+      }
+    } catch (err) {
+      console.error("Part PDF upload error:", err);
+      alert("An error occurred while uploading PDF for this part.");
+    } finally {
+      setUploadingPartIdx(null);
+    }
+  };
+
   const handleSaveLesson = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSavingLesson(true);
@@ -181,9 +241,15 @@ export default function EditLessonPage({ params }: { params: Promise<{ courseId:
         body: JSON.stringify({
           title,
           order: Number(order),
+          lessonType,
+          pdfUrl: pdfUrl.trim(),
           parts: parts.map((p, i) => ({
             ...p,
             partNumber: i + 1,
+            startPage: Number(p.startPage) || 1,
+            endPage: Number(p.endPage) || 1,
+            passingScore: Number(p.passingScore) || 80,
+            partContext: p.partContext || "",
           })),
         }),
       });
@@ -383,6 +449,48 @@ export default function EditLessonPage({ params }: { params: Promise<{ courseId:
           </CardHeader>
           <form onSubmit={handleSaveLesson}>
             <CardContent className="space-y-4">
+              {/* Lesson Format Switcher */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold uppercase text-muted-foreground">Lesson Format / Type</label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setLessonType("text")}
+                    className={`p-2 rounded-lg border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                      lessonType === "text"
+                        ? "bg-emerald-500/10 border-emerald-500 text-emerald-700 dark:text-emerald-400"
+                        : "bg-background border-border text-muted-foreground hover:bg-accent"
+                    }`}
+                  >
+                    <FileText className="w-3.5 h-3.5" /> Text / Markdown
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setLessonType("video")}
+                    className={`p-2 rounded-lg border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                      lessonType === "video"
+                        ? "bg-blue-500/10 border-blue-500 text-blue-700 dark:text-blue-400"
+                        : "bg-background border-border text-muted-foreground hover:bg-accent"
+                    }`}
+                  >
+                    <Video className="w-3.5 h-3.5" /> Video (Vimeo)
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setLessonType("pdf")}
+                    className={`p-2 rounded-lg border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                      lessonType === "pdf"
+                        ? "bg-purple-500/10 border-purple-500 text-purple-700 dark:text-purple-400"
+                        : "bg-background border-border text-muted-foreground hover:bg-accent"
+                    }`}
+                  >
+                    <FileText className="w-3.5 h-3.5 text-purple-600" /> PDF Document
+                  </button>
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <label className="text-xs font-semibold uppercase text-muted-foreground">Lesson Title</label>
                 <input
@@ -403,6 +511,54 @@ export default function EditLessonPage({ params }: { params: Promise<{ courseId:
                 />
               </div>
 
+              {/* PDF Document Upload / URL Section */}
+              {lessonType === "pdf" && (
+                <div className="p-3 bg-purple-500/5 border border-purple-500/20 rounded-lg space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-purple-700 dark:text-purple-400 flex items-center gap-1.5">
+                      <FileText className="w-3.5 h-3.5" /> Lesson PDF File / URL
+                    </label>
+                    {pdfUrl && (
+                      <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1 bg-emerald-500/10 px-2 py-0.5 rounded">
+                        <CheckCircle2 className="w-3 h-3" /> Attached
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 items-center">
+                    <input
+                      type="text"
+                      placeholder="Paste PDF File URL (e.g. /uploads/pdf/document.pdf)"
+                      value={pdfUrl}
+                      onChange={(e) => setPdfUrl(e.target.value)}
+                      className="w-full px-2.5 py-1 bg-background border border-input rounded text-xs font-mono"
+                    />
+
+                    <label className="cursor-pointer inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded border border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20 text-xs font-semibold text-purple-700 dark:text-purple-400">
+                      {isUploadingPdf ? (
+                        <>
+                          <Loader2 className="w-3 h-3 animate-spin text-purple-600" /> Uploading PDF...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-3 h-3 text-purple-600" /> Upload PDF File
+                        </>
+                      )}
+                      <input
+                        type="file"
+                        accept="application/pdf,.pdf"
+                        disabled={isUploadingPdf}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handlePdfUpload(file);
+                        }}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                </div>
+              )}
+
               <hr className="border-border" />
 
               <div className="space-y-3">
@@ -416,7 +572,18 @@ export default function EditLessonPage({ params }: { params: Promise<{ courseId:
                     onClick={() =>
                       setParts((prev) => [
                         ...prev,
-                        { partNumber: prev.length + 1, title: "", content: "", videoUrl: "", vimeoVideoId: "", vimeoEmbedUrl: "" },
+                        {
+                          partNumber: prev.length + 1,
+                          title: "",
+                          content: "",
+                          videoUrl: "",
+                          vimeoVideoId: "",
+                          vimeoEmbedUrl: "",
+                          startPage: 1,
+                          endPage: 5,
+                          passingScore: 80,
+                          partContext: "",
+                        },
                       ])
                     }
                   >
@@ -446,6 +613,99 @@ export default function EditLessonPage({ params }: { params: Promise<{ courseId:
                       onChange={(e) => handlePartFieldChange(idx, "title", e.target.value)}
                       className="w-full px-2.5 py-1 text-xs bg-background border border-input rounded font-semibold"
                     />
+
+                    {/* PDF Page Range Config (when lessonType === 'pdf') */}
+                    {lessonType === "pdf" && (
+                      <div className="p-2.5 bg-purple-500/5 border border-purple-500/20 rounded-md space-y-2 text-xs">
+                        <span className="font-bold text-purple-700 dark:text-purple-400 block text-[11px]">
+                          PDF Page Checkpoint Config
+                        </span>
+                        <div className="grid grid-cols-3 gap-2">
+                          <div>
+                            <label className="text-[10px] text-muted-foreground block font-semibold">Start Page</label>
+                            <input
+                              type="number"
+                              min="1"
+                              value={p.startPage || 1}
+                              onChange={(e) => handlePartFieldChange(idx, "startPage", parseInt(e.target.value) || 1)}
+                              className="w-full px-2 py-1 bg-background border border-input rounded text-xs font-mono"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[10px] text-muted-foreground block font-semibold">End Page</label>
+                            <input
+                              type="number"
+                              min={p.startPage || 1}
+                              value={p.endPage || 1}
+                              onChange={(e) => handlePartFieldChange(idx, "endPage", parseInt(e.target.value) || 1)}
+                              className="w-full px-2 py-1 bg-background border border-input rounded text-xs font-mono"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[10px] text-muted-foreground block font-semibold">Passing %</label>
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={p.passingScore || 80}
+                              onChange={(e) => handlePartFieldChange(idx, "passingScore", parseInt(e.target.value) || 80)}
+                              className="w-full px-2 py-1 bg-background border border-input rounded text-xs font-mono"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] text-muted-foreground block font-semibold">AI Quiz Context Summary</label>
+                          <textarea
+                            rows={2}
+                            placeholder="Key topics in this page range for AI question generation..."
+                            value={p.partContext || ""}
+                            onChange={(e) => handlePartFieldChange(idx, "partContext", e.target.value)}
+                            className="w-full px-2 py-1 bg-background border border-input rounded text-xs"
+                          />
+                        </div>
+
+                        {/* Direct Part PDF Upload */}
+                        <div className="space-y-1 pt-2 border-t border-purple-500/20">
+                          <label className="text-[10px] font-semibold text-muted-foreground flex items-center justify-between">
+                            <span>Part PDF Document (Upload PDF directly for Part #{idx + 1})</span>
+                            {p.pdfUrl && <span className="text-emerald-600 font-bold">✓ Loaded</span>}
+                          </label>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <input
+                              type="text"
+                              placeholder="Part PDF URL (e.g. /uploads/pdf/part1.pdf)"
+                              value={p.pdfUrl || ""}
+                              onChange={(e) => handlePartFieldChange(idx, "pdfUrl", e.target.value)}
+                              className="w-full px-2 py-1 bg-background border border-input rounded text-xs font-mono"
+                            />
+                            <label className="cursor-pointer inline-flex items-center justify-center gap-1.5 px-2 py-1 rounded border border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20 text-xs font-semibold text-purple-700 dark:text-purple-400">
+                              {uploadingPartIdx === idx ? (
+                                <>
+                                  <Loader2 className="w-3 h-3 animate-spin text-purple-600" /> Loading PDF...
+                                </>
+                              ) : (
+                                <>
+                                  <Upload className="w-3 h-3 text-purple-600" /> Load PDF for Part #{idx + 1}
+                                </>
+                              )}
+                              <input
+                                type="file"
+                                accept="application/pdf,.pdf"
+                                disabled={uploadingPartIdx === idx}
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) handlePartPdfUpload(idx, file);
+                                }}
+                                className="hidden"
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Vimeo Video Upload / URL Section */}
                     <div className="p-3 bg-card border border-border rounded-lg space-y-2">

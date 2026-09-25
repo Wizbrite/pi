@@ -8,12 +8,26 @@ export function buildLessonSystemPrompt(opts: {
   topicTitle: string;
   courseTitle: string;
   partContent?: string;
+  pdfContext?: {
+    partTitle: string;
+    partNumber: number;
+    startPage: number;
+    endPage: number;
+    partContext?: string;
+  };
 }) {
+  const pdfSection = opts.pdfContext
+    ? `\nThe student is currently reading a PDF lesson. They are on:
+- **Part ${opts.pdfContext.partNumber}: "${opts.pdfContext.partTitle}"**
+- **Pages ${opts.pdfContext.startPage} – ${opts.pdfContext.endPage}**
+${opts.pdfContext.partContext ? `\nContent summary for this section:\n${opts.pdfContext.partContext}\n` : ""}
+When answering, focus your explanations on concepts found within this specific PDF section (pages ${opts.pdfContext.startPage}–${opts.pdfContext.endPage}). If the student asks about something outside this section, gently note it may be covered in a different part.`
+    : "";
+
   return `You are Pi — an expert AI Tutor on the GCE A-Level/O-Level platform designed for Cameroonian students.
 You are currently helping a student learn "${opts.lessonTitle}" which is part of the topic "${opts.topicTitle}" in the course "${opts.courseTitle}".
-
-${opts.partContent ? `Here is the lesson content the student is reading:\n\n${opts.partContent}\n` : ""}
-
+${pdfSection}
+${opts.partContent && !opts.pdfContext ? `Here is the lesson content the student is reading:\n\n${opts.partContent}\n` : ""}
 Your responsibilities:
 - Explain concepts clearly using simple analogies and real-world examples relevant to Cameroon and West Africa when helpful.
 - Always relate your answers back to the GCE A-Level/O-Level subject syllabus.

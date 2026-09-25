@@ -28,6 +28,12 @@ export interface ILessonPart {
   videoContext?: string;      // transcript / summary fed to AI for question generation
   totalQuestions?: number;    // total questions the AI should generate for the whole video
   questionsPerNotion?: number;// how many of those questions each notion gets (default 10)
+  // ── PDF Lesson Part Config ──────────────────────────────────────────────────
+  pdfUrl?: string;            // PDF file URL (if specified per part)
+  startPage?: number;         // PDF start page for this part (1-indexed)
+  endPage?: number;           // PDF end page for this part (inclusive)
+  passingScore?: number;      // minimum % score to unlock next part (default 80)
+  partContext?: string;       // Context summary of this PDF range for AI question generation
 }
 
 // ---------------------------------------------------------------------------
@@ -38,6 +44,8 @@ export interface ILesson {
   topicId: mongoose.Types.ObjectId;  // ref: sub-document inside Course.topics
   title: string;
   order: number;
+  lessonType?: "text" | "video" | "pdf";
+  pdfUrl?: string;                   // Global PDF URL for the entire lesson
   parts: ILessonPart[];
   createdAt?: Date;
   updatedAt?: Date;
@@ -66,7 +74,7 @@ const lessonPartSchema = new Schema<ILessonPart>(
   {
     partNumber: { type: Number, required: true },
     title: { type: String, required: true, trim: true },
-    content: { type: String, required: true },
+    content: { type: String, required: true, default: "" },
     aiPromptHint: { type: String },
     videoUrl: { type: String, default: "" },
     vimeoVideoId: { type: String, default: "" },
@@ -76,6 +84,12 @@ const lessonPartSchema = new Schema<ILessonPart>(
     videoContext: { type: String, default: "" },
     totalQuestions: { type: Number, default: 20, min: 5 },
     questionsPerNotion: { type: Number, default: 10, min: 1 },
+    // PDF Lesson Part Config
+    pdfUrl: { type: String, default: "" },
+    startPage: { type: Number, default: 1 },
+    endPage: { type: Number, default: 1 },
+    passingScore: { type: Number, default: 80, min: 0, max: 100 },
+    partContext: { type: String, default: "" },
   },
   { _id: false } // parts are value objects, no independent _id needed
 );
@@ -86,6 +100,8 @@ const lessonSchema = new Schema<ILessonDocument>(
     topicId: { type: Schema.Types.ObjectId, required: true },
     title: { type: String, required: true, trim: true },
     order: { type: Number, required: true },
+    lessonType: { type: String, enum: ["text", "video", "pdf"], default: "text" },
+    pdfUrl: { type: String, default: "" },
     parts: { type: [lessonPartSchema], default: [] },
   },
   {
