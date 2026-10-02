@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev --hostname 0.0.0.0",
     "build": "next build",
-    "start": "next start --hostname 0.0.0.0",
+    "start": "next start -H 0.0.0.0 -p ${PORT:-3000}",
     "lint": "eslint",
     "seed:ict": "tsx scripts/seed-ict.ts",
     "seed:exams": "tsx scripts/seed-exams.ts"
