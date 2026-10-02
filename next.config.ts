@@ -1,15 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: "standalone",
-  experimental: {
-    optimizePackageImports: [
-      "lucide-react",
-      "react-icons",
-      "framer-motion",
-      "date-fns",
-    ],
-  },
+  /* config options here */
+  reactCompiler: true,
+  allowedDevOrigins: ['10.102.159.25'],
+  turbopack: {},
   webpack: (config) => {
     // Required for react-pdf / pdfjs-dist to work with Next.js
     config.resolve.alias.canvas = false;
