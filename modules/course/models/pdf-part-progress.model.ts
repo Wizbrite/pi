@@ -12,6 +12,8 @@ export interface IPdfPartProgress {
   attempts: number;           // total attempts
   bestScore: number;          // best percentage achieved (0–100)
   lastScore: number;          // last score percentage
+  questionsAttempted: number; // total questions in the last attempt
+  questionsCorrect: number;   // correct answers in the last attempt
   unlockedAt?: Date;          // date when student passed checkpoint
   lastAttemptAt: Date;
   createdAt?: Date;
@@ -32,6 +34,8 @@ const pdfPartProgressSchema = new Schema<IPdfPartProgressDocument>(
     attempts: { type: Number, default: 0 },
     bestScore: { type: Number, default: 0, min: 0, max: 100 },
     lastScore: { type: Number, default: 0, min: 0, max: 100 },
+    questionsAttempted: { type: Number, default: 0 },
+    questionsCorrect: { type: Number, default: 0 },
     unlockedAt: { type: Date },
     lastAttemptAt: { type: Date, default: Date.now },
   },

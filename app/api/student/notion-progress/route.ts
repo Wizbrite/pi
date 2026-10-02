@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import connectToDatabase from "@/lib/db/mongodb";
 import NotionProgress from "@/modules/course/models/notion-progress.model";
 import { getUserId } from "@/lib/auth/get-user";
+import { logDailyActivity } from "@/lib/progress/log-activity";
 
 /**
  * GET /api/student/notion-progress?lessonId=...
@@ -94,12 +95,23 @@ export async function POST(request: NextRequest) {
       existing.attempts += 1;
       existing.lastScore = percentage;
       existing.lastAttemptAt = now;
+      existing.questionsAttempted = total;
+      existing.questionsCorrect = score;
       if (percentage > existing.bestScore) existing.bestScore = percentage;
       if (passed && !existing.passed) {
         existing.passed = true;
         existing.unlockedAt = now;
       }
       await existing.save();
+
+      // Log daily activity to update streak (non-blocking)
+      logDailyActivity(userId, {
+        questionsAttempted: total,
+        questionsCorrect: score,
+      }).catch((err) => {
+        console.error("[notion-progress] Failed to log daily activity:", err);
+      });
+
       return NextResponse.json({ success: true, data: existing });
     } else {
       const record = await NotionProgress.create({
@@ -113,9 +125,20 @@ export async function POST(request: NextRequest) {
         attempts: 1,
         bestScore: percentage,
         lastScore: percentage,
+        questionsAttempted: total,
+        questionsCorrect: score,
         unlockedAt: passed ? now : undefined,
         lastAttemptAt: now,
       });
+
+      // Log daily activity to update streak (non-blocking)
+      logDailyActivity(userId, {
+        questionsAttempted: total,
+        questionsCorrect: score,
+      }).catch((err) => {
+        console.error("[notion-progress] Failed to log daily activity:", err);
+      });
+
       return NextResponse.json({ success: true, data: record });
     }
   } catch (error: any) {

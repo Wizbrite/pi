@@ -14,6 +14,8 @@ export interface INotionProgress {
   attempts: number;           // total quiz attempts
   bestScore: number;          // best percentage achieved (0–100)
   lastScore: number;          // most recent percentage
+  questionsAttempted: number; // total questions in the last attempt
+  questionsCorrect: number;   // correct answers in the last attempt
   unlockedAt?: Date;          // when the student first passed
   lastAttemptAt: Date;
   createdAt?: Date;
@@ -36,6 +38,8 @@ const notionProgressSchema = new Schema<INotionProgressDocument>(
     attempts: { type: Number, default: 0 },
     bestScore: { type: Number, default: 0, min: 0, max: 100 },
     lastScore: { type: Number, default: 0, min: 0, max: 100 },
+    questionsAttempted: { type: Number, default: 0 },
+    questionsCorrect: { type: Number, default: 0 },
     unlockedAt: { type: Date },
     lastAttemptAt: { type: Date, default: Date.now },
   },

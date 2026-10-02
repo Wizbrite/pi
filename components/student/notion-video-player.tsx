@@ -285,6 +285,23 @@ export default function NotionVideoPlayer({
 
   return (
     <div className="space-y-4">
+      {/* Video Title Header Tab */}
+      <div className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-card border border-border/80 shadow-xs">
+        <div className="flex items-center gap-2.5">
+          <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
+            <Video className="w-4 h-4" />
+          </div>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-primary block">
+              Video Lesson Segment
+            </span>
+            <h3 className="text-sm font-bold text-foreground">
+              Part {partNumber}: {partTitle || lessonTitle}
+            </h3>
+          </div>
+        </div>
+      </div>
+
       {/* AI question pool status banner */}
       {notions.length > 0 && (
         <div className={[

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getUserId } from "@/lib/auth/get-user";
 import connectToDatabase from "@/lib/db/mongodb";
 import PdfPartProgress from "@/modules/course/models/pdf-part-progress.model";
+import { logDailyActivity } from "@/lib/progress/log-activity";
 import mongoose from "mongoose";
 
 /**
@@ -97,6 +98,8 @@ export async function POST(request: NextRequest) {
       existing.attempts += 1;
       existing.lastScore = scorePercentage;
       existing.lastAttemptAt = new Date();
+      existing.questionsAttempted = totalQuestions;
+      existing.questionsCorrect = score;
       if (scorePercentage > existing.bestScore) {
         existing.bestScore = scorePercentage;
       }
@@ -115,10 +118,20 @@ export async function POST(request: NextRequest) {
         attempts: 1,
         bestScore: scorePercentage,
         lastScore: scorePercentage,
+        questionsAttempted: totalQuestions,
+        questionsCorrect: score,
         unlockedAt: hasPassed ? new Date() : undefined,
         lastAttemptAt: new Date(),
       });
     }
+
+    // Log daily activity to update streak (non-blocking)
+    logDailyActivity(userId, {
+      questionsAttempted: totalQuestions,
+      questionsCorrect: score,
+    }).catch((err) => {
+      console.error("[pdf-progress] Failed to log daily activity:", err);
+    });
 
     // Fetch all updated records for this lesson to return complete status
     const allProgress = await PdfPartProgress.find({

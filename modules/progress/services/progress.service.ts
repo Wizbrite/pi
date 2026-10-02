@@ -5,6 +5,8 @@ import DailyActivity from "../models/daily-activity.model";
 import ExamAttempt from "../models/exam-attempt.model";
 import Course from "@/modules/course/models/course.model";
 import Lesson from "@/modules/course/models/lesson.model";
+import PdfPartProgress from "@/modules/course/models/pdf-part-progress.model";
+import NotionProgress from "@/modules/course/models/notion-progress.model";
 import type {
   ProgressData,
   OverallStats,
@@ -50,7 +52,9 @@ export class ProgressService {
       dailyXpResult,
       lessonsCompleted,
       examsTaken,
-      accuracyResult,
+      lessonAccuracyResult,
+      pdfAccuracyResult,
+      notionAccuracyResult,
       timeResult,
       courseIds,
       streakData,
@@ -64,16 +68,36 @@ export class ProgressService {
       LessonProgress.countDocuments({ userId, completed: true }),
       // Exams taken count
       ExamAttempt.countDocuments({ userId }),
-      // Overall accuracy (weighted by question count)
+      // Accuracy from end-of-lesson quizzes (weighted by question count)
       LessonProgress.aggregate([
-        {
-          $match: { userId, completed: true, totalQuestions: { $gt: 0 } },
-        },
+        { $match: { userId, completed: true, totalQuestions: { $gt: 0 } } },
         {
           $group: {
             _id: null,
             totalCorrect: { $sum: "$score" },
             totalQuestions: { $sum: "$totalQuestions" },
+          },
+        },
+      ]),
+      // Accuracy from PDF part quizzes
+      PdfPartProgress.aggregate([
+        { $match: { userId, questionsAttempted: { $gt: 0 } } },
+        {
+          $group: {
+            _id: null,
+            totalCorrect: { $sum: "$questionsCorrect" },
+            totalQuestions: { $sum: "$questionsAttempted" },
+          },
+        },
+      ]),
+      // Accuracy from Notion/video quizzes
+      NotionProgress.aggregate([
+        { $match: { userId, questionsAttempted: { $gt: 0 } } },
+        {
+          $group: {
+            _id: null,
+            totalCorrect: { $sum: "$questionsCorrect" },
+            totalQuestions: { $sum: "$questionsAttempted" },
           },
         },
       ]),
@@ -89,9 +113,17 @@ export class ProgressService {
     ]);
 
     const totalXp = dailyXpResult[0]?.total || 0;
-    const totalCorrect = accuracyResult[0]?.totalCorrect || 0;
-    const totalQuestions = accuracyResult[0]?.totalQuestions || 0;
     const lessonTimeSeconds = timeResult[0]?.total || 0;
+
+    // Combine correct/total across all quiz types for true platform-wide accuracy
+    const combinedCorrect =
+      (lessonAccuracyResult[0]?.totalCorrect || 0) +
+      (pdfAccuracyResult[0]?.totalCorrect || 0) +
+      (notionAccuracyResult[0]?.totalCorrect || 0);
+    const combinedTotal =
+      (lessonAccuracyResult[0]?.totalQuestions || 0) +
+      (pdfAccuracyResult[0]?.totalQuestions || 0) +
+      (notionAccuracyResult[0]?.totalQuestions || 0);
 
     // Aggregate cumulative exam time and daily activity time
     const [examTimeResult, dailyTimeResult] = await Promise.all([
@@ -128,7 +160,7 @@ export class ProgressService {
       totalLessonsCompleted: lessonsCompleted,
       totalExamsTaken: examsTaken,
       overallAccuracy:
-        totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : 0,
+        combinedTotal > 0 ? Math.round((combinedCorrect / combinedTotal) * 100) : 0,
       subjectsEnrolled: courseIds.length,
     };
   }
@@ -420,8 +452,8 @@ export class ProgressService {
   private async getWeakAreas(
     userId: Types.ObjectId
   ): Promise<WeakArea[]> {
-    // Aggregate lesson accuracy by topicId via lesson lookup
-    const topicAccuracy = await LessonProgress.aggregate([
+    // ── 1. Lesson-level accuracy (existing) ─────────────────────────────
+    const lessonTopicAccuracy = await LessonProgress.aggregate([
       {
         $match: {
           userId,
@@ -441,25 +473,124 @@ export class ProgressService {
       {
         $group: {
           _id: "$lesson.topicId",
-          accuracy: { $avg: "$accuracy" },
+          totalCorrect: { $sum: "$score" },
+          totalQuestions: { $sum: "$totalQuestions" },
           totalAttempts: { $sum: "$attempts" },
           lessonCount: { $sum: 1 },
           courseId: { $first: "$courseId" },
         },
       },
-      {
-        $match: { accuracy: { $lt: 80 } },
-      },
-      { $sort: { accuracy: 1 } },
-      { $limit: 10 },
     ]);
 
-    if (topicAccuracy.length === 0) return [];
+    // ── 2. PDF part quiz accuracy (new) ─────────────────────────────────
+    const pdfTopicAccuracy = await PdfPartProgress.aggregate([
+      {
+        $match: { userId, questionsAttempted: { $gt: 0 } },
+      },
+      {
+        $lookup: {
+          from: "lessons",
+          localField: "lessonId",
+          foreignField: "_id",
+          as: "lesson",
+        },
+      },
+      { $unwind: "$lesson" },
+      {
+        $group: {
+          _id: "$lesson.topicId",
+          totalCorrect: { $sum: "$questionsCorrect" },
+          totalQuestions: { $sum: "$questionsAttempted" },
+          totalAttempts: { $sum: "$attempts" },
+          lessonCount: { $sum: 1 },
+          courseId: { $first: "$courseId" },
+        },
+      },
+    ]);
 
-    // Get topic titles from courses
-    const courseIds = [
-      ...new Set(topicAccuracy.map((t) => t.courseId.toString())),
-    ];
+    // ── 3. Notion/video quiz accuracy (new) ──────────────────────────────
+    const notionTopicAccuracy = await NotionProgress.aggregate([
+      {
+        $match: { userId, questionsAttempted: { $gt: 0 } },
+      },
+      {
+        $lookup: {
+          from: "lessons",
+          localField: "lessonId",
+          foreignField: "_id",
+          as: "lesson",
+        },
+      },
+      { $unwind: "$lesson" },
+      {
+        $group: {
+          _id: "$lesson.topicId",
+          totalCorrect: { $sum: "$questionsCorrect" },
+          totalQuestions: { $sum: "$questionsAttempted" },
+          totalAttempts: { $sum: "$attempts" },
+          lessonCount: { $sum: 1 },
+          courseId: { $first: "$courseId" },
+        },
+      },
+    ]);
+
+    // ── 4. Merge all three sources by topicId ────────────────────────────
+    type TopicBucket = {
+      totalCorrect: number;
+      totalQuestions: number;
+      totalAttempts: number;
+      lessonCount: number;
+      courseId: Types.ObjectId;
+    };
+    const topicMap = new Map<string, TopicBucket>();
+
+    const mergeBuckets = (rows: any[]) => {
+      for (const row of rows) {
+        const key = row._id?.toString();
+        if (!key) continue;
+        const existing = topicMap.get(key);
+        if (existing) {
+          existing.totalCorrect += row.totalCorrect || 0;
+          existing.totalQuestions += row.totalQuestions || 0;
+          existing.totalAttempts += row.totalAttempts || 0;
+          existing.lessonCount = Math.max(existing.lessonCount, row.lessonCount || 0);
+        } else {
+          topicMap.set(key, {
+            totalCorrect: row.totalCorrect || 0,
+            totalQuestions: row.totalQuestions || 0,
+            totalAttempts: row.totalAttempts || 0,
+            lessonCount: row.lessonCount || 0,
+            courseId: row.courseId,
+          });
+        }
+      }
+    };
+
+    mergeBuckets(lessonTopicAccuracy);
+    mergeBuckets(pdfTopicAccuracy);
+    mergeBuckets(notionTopicAccuracy);
+
+    if (topicMap.size === 0) return [];
+
+    // ── 5. Compute combined accuracy per topic and filter weak ones ───────
+    const weakTopics = Array.from(topicMap.entries())
+      .map(([topicId, data]) => ({
+        topicId,
+        accuracy: data.totalQuestions > 0
+          ? Math.round((data.totalCorrect / data.totalQuestions) * 100)
+          : 0,
+        totalAttempts: data.totalAttempts,
+        lessonCount: data.lessonCount,
+        courseId: data.courseId,
+      }))
+      .filter((t) => t.accuracy < 80)
+      .sort((a, b) => a.accuracy - b.accuracy)
+      .slice(0, 10);
+
+    if (weakTopics.length === 0) return [];
+
+    // ── 6. Resolve topic titles from course data ──────────────────────────
+    const courseIds = [...new Set(weakTopics.map((t) => t.courseId?.toString()).filter(Boolean))];
     const courses = await Course.find({ _id: { $in: courseIds } }).lean();
 
     const topicTitleMap = new Map<string, { title: string; courseTitle: string }>();
@@ -472,16 +603,16 @@ export class ProgressService {
       }
     }
 
-    return topicAccuracy
+    return weakTopics
       .map((t) => {
-        const info = topicTitleMap.get(t._id.toString());
+        const info = topicTitleMap.get(t.topicId);
         if (!info) return null;
         return {
-          topicId: t._id.toString(),
+          topicId: t.topicId,
           topicTitle: info.title,
           courseId: t.courseId.toString(),
           courseTitle: info.courseTitle,
-          accuracy: Math.round(t.accuracy),
+          accuracy: t.accuracy,
           totalAttempts: t.totalAttempts,
           lessonCount: t.lessonCount,
         };

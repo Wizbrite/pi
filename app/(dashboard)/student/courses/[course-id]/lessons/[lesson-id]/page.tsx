@@ -245,23 +245,85 @@ export default function LessonDetailPage({ params }: LessonPageProps) {
       <Card className="bg-card border-border text-card-foreground shadow-xs p-4 md:p-6 space-y-6">
         {lesson.lessonType === "pdf" || lesson.pdfUrl ? (
           <SelectionAskAI onAsk={handleSelectionAsk}>
-            <PdfLessonViewer
-              lessonId={lesson._id.toString()}
-              courseId={courseId}
-              lessonTitle={lesson.title}
-              pdfUrl={lesson.pdfUrl || lesson.parts?.[0]?.pdfUrl || ""}
-              parts={lesson.parts || []}
-              onPartChange={(part) => {
-                setPdfActivePart({
-                  partNumber: part.partNumber,
-                  partTitle: part.title,
-                  startPage: part.startPage ?? 1,
-                  endPage: part.endPage ?? 1,
-                  partContext: part.partContext || part.content || "",
-                });
-                resetAi();
-              }}
-            />
+            <div className="space-y-6">
+              {(() => {
+                const activePdfPartObj = lesson.parts?.find(
+                  (p: any) => p.partNumber === (pdfActivePart?.partNumber || 1)
+                ) || lesson.parts?.[0];
+                const vimeoSrc = activePdfPartObj
+                  ? getVimeoSrc(activePdfPartObj) || getVimeoSrc(lesson)
+                  : getVimeoSrc(lesson);
+
+                if (!vimeoSrc) return null;
+
+                return (
+                  <div className="space-y-4">
+                    {activePdfPartObj?.notions && activePdfPartObj.notions.length > 0 ? (
+                      <NotionVideoPlayer
+                        key={`nvp-pdf-${activePdfPartObj.partNumber}`}
+                        vimeoEmbedUrl={vimeoSrc}
+                        notions={activePdfPartObj.notions}
+                        lessonId={lesson._id.toString()}
+                        courseId={courseId}
+                        partNumber={activePdfPartObj.partNumber}
+                        lessonTitle={lesson.title}
+                        partTitle={activePdfPartObj.title}
+                        videoContext={activePdfPartObj.videoContext || activePdfPartObj.content || ""}
+                        totalQuestions={activePdfPartObj.totalQuestions ?? 20}
+                        questionsPerNotion={activePdfPartObj.questionsPerNotion ?? 10}
+                        initialProgress={notionProgress}
+                      />
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-card border border-border/80 shadow-xs">
+                          <div className="flex items-center gap-2.5">
+                            <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
+                              <Video className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-primary block">
+                                Video Lesson Segment
+                              </span>
+                              <h3 className="text-sm font-bold text-foreground">
+                                Part {activePdfPartObj?.partNumber || 1}: {activePdfPartObj?.title || lesson.title}
+                              </h3>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-black border border-border shadow-sm">
+                          <iframe
+                            src={vimeoSrc}
+                            className="absolute top-0 left-0 h-full w-full border-0"
+                            allow="autoplay; fullscreen; picture-in-picture"
+                            allowFullScreen
+                            title={activePdfPartObj?.title || lesson.title || "Lesson Video"}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              <PdfLessonViewer
+                lessonId={lesson._id.toString()}
+                courseId={courseId}
+                lessonTitle={lesson.title}
+                pdfUrl={lesson.pdfUrl || lesson.parts?.[0]?.pdfUrl || ""}
+                parts={lesson.parts || []}
+                onPartChange={(part) => {
+                  setPdfActivePart({
+                    partNumber: part.partNumber,
+                    partTitle: part.title,
+                    startPage: part.startPage ?? 1,
+                    endPage: part.endPage ?? 1,
+                    partContext: part.partContext || part.content || "",
+                  });
+                  resetAi();
+                }}
+              />
+            </div>
           </SelectionAskAI>
         ) : lesson.parts && lesson.parts.length > 0 ? (
           <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">

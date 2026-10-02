@@ -7,6 +7,9 @@ import { getAiProvider } from "@/lib/ai/provider";
 import { GLOBAL_AI_FORMATTING_INSTRUCTION } from "@/lib/ai/config";
 import { getUserId } from "@/lib/auth/get-user";
 import LearnerProfile from "@/modules/adaptive/models/learner-profile.model";
+import PdfPartProgress from "@/modules/course/models/pdf-part-progress.model";
+import NotionProgress from "@/modules/course/models/notion-progress.model";
+import Lesson from "@/modules/course/models/lesson.model";
 import { Types } from "mongoose";
 
 export interface AIStudentReport {
@@ -109,6 +112,62 @@ export async function GET() {
         : null;
     const lastExam = exams[0] || null;
 
+    // ── Part-quiz performance data (PDF & Notion) ─────────────────────────
+    const userObjId = new Types.ObjectId(userId);
+
+    const [pdfPartRecords, notionRecords] = await Promise.all([
+      PdfPartProgress.find({ userId: userObjId, questionsAttempted: { $gt: 0 } })
+        .select("lessonId partNumber questionsAttempted questionsCorrect lastScore bestScore passed")
+        .lean(),
+      NotionProgress.find({ userId: userObjId, questionsAttempted: { $gt: 0 } })
+        .select("lessonId notionLabel questionsAttempted questionsCorrect lastScore bestScore passed")
+        .lean(),
+    ]);
+
+    // Resolve lesson titles for the PDF parts that scored low
+    const weakPdfLessonIds = [...new Set(
+      pdfPartRecords
+        .filter((r) => r.lastScore < 70)
+        .map((r) => r.lessonId.toString())
+    )];
+    const weakLessons = weakPdfLessonIds.length > 0
+      ? await Lesson.find({ _id: { $in: weakPdfLessonIds } }).select("title").lean()
+      : [];
+    const lessonTitleMap = new Map(weakLessons.map((l) => [l._id.toString(), l.title]));
+
+    // Build a list of weak PDF quiz parts (score < 70%)
+    const weakPartQuizzes = pdfPartRecords
+      .filter((r) => r.lastScore < 70)
+      .map((r) => ({
+        type: "pdf_part" as const,
+        lessonTitle: lessonTitleMap.get(r.lessonId.toString()) || "Lesson",
+        part: r.partNumber,
+        score: r.lastScore,
+        passed: r.passed,
+      }))
+      .slice(0, 6);
+
+    // Build a list of weak Notion quiz segments (score < 70%)
+    const weakNotionQuizzes = notionRecords
+      .filter((r) => r.lastScore < 70)
+      .map((r) => ({
+        type: "notion_video" as const,
+        segment: r.notionLabel,
+        score: r.lastScore,
+        passed: r.passed,
+      }))
+      .slice(0, 6);
+
+    // Aggregate overall part-quiz accuracy
+    const pdfTotalCorrect = pdfPartRecords.reduce((s, r) => s + (r.questionsCorrect || 0), 0);
+    const pdfTotalQuestions = pdfPartRecords.reduce((s, r) => s + (r.questionsAttempted || 0), 0);
+    const notionTotalCorrect = notionRecords.reduce((s, r) => s + (r.questionsCorrect || 0), 0);
+    const notionTotalQuestions = notionRecords.reduce((s, r) => s + (r.questionsAttempted || 0), 0);
+
+    const partQuizAccuracy = (pdfTotalQuestions + notionTotalQuestions) > 0
+      ? Math.round(((pdfTotalCorrect + notionTotalCorrect) / (pdfTotalQuestions + notionTotalQuestions)) * 100)
+      : null;
+
     // ── Build the AI prompt ───────────────────────────────────────────────
     const systemPrompt = `You are Pi's personal AI study coach for GCE students in Cameroon. 
 You analyze student learning data and produce precise, encouraging, and highly actionable personal study reports. 
@@ -145,6 +204,15 @@ ${GLOBAL_AI_FORMATTING_INSTRUCTION}`;
         lastExam: lastExam
           ? { title: lastExam.paperTitle, score: lastExam.percentage, passed: lastExam.percentage >= 50 }
           : null,
+      },
+      // Part-quiz performance: PDF checkpoints and Notion/video segments
+      partQuizPerformance: {
+        overallPartQuizAccuracy: partQuizAccuracy,
+        weakPdfParts: weakPartQuizzes,
+        weakNotionSegments: weakNotionQuizzes,
+        note: weakPartQuizzes.length > 0 || weakNotionQuizzes.length > 0
+          ? "The student has low scores on specific lesson parts/segments listed above. Prioritise these in recommendations."
+          : "No consistently weak lesson parts detected yet.",
       },
       subjects: progress.subjects.map((s) => ({
         title: s.title,

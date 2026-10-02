@@ -187,15 +187,19 @@ export function PdfLessonViewer({
           return;
         }
         // Next part IS unlocked – switch to it
+        const newUrl = nextPart.pdfUrl || pdfUrl;
+        const oldUrl = activePart.pdfUrl || pdfUrl;
         setActivePart(nextPart);
         setCurrentPage(nextPart.startPage ?? newPage);
-        setPdfLoading(true);
+        if (newUrl !== oldUrl) {
+          setPdfLoading(true);
+        }
         return;
       }
 
       setCurrentPage(newPage);
     },
-    [activePart, partStartPage, partEndPage, sortedParts, passedParts]
+    [activePart, partStartPage, partEndPage, sortedParts, passedParts, pdfUrl]
   );
 
   // ─── Switch to a specific part tab ────────────────────────────────────────
@@ -205,9 +209,13 @@ export function PdfLessonViewer({
       setShowLockOverlay(true);
       return;
     }
+    const newUrl = part.pdfUrl || pdfUrl;
+    const oldUrl = activePart.pdfUrl || pdfUrl;
     setActivePart(part);
     setCurrentPage(part.startPage ?? 1);
-    setPdfLoading(true);
+    if (newUrl !== oldUrl) {
+      setPdfLoading(true);
+    }
     setShowLockOverlay(false);
     // Notify parent so the AI tutor updates its context
     if (onPartChange) onPartChange(part);
@@ -502,6 +510,8 @@ export function PdfLessonViewer({
                 pageNumber={currentPage}
                 width={Math.min(containerWidth - 32, 900)}
                 loading=""
+                onLoadSuccess={() => setPdfLoading(false)}
+                onRenderSuccess={() => setPdfLoading(false)}
                 renderAnnotationLayer={false}
                 renderTextLayer={true}
                 className="shadow-2xl"
